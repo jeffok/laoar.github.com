@@ -2,10 +2,10 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
 
   <title><![CDATA[The Complaint of laoar]]></title>
-  <link href="http://www.laoar.net/atom.xml" rel="self"/>
-  <link href="http://www.laoar.net/"/>
-  <updated>2014-05-24T21:26:31+08:00</updated>
-  <id>http://www.laoar.net/</id>
+  <link href="http://laoar.github.io/atom.xml" rel="self"/>
+  <link href="http://laoar.github.io/"/>
+  <updated>2014-05-24T23:17:55+08:00</updated>
+  <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
     <email><![CDATA[laoar.shao@gmail.com]]></email>
@@ -15,9 +15,9 @@
   
   <entry>
     <title type="html"><![CDATA[Test]]></title>
-    <link href="http://www.laoar.net/blog/2014/05/20/test/"/>
+    <link href="http://laoar.github.io/blog/2014/05/20/test/"/>
     <updated>2014-05-20T22:38:39+08:00</updated>
-    <id>http://www.laoar.net/blog/2014/05/20/test</id>
+    <id>http://laoar.github.io/blog/2014/05/20/test</id>
     <content type="html"><![CDATA[
 ]]></content>
   </entry>

@@ -1,4 +1,4 @@
 User-agent: *
 Disallow: 
 
-Sitemap: http://www.laoar.net/sitemap.xml 
+Sitemap: http://laoar.github.io/sitemap.xml 
