@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: 
+
+Sitemap: http://laoar.github.io/sitemap.xml 
