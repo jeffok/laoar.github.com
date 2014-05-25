@@ -1,0 +1,235 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>三言两语聊Kernel： Undefined Instruction - The Complaint of laoar</title>
+  <meta name="author" content="Yafang Shao">
+
+  
+  <meta name="description" content="    在写这篇文章的时候，我一直在犹豫要不要写， 因为它涉及到我的日常工作，而我司对信息安全监管的特别严。但是，我觉得最近遇到的这个bug确实很有趣，有必要记录一下，以后翻阅的时候也有参考。 所以，我禁掉了google对我个人博客的搜索，同时也关掉了往其他博客（比如sina微博）的同步。 &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://laoar.github.io/blogs/215">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="The Complaint of laoar" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">The Complaint of laoar</a></h1>
+  
+    <h2>纯属歪歪</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:laoar.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">三言两语聊Kernel： Undefined Instruction</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-01-01T00:00:00+08:00" pubdate data-updated="true">Jan 1<span>st</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p><!--?xml version="1.0" encoding="UTF-8" standalone="no"?-->    在写这篇文章的时候，我一直在犹豫要不要写， 因为它涉及到我的日常工作，而我司对信息安全监管的特别严。但是，我觉得最近遇到的这个bug确实很有趣，有必要记录一下，以后翻阅的时候也有参考。 所以，我禁掉了google对我个人博客的搜索，同时也关掉了往其他博客（比如sina微博）的同步。权当做个人记录。<br />
+<div>     一个可执行文件，简单的看就是指令和数据的集合。 CPU在执行该可执行文件的时候，会不断的去读取指令，然后解析该指令，最终执行，这是流水线的基本原理。</div><br />
+<div></div><br />
+<div>    Undefined Instruction的意思就是，CPU无法解析从内存中读取到的指令，这条指令不是该CPU能够识别的指令集里面的。 出现undefined instruction，无非是以下几种情况：</div><br />
+<div style="padding-left: 30px;">1）确实是非法指令</div><br />
+<div style="padding-left: 60px;">这种情况一般都是硬编码导致，在代码里直接用16进制的数字来表示一条指令，这样就导致这些代码移植到其他平台的时候不能被解析。</div><br />
+<div style="padding-left: 30px;">2）踩内存</div><br />
+<div style="padding-left: 60px;">存储指令的内存空间被踩掉，指令就变成了其他的内容，这种情况，出现什么错误都是有可能的。不仅仅是undefined instruction，还可能是bad syscall等等。</div><br />
+<div style="padding-left: 30px;">3）指令所在的内存被释放掉</div><br />
+<div style="padding-left: 60px;">这种情况一般都是出现在操作系统里面。在操作系统初始化的时候，会执行很多初始化代码，这些代码在操作系统起来后就再也不被执行到了。为了节省内存，os就有了个机制：回收初始化代码，或者说，free init memory。一个函数使用__init memory机制的前提是，作者认为这部分代码以后永远也不会被用到。ok，问题就来了。 原作者很清楚自己写的代码，而后来的维护者就理解不是很深刻，他就可能会调用到__init memory里面的代码。可想而知，这必然是会出错的，因为init memory已经被释放然后分配给其他用途了，这个地址空间不知道存储的是什么东西，你再到这个地址空间去取指令，显然发生的错误是不可预料的。</div><br />
+<div></div><br />
+<div>    这三种情况我都有遇到过。 从定位问题的难度来看，感觉第3种是最好定位的，第2种是最不好定位的.下面我要说的就是遇到的第3种情况的问题。</div><br />
+<div></div><br />
+<div>    我在移植一个特性到os上去，执行的时候出现undefined instruction的情况，每次都是在func_a()这个出现。我就去看func_a()的反汇编，那个地址对应的指令是正常的。于是，我猜测应该是踩内存了。</div><br />
+<div></div><br />
+<div>    接下来，我在调用func_a()的前面加了几行语句，来把func_a()所在地址空间里面的内容给打印出来，看看到底是哪里被踩了。</div><br />
+<div style="padding-left: 30px;">/<strong>打印出从func_a()所在地址开始的25条语句</strong>/</div><br />
+<div style="padding-left: 30px;">for(i = (unsigned int)func_a; i &lt; (unsigned int)func_a + 100; i += 4 )</div><br />
+<div style="padding-left: 30px;">     printk(&#8220;%08x : %08x\n&#8221;, (unsigned int)func_a, *(unsignd int *)func_a);</div><br />
+<div></div><br />
+<div>    打印出来的数据显示，func_a()这个函数里面的内容都被踩掉了。于是就去研究，为什么被踩。</div><br />
+<div></div><br />
+<div>    在追内核代码的过程中，发现func_a()这个函数其实是初始化部分的函数。函数定义如下：</div><br />
+<div style="padding-left: 30px;">int __init func_a()</div><br />
+<div style="padding-left: 30px;">{</div><br />
+<div style="padding-left: 30px;">     &#8230;</div><br />
+<div style="padding-left: 30px;">}</div><br />
+<div></div><br />
+<div>    __init这个宏的定义如下：</div><br />
+<div><a href="http://www.laoar.net/wp-content/uploads/2013/01/2dc250f6dd2ab58b5b03df658953ef501.png"><img class="aligncenter size-full wp-image-217" title="2dc250f6dd2ab58b5b03df658953ef50" src="http://www.laoar.net/wp-content/uploads/2013/01/2dc250f6dd2ab58b5b03df658953ef501.png" alt="" width="754" height="111" /></a>    它的作用是，将这个函数放到.init.text这个section中。section是elf格式的一个概念，具体可google之。 os是怎么处理.init.text这个section的哪？</div><br />
+<div></div><br />
+<div>    在free_initmem()这个函数里面会将这个section所占用的内存给释放掉：</div><br />
+<div><a href="http://www.laoar.net/wp-content/uploads/2013/01/c07559b7c01affcc71884aed64c6f0712.png"><img class="aligncenter size-full wp-image-221" title="c07559b7c01affcc71884aed64c6f071" src="http://www.laoar.net/wp-content/uploads/2013/01/c07559b7c01affcc71884aed64c6f0712.png" alt="" width="825" height="378" /></a>注释：</div><br />
+<div>1） __init_begin和__init_end的的初始化是在vmlinux.lds.S这个文件里面。 INIT_TEXT_SETION位于这两个变量之间。</div><br />
+<div>2）INIT_TEXT_SETION的定义是在include/asm-generic/vmlinux.lds.h这个头文件中，就是.init.text这个节。</div><br />
+<div></div></p></div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Yafang Shao</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-01-01T00:00:00+08:00" pubdate data-updated="true">Jan 1<span>st</span>, 2013</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blogs/197" title="Previous Post: 三言两语聊Kernel：flash驱动及文件系统">&laquo; 三言两语聊Kernel：flash驱动及文件系统</a>
+      
+      
+        <a class="basic-alignment right" href="/blogs/227" title="Next Post: 2012 memory">2012 memory &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/05/25/hello-github/">Hello Github</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blogs/501">性能优化：一些很有意思的尝试</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/05/20/test/">Test</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blogs/482">从linux内核里来学习性能优化，和一个例子</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blogs/466">关于struct Hack, 优雅的FreeBSD</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - Yafang Shao -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

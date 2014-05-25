@@ -1,0 +1,230 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>从linux内核里来学习性能优化，和一个例子 - The Complaint of laoar</title>
+  <meta name="author" content="Yafang Shao">
+
+  
+  <meta name="description" content="    我对“案例”这个词比较反感，所以标题是“一个例子”。 “案例”这个词，就跟“拉通”、“沟通”、“跟产品PK”、“奋斗者”、“客户”一样，在我眼里属于洗脑文化，所以我比较忌讳使用这些词。使用“例子”、“员工”、“customer”这些词(很抱歉我不知道“拉通”、“沟通”、“和产品PK” &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://laoar.github.io/blogs/482">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="The Complaint of laoar" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">The Complaint of laoar</a></h1>
+  
+    <h2>纯属歪歪</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:laoar.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">从linux内核里来学习性能优化，和一个例子</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-04-29T00:00:00+08:00" pubdate data-updated="true">Apr 29<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p style="padding-left: 30px;"></p>
+<p>    我对“案例”这个词比较反感，所以标题是“一个例子”。 “案例”这个词，就跟“拉通”、“沟通”、“跟产品PK”、“奋斗者”、“客户”一样，在我眼里属于洗脑文化，所以我比较忌讳使用这些词。使用“例子”、“员工”、“customer”这些词(很抱歉我不知道“拉通”、“沟通”、“和产品PK”是什么意思，因而找不到对应的词，还好我生活和工作中也不会用到这些词)会让我更舒服一些。<br />
+<p style="padding-left: 30px;"></p><br />
+    对于性能优化，相信稍微懂点编程的人都能说出个二五六来。比如对于inline的使用，只要是会写C语言，相信你一定能够口若悬河滔滔不绝的说出一大坨一大坨inline的优劣以及对性能的影响，然而这一大坨一大坨的经验都是bullshit，一切要看结果怎么样（我心里忽然不由自主的冒出了“以结果为导向”这个词，oh god，愿上帝拯救我）。就像木心在《文学回忆录》说的，“思想过剩的人，行动力往往较差”，关于性能优化这件事也是这样，不要迷信前人的经验，要自己动手去做。注意“迷信”的前提是了解，你要去了解他们的说法，但是不要去相信他们。<span style="line-height: 1.5em;">   </span></p>
+<p><span style="line-height: 1.5em;">    再来看inline这个问题，有个哥哥根据自己的实验发现，</span><span style="text-decoration: underline;"><a href="https://lwn.net/Articles/82494/">在skbbuff里面的一些skb__函数都不应该使用inline，因为去掉这些inline后能够提升3%的性</a>能</span><span style="line-height: 1.5em;">。所以说，这些想当然的经验都是bullshit，一切要看实际结果，写代码时不要傻逼兮兮的一上来就到处加inline，毕竟高司令也说过，“过早优化是万恶之源‘。</span><br />
+<p style="padding-left: 30px;"></p><br />
+    当然我要说的例子不是这个inline的例子。<br />
+<p style="padding-left: 30px;"></p><br />
+    我们知道Linux Kernel跟GNU是密切联系的，所以在Linux Kernel里面到处可见GCC的一些优化手段，比如GCC的attribute这个东西。《GNU/Linux Application Programming》的作者Tim Jones在他的文章《GCC hacks in Linux Kernel》里对GCC的这些手段做了些总结，写的也挺好。不过这个老兄忽略了一个很重要的东西，__attribute__((section(&#8220;name&#8221;))). 如果你要是写过内核驱动或者做过内核启动的话，你应该对__attribute__((section(&#8220;.init.text&#8221;)))不会陌生，没错他就是__init这个宏。__init这个宏的作用是，Gcc会把这个函数放在.init.text的输入段给链接器，这样所有以__init来声明的符号都会放在.init.text这个section里面。然后在初始化完毕，这些初始化代码显然就不会再执行了，那么他们占用的内存就可以被释放掉，所以在kernel初始化结束会调用一个free_initmem()函数来释放所有位于.init这个section的函数。<br />
+<p style="padding-left: 30px;"></p><br />
+    不过可惜的是，由于释放的是代码段的页表，因而必须得在内核里面来做，而且内核也没有提供这样的系统调用给用户态 ，对于用户态而言就没有办法来这样处理。事实上有很多用户态程序的初始化代码也很大，几百KB的初始化代码也是很正常的，释放这部分空间也是很可观。不清楚内核开发者为什么不考虑将这个方法以一个系统调用的形式导出到用户态。即提供这样一个系统调用：<br />
+int free_inittext(unsigned long start, unsigned long end);<br />
+释放页表要求是页对齐，这部分工作可以在内核里面进行检查，并将start向后对齐，以及end向前对齐，该系统调用的返回值是实际释放的page数目，如果没有释放就返回负值。<br />
+<p style="padding-left: 30px;"></p><br />
+    我们已经知道__attribute__((section(“name&quot;)))的作用是将这个函数给放在一起，这样就给我们提供了一个优化思路，我们完全可以将hot function用这种方法给放在一起，来减少icache miss。之所以是将hot function放在一起，而不是将逻辑上顺序执行的代码顺序排放，是因为icache的替换算法是LRU，即最近最少使用。既然是hot function，显然是会经常调用的，那么，我们把经常调用的函数给放在一起，当某一个函数得到执行时就会可能将另外的hot function一并给预取到cache line里面，其实本质上就是利用cpu的指令预取特性，有点类似于likely()；并且由于这个cache line里都是hot instruction，它总是会得到执行，被替换出去的可能性就大大减少，从而提高cache hit rate。这里需要澄清的一点是，当执行到某一个函数的时候，由于cpu不直接跟memory打交道，它会把该函数读取到cache里面再load到寄存器里面去执行，它把函数读取到cache里面时并不是把整个函数给读取到cache里，而是只读取一个cache line。比如我某一个函数它的起始地址是0x40000008, 假设cache line大小是32bytes， 那么我要执行这个函数的时候就会一次性的将0x40000000～0x40000020这部分的指令给读取到cache，某些cpu会有critical设计，即先读取0x40000008开始的4字节（对于32bits的CPU而言，其read path是4字节）读取到cache接下来再读取其余的28bytes。<br />
+<p style="padding-left: 30px;"></p><br />
+    这里就是我要说的一个例子。我在做性能优化的时候，仅仅是将critical path里的2个函数利用这种方法给放在了一起，就将UDP的throughput给提升了&gt;10%.<br />
+<p style="padding-left: 30px;"></p><br />
+    然而，我之所以选择这样做也是迫不得已，我更理想的想法是将另外一个函数给定义成inline，然而无奈另外一个函数有多处调用，如定义成inline可能会得不偿失，因为可执行文件的size就会变大了。结果也恰如我所料，将其定义为inline反而导致性能下降。<br />
+<p style="padding-left: 30px;"></p><br />
+    所以我就想，C语言里面是否应该有这种设计：inline不是用来作为函数定义的限制词，而是作为函数调用的限制词，即我在调用的时候来决定是否将该函数给内嵌过来，而不是在定义该函数的时候限制其为inline。 比如：<br />
+<ol><br />
+	<li>int func_b(int a, int b);</li><br />
+	<li></li><br />
+	<li>void func_a(void)</li><br />
+	<li>{</li><br />
+	<li>     …</li><br />
+	<li>     c = func_b(a, b) __inline;</li><br />
+	<li>     &#8230;</li><br />
+	<li>}</li></p>
+</ol></div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Yafang Shao</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-04-29T00:00:00+08:00" pubdate data-updated="true">Apr 29<span>th</span>, 2014</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blogs/466" title="Previous Post: 关于struct hack, 优雅的FreeBSD">&laquo; 关于struct hack, 优雅的FreeBSD</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2014/05/20/test/" title="Next Post: test">test &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/05/25/hello-github/">Hello Github</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blogs/501">性能优化：一些很有意思的尝试</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/05/20/test/">Test</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blogs/482">从linux内核里来学习性能优化，和一个例子</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blogs/466">关于struct Hack, 优雅的FreeBSD</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - Yafang Shao -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

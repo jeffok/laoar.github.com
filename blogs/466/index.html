@@ -1,0 +1,235 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>关于struct Hack, 优雅的FreeBSD - The Complaint of laoar</title>
+  <meta name="author" content="Yafang Shao">
+
+  
+  <meta name="description" content="    本来今晚计划去健身的，谁知道正打算去的时候发现背包里只带着运动裤，忘了带跑步鞋了，脚上的Northface鞋实在不适合健身，于是无奈放弃了。然后趁这个机会写点东西。     好了，言归正传。     我们对于struct stack熟知的是下面这种情况。 &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://laoar.github.io/blogs/466">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="The Complaint of laoar" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">The Complaint of laoar</a></h1>
+  
+    <h2>纯属歪歪</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:laoar.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">关于struct Hack, 优雅的FreeBSD</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-03-20T00:00:00+08:00" pubdate data-updated="true">Mar 20<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p style="padding-left: 30px;"></p>
+<p>    本来今晚计划去健身的，谁知道正打算去的时候发现背包里只带着运动裤，忘了带跑步鞋了，脚上的Northface鞋实在不适合健身，于是无奈放弃了。然后趁这个机会写点东西。<br />
+<p style="padding-left: 30px;"></p><br />
+    好了，言归正传。<br />
+<p style="padding-left: 60px;"></p><br />
+    我们对于struct stack熟知的是下面这种情况。</p>
+<p><a href="http://www.laoar.net/wp-content/uploads/2014/03/1.png"><img class="aligncenter size-full wp-image-468" alt="1" src="http://www.laoar.net/wp-content/uploads/2014/03/1.png" width="645" height="572" /></a>我们定义一个结构体family来记录一个正常家庭的人的年龄，显然对于一个正常家庭来说，爸妈各只有一个，但是孩子有多少就不确定了，所以我们把family的最后一个成员baby定义为了变长数组。对于这种在一个结构体里面最后一个变量是变长数组而且仅有这一个成员是变长数组的情况，我们称之为struct hack。这属于C语言里面的一个trick。<br />
+<p style="padding-left: 30px;"></p><br />
+    我这边博客要讨论的不是这种情况，我要说的是我在FreeBSD内核里面看到的一个很有意思的代码，也是一种struct的trick。它起的名字是struct __hack, 所以我就联想到了前面的struc hack ：）<br />
+<p style="padding-left: 30px;"></p><br />
+    在说FreeBSD内核的struct __hack之前，先来说下Linux内核里的do{ }while(0) 。 在我之前一个<a href="http://www.laoar.net/?p=289">blog</a>里，我说了 do{} while(0) 的目的是为了防止悬挂else问题。之所以会出现悬挂else问题，就是因为代码写的不是太规范。所以说，对于if/else,我们还是要尽量写成<br />
+<p style="text-align: left; padding-left: 150px;"><br />
+if  (…)  {<br />
+&#8230;<br />
+} else {<br />
+&#8230;<br />
+}</p><br />
+即使里面只有一句话。<br />
+<p style="padding-left: 30px;">然后在来看这个struct __hack。</p><br />
+<a href="http://www.laoar.net/wp-content/uploads/2014/03/2.png"><img class="aligncenter size-full wp-image-469" alt="2" src="http://www.laoar.net/wp-content/uploads/2014/03/2.png" width="769" height="418" /></a>上面这个宏来自FreeBSD内核的sys/sys/taskqueue.h这个头文件。 请注意最后一行的这个struct __hack是不是很奇怪。我第一次看到这个代码的时候也诧异了一阵子，研究了一会才忽然明白，原来这个struct __hack的作用是告诉程序员使用这个宏的时候必须在后面加个“;”, 否则就产生一个编译错误。 由于”strut __hack;”并不是一个完整的结构体，而且在程序里面也不会使用到它，因而编译器在编译的时候会将其自动的给优化掉，不会对程序的体积有任何影响。<br />
+<p style="padding-left: 90px;"></p><br />
+<p style="text-align: left;">     任何技术或者技巧的出现都是为了解决一些问题的，那么这里的struct __hack是为了解决什么问题哪？ 其实它是用来告诉程序员这个宏只用作函数声明。我们知道函数什么一般都是下面这个样子：</p><br />
+<p style="text-align: left; padding-left: 150px;"><br />
+void foobar(void);</p><br />
+<p style="text-align: left;">这个宏也是为了模拟这种形式。比如：</p><br />
+<p style="text-align: left; padding-left: 150px;">TASKQUEUE_DEFINE_THREAD(kqueue);</p><br />
+<p style="padding-left: 30px;"></p><br />
+    总之，这个小小的细节正体现出了FreeBSD所追求的优雅性.<br />
+<p style="padding-left: 30px;"></p><br />
+    写完发现字数太少了。所以在歪歪唧唧一些。最近写blog经常中英混杂，貌似好像大概可能也许很多人都讨厌这个样子，不过目测讨厌这样的多半都不是计算机这个行业或者工作中和英语打交道较少的。假如英语真的影响到你的薪水，进而又影响到你的生活质量，显然你也会不自觉的变成这样，无他，赚钱糊口而已。正应了那句话，叫做，屌丝的生活高富帅永远都不懂，只有经历了你才会明白：）<br />
+<p style="padding-left: 30px;"></p><br />
+    计算机这个东西本身就是美国的，凡事都是原汁原味的好，而且在绝大多数情况下，你面对的只有英文。比如对于一个C编译器的编译错误信息“discards qualifiers from pointer target type”， 如果你要Google一下才知道这是什么错误的话，那么恭喜你，码农的苦逼生活不适合你：）<br />
+<p style="padding-left: 30px;"></p><br />
+    其实反过来想也是这样。我在的小区附近老外特别多，旁边一个小区住着N多的韩国人。最近楼下新开了一家店，为了招徕老外，显然得起个英文名，它的英文名字叫“Chinese Humberger”，你猜它的中文名叫什么？ 肉夹馍！ 哈哈，很不伦不类，莫名其妙不是。所以说，原汁原味的才是最好的。</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p></div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Yafang Shao</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-03-20T00:00:00+08:00" pubdate data-updated="true">Mar 20<span>th</span>, 2014</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blogs/455" title="Previous Post: 关于Profiling">&laquo; 关于Profiling</a>
+      
+      
+        <a class="basic-alignment right" href="/blogs/482" title="Next Post: 从linux内核里来学习性能优化，和一个例子">从linux内核里来学习性能优化，和一个例子 &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/05/25/hello-github/">Hello Github</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blogs/501">性能优化：一些很有意思的尝试</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/05/20/test/">Test</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blogs/482">从linux内核里来学习性能优化，和一个例子</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blogs/466">关于struct Hack, 优雅的FreeBSD</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - Yafang Shao -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

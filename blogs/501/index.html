@@ -1,0 +1,225 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>性能优化：一些很有意思的尝试 - The Complaint of laoar</title>
+  <meta name="author" content="Yafang Shao">
+
+  
+  <meta name="description" content="Cliff跟我说，做性能优化就得花时间去琢磨，你要天天琢磨这个事，慢慢的就能找到办法了。 Boss的相对宽容，就给了我足够的时间来做一些琢磨（一开始写的是研究，想着自己也不是啥科学家，研究这个词还是太高大上了），我也得以能够做一些实验来证明自己的想法。
+我在前一篇博客里也说过， &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://laoar.github.io/blogs/501">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="The Complaint of laoar" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">The Complaint of laoar</a></h1>
+  
+    <h2>纯属歪歪</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:laoar.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">性能优化：一些很有意思的尝试</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-05-24T00:00:00+08:00" pubdate data-updated="true">May 24<span>th</span>, 2014</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>Cliff跟我说，做性能优化就得花时间去琢磨，<wbr />你要天天琢磨这个事，慢慢的就能找到办法了。 Boss的相对宽容，就给了我足够的时间来做一些琢磨（<wbr />一开始写的是研究，想着自己也不是啥科学家，<wbr />研究这个词还是太高大上了），<wbr />我也得以能够做一些实验来证明自己的想法。<br />
+我在前一篇博客里也说过，<wbr />关于性能优化的经验文章可谓汗牛充栋数不胜数，<wbr />然而这一类的文章大多数都是纸上谈兵，纯理论派，<wbr />实际操作性太差。所以我就说下我的实际操作经验，<wbr />这些操作经验在理论派达人眼里可能是小儿科，<wbr />远不及他们指点江山挥斥方遒的派头，<wbr />然而实用的终究要比花拳绣腿好。<br />
+因为有些东西我还没有想明白，<wbr />所以这篇博客可能最终没有真正的结论，只有实际的效果。<wbr />仅举几个有趣的例子。<br />
+某松柏公司的版本管理方案大致是下面这个这个样子，<wbr />首先有一个主线版本，在每个迭代的开始会拉出一个开发分支，<wbr />开发分支开发完毕再sync到主线，<wbr />然后再从主线拉出一个发布分支做版本发布。注：<wbr />开发分支主要是针对一些大的特性的改动，一些bug fix可能只是commit到主线，<wbr />而不会commit到开发分支。<br />
+对于开发分支，会定期有一些sanity check，即做一些测试来监控开发版本的一些指标，<wbr />比如性能指标。主线由于相对稳定，因而就没有这些sanity check。<br />
+开发分支由于有daily build的性能测试，因而能够及时的发现问题，<wbr />所以它的性能状况一向都比较良好。<br />
+于是问题就来了。最近再把开发分支sync到主线，<wbr />然后从主线拉出来一个发布分支后，发布分支的性能非常之低。 比如开发分支的UDP吞吐量是900Kpps，<wbr />发布分支的UDP吞吐量竟然下降到了780Kpps，<wbr />版本经理的预期是要达到850Kpps，<wbr />因而我需要找出来为什么性能下降这么大，<wbr />以及怎么样来提升它的性能。<br />
+理论派达人如果过来指点下江山的话，可能会说，<wbr />用profile工具来比较性能较好（开发分支）和性能很差（<wbr />发布分支）的两个image，看看他们的关键路径上有什么差异，<wbr />先找出差异来，再做调整。 但是，实际情况是，性能差异这么巨大，<wbr />很大的可能性不是由于critical path的代码改动导致的，<wbr />而是由一些无关痛痒的代码改动导致cache的sensitiv<wbr />e。 如果花时间的话，这种想法也的确可行，<wbr />然而最终效果总是看起来很美实际上只是老大爷打太极有板有眼就是<wbr />敌不过一双拳。<br />
+再稍微务实一点的想法是，<wbr />我们找到主线分支上性能较好的一个revision，<wbr />然后利用二分查找法来找出是不是由于某个check－<wbr />in导致的。这里的难点在于，首先，<wbr />代码的性能变化是一个波浪型的曲线，<wbr />你没有办法来确认你找到的性能较高的revision是一个合理<wbr />的revision。这种想法更务实一点，<wbr />花费的时间可能也会很多。<br />
+更务实一点的想法是，我们找出哪些代码只commit到了主线（<wbr />性能较低）而没有commit到开发分支（性能很好），<wbr />那么性能下降必然是由这些check－in导致的。难点在于，<wbr />每天的代码的check－in少则有4、5个，多则有十几个，<wbr />这个比较也是一个吃力不讨好的事。<br />
+所以，我们玩点有技术含量的吧，比较二进制！ 坦白说，在我打算这么做的时候，我不知道结果会怎么样，<wbr />也不知道能不能搞定，反正当时心一横，管它哪，干吧！<br />
+于是，<wbr />我将开发分支和发布分支的两个image的符号表给dump出来<wbr />，然后由低地址到高地址sort排序。 大致命令如下：<br />
+objdump -t image1.elf | sort &gt; iamge2.sym<br />
+objdump -t image2.elf | sort &gt; image2.sym<br />
+vim -d iamge1.sym image2.sym<br />
+然后我痛苦的发现，这两个符号表竟然有10多万个差异。 这要是一个个的去查，那得查到天荒地老了。<br />
+然而这些差异很多都是符号地址的差异，符号的大小基本都一样的。 所以接下来，我就把image1.sym和image2.<wbr />sym的地址这一列给删除再做比较。<wbr />在vim的visual模式下可以按列删除，<wbr />具体请google，此处不缀述。<br />
+然后问题就稍微简化了些，很快就找到了一个值得怀疑的地方，<wbr />如下图。（为了不泄漏某松柏公司的信息，我对图片做了些处理。<wbr />虽然这些信息可能也无关紧要，不过做人要职业些嘛）<br />
+<a href="http://www.laoar.net/wp-content/uploads/2014/05/Image2.jpg"><img class="aligncenter size-full wp-image-502" alt="Image2" src="http://www.laoar.net/wp-content/uploads/2014/05/Image2.jpg" width="1417" height="169" /></a></p>
+<p>我们可以看到深蓝色的那一行就是两个的差异，<wbr />该符号的大小由0x910增大到了0xaa8，<wbr />共增加了102条指令。于是我验证了下，<wbr />果然是这个差异导致的性能由900Kpps下降到了780Kpp<wbr />s。<br />
+既然知道了是哪里导致性能下降的了，问题就简单了，<wbr />肯定是有办法来解决的。<br />
+不过我要说的，到这里并没有结束，接下来才是关键。事实上，<wbr />这个符号在data path里并不会执行到，也就是说，<wbr />UDP的吞吐量根本就不会执行这个函数，<wbr />但是这个函数的改动又切切实实的导致了性能的下降。<wbr />唯二的可能性就是a)这个符号的改动影响了后续符号的地址，<wbr />导致一些cache line对齐问题，b)这个符号的改动使得critical path里面的函数／数据出现了cache line的冲突。然而由于符号的差异确实太多了，<wbr />而且critical path里面的函数和数据也很多，<wbr />所以我没有太多的时间和精力来查找到底是哪个原因。<wbr />对于b这种可能性相对好验证一些，只要知道了cache line的大小，和组相连的set，就能够知道cache line冲突的单位是set*line_size, 然后以这个值为基本单位来比较相差这个大小的符号即可。<wbr />对于情况a，可能就不太好验证了，因为要排查的东西太多了，<wbr />时间不允许，不过对于这种情况，我们可以有一些预防措施，<wbr />比如使用__attribute__(signed(128))<wbr />来将一些大的数据结构cache line对齐。注意我们将大数据结构cache line对齐并不是说对齐可以提高访问速度，oh god，如果你这么想那就真的是太悲哀了，<wbr />RISC的访问必须是对齐访问，<wbr />CISC的访问可以不对齐访问多花一个cycle。<wbr />这里所说的cache line对齐，是指，避免这个大数据结构占用多个cache line，比如如果这个大数据结构是136字节，<wbr />不对齐的话它完全是有可能占用3个cache line的（假设cache line的大小是128字节），而对齐的话只需要2个cache line。接下来如果我有充足的时间的话，<wbr />我会继续深入的做一下这件事的琢磨，看看能不能发现一些东西。<wbr />当然也可能花费很多时间什么都做不出来。<br />
+事情到这里还没有结束。我们还得再琢磨琢磨。<br />
+我们也看到了，<wbr />这明显是无关代码改动导致关键路径性能下降的例子，<wbr />那么我们为何不将关键路径，<wbr />或者说主要功能的代码给放到符号地址空间的前面，<wbr />而将这些次要功能或者说不是很重要的代码给放到后面，<wbr />这样这些无关代码的改动就不会太明显的影响了关键路径了。<wbr />这也说明，对于大型软件系统而言，<wbr />合理的划分地址空间是多么的重要，<wbr />不然以后就只能疲于奔命的去解决这些很无奈的问题了。<br />
+合理的划分地址空间，就设计到Makefile／<wbr />链接脚本的设计。这些也不是一个想当然的事，<wbr />而是要根据具体情况来做。 在设计大型软件之初，也不必要去过多的关注这方面，<wbr />等到需要改变的时候再去改变也不迟，毕竟，高司令也教导我们，“<wbr />过早优化是万恶之源”。</p></div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Yafang Shao</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-05-24T00:00:00+08:00" pubdate data-updated="true">May 24<span>th</span>, 2014</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014/05/20/test/" title="Previous Post: test">&laquo; test</a>
+      
+      
+        <a class="basic-alignment right" href="/blog/2014/05/25/hello-github/" title="Next Post: hello github">hello github &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/05/25/hello-github/">Hello Github</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blogs/501">性能优化：一些很有意思的尝试</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/05/20/test/">Test</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blogs/482">从linux内核里来学习性能优化，和一个例子</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blogs/466">关于struct Hack, 优雅的FreeBSD</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - Yafang Shao -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

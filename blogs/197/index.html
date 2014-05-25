@@ -1,0 +1,256 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>三言两语聊Kernel：flash驱动及文件系统 - The Complaint of laoar</title>
+  <meta name="author" content="Yafang Shao">
+
+  
+  <meta name="description" content="    flash分为nor flash和nand flash。nor flash的容量较小，但访问速度相对快；nand flash的容量较大。
+    用户访问flash的内容大概是要经历这些过程：
+用户-＞vfs-＞具体文件系统-＞mtd设备（字符设备、块设备）-＞cfi命令字-＞flash &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://laoar.github.io/blogs/197">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="The Complaint of laoar" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">The Complaint of laoar</a></h1>
+  
+    <h2>纯属歪歪</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:laoar.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">三言两语聊Kernel：flash驱动及文件系统</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-16T00:00:00+08:00" pubdate data-updated="true">Dec 16<span>th</span>, 2012</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p style="text-align: left;">    flash分为nor flash和nand flash。nor flash的容量较小，但访问速度相对快；nand flash的容量较大。</p>
+<p style="text-align: left;">    用户访问flash的内容大概是要经历这些过程：<br />
+用户-＞vfs-＞具体文件系统-＞mtd设备（字符设备、块设备）-＞cfi命令字-＞flash。</p>
+<p style="text-align: left;">    现在的flash一般都满足cfi标准，对于不满足cfi标准的flash要使用其他的命令字。</p>
+<p style="text-align: left;">    flash空间可根据需要来灵活划分分区，比如32M的flash，做如下划分：1M(uboot),2M(kernel),4M(initrd),25M(log)。注意划分分区的大小必须要是block大小的整数倍。分区划分可以通过uboot传参的方式来做， 这样更灵活一些，当然也可以直接写死在内核里面。使用uboot传参的方式需要内核mencuonfig的支持，即打开开关：CONFIG_CMDLINE_PARTS。打开了这个开关后，内核启动时就会解析uboot传递的参数：&quot;mtdparts=nor:1M(uboot),2M(kernel),4M(initrd),25M(log)&#8220;。在内核启动时，只是会将这些分区划分信息给存储起来， 只有真正的加载flash驱动后，即通过cfi probe具体的flash并加载其ko，然后在会读取分区划分信息并对flash空间进行划分。划分好分区后，通过/proc/mtd可以看到这些分区。同时在/dev目录下能够看到对应的mtd设备（包括块设备和字符设备），由于我们是划分的4个分区，所以可以看到mtd0、mtd1、mtd2、mtd3这四个设备。我们可以通过open这几个设备来读写对应的flash地址空间。例：<br />
+&#8221;color: #808000;&#8220;&gt;            int fd = open(&#8221;/dev/mtd3&quot;, O_RDWR);</span><br />
+<span style="color: #808000;">                if(fd &lt; 0){</span><br />
+<span style="color: #808000;">                    perror(&#8220;open&#8221;);</span><br />
+<span style="color: #808000;">                    return -1;</span><br />
+<span style="color: #808000;">               }        </span><br />
+<span style="color: #808000;">               int retval = write(fd, buff, <span class="caps">LEN</span>);</span><br />
+<span style="color: #808000;">               if(-1 == retval){</span><br />
+<span style="color: #808000;">                   perror(&#8220;write&#8221;);</span><br />
+<span style="color: #808000;">               }</span><br />
+<span style="color: #808000;">               retval = close(fd);</span><br />
+<span style="color: #808000;">               if(-1 == retval){</span><br />
+<span style="color: #808000;">                   perror(&#8220;close&#8221;);</span><br />
+<span style="color: #808000;">                   return -1;</span><br />
+<span style="color: #808000;">               } </span><br />
+<span style="color: #808000;">               return 0; </span></p>
+<div>    通过mtd设备赖读写flash，这种方式会绕过文件系统层，即直接通过mtd接口来读写。这种方式和dd命令读写块设备是一致的，dd命令本质上也是用的这种方式， 比如我要随即产生1M大小的内容写入到mtd3对应的地址空间中可以这样：</div>
+<div style="padding-left: 30px; text-align: center;">dd if=/dev/urandom of=/dev/mtdblock3 bs=128k count=8</div>
+<div style="padding-left: 30px;"></div>
+<div>     dd命令一般是用来测试flash的读写速度。</div>
+<div style="text-align: left;">    上述这种方式，在内核里的执行路径大概是这样子：<br />
+vfs_read/vfs_write-&gt;part_read/part_write-&gt;cfi_amdstd_read/do_write_buffer.</div>
+<div style="text-align: left;">这种方式会绕过flash的具体文件系统，而是从vfs直接到mtd层。</div>
+<div style="text-align: left;"></div>
+<div>     读写flash当然也可以使用/dev/mem的方式，/dev/mem是将外设的空间当做一块内存，然后mmap出来，这样就能直接在用户空间来操作物理地址。使用/dev/mem的示例如下：</div>
+<div>           <span style="color: #808000;">  unsigned char *map_base;</span></div>
+<div><span style="color: #808000;">             FILE *fd;</span></div>
+<div></div>
+<div><span style="color: #808000;">             fd = open(&#8220;/dev/mem&#8221;, O_RDWR|O_SYNC);</span></div>
+<div><span style="color: #808000;">             if(-1 == fd){</span></div>
+<div><span style="color: #808000;">                 perror(&#8220;open&#8221;);</span></div>
+<div><span style="color: #808000;">                 return -1;</span></div>
+<div><span style="color: #808000;">             }</span></div>
+<div></div>
+<div><span style="color: #808000;">             map_base = mmap(<span class="caps">NULL</span>, FLASH_SIZE,  PROC_READ|PROC_WRITE,<br />
+</span><span style="color: #808000;">                                                  MAP_SHARED,  fd, FLASH_BASE);</span></div>
+<div><span style="color: #808000;">             if(<span class="caps">NULL</span> == map_base){</span></div>
+<div><span style="color: #808000;">                 perror(&#8220;mmap&#8221;);</span></div>
+<div><span style="color: #808000;">                 close(fd);</span></div>
+<div><span style="color: #808000;">                 return -1;</span></div>
+<div><span style="color: #808000;">             }</span></div>
+<div></div>
+<div><span style="color: #808000;">             /<strong>get the content of the flash</strong>/</span></div>
+<div><span style="color: #808000;">             for(int i = 0; i &lt; FLASH_SIZE; i++){</span></div>
+<div><span style="color: #808000;">                 buf[i] = *(map_base + i);</span></div>
+<div><span style="color: #808000;">             }</span></div>
+<div></div>
+<div>     使用/dev/mem的这种方式，不会调用驱动接口，它是直接把flash当做一块内存来使用，所以 /dev/mem这种方式破坏性很大。</div>
+<div></div>
+<div>     flash文件系统，现在主流的有jffs2、yaffs2、ubifs。jffs2适用于nor flash，yaffs2适用于nand flash，ubifs两种flash都适用。yaffs2目前还未进入内核主线。jffs2则很早就进入了内核主线，且在业界有相对较广泛的应用。ubifs是比较新的文件系统，在性能上显著优于其余两者，不过稳定性上目前还不太好。这三种flash文件系统各自的邮件列表貌似都不太活跃，通常是好几天才能收到一封邮件：）</div>
+<div></div></div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Yafang Shao</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2012-12-16T00:00:00+08:00" pubdate data-updated="true">Dec 16<span>th</span>, 2012</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blogs/195" title="Previous Post: test">&laquo; test</a>
+      
+      
+        <a class="basic-alignment right" href="/blogs/215" title="Next Post: 三言两语聊Kernel： Undefined Instruction">三言两语聊Kernel： Undefined Instruction &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/05/25/hello-github/">Hello Github</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blogs/501">性能优化：一些很有意思的尝试</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/05/20/test/">Test</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blogs/482">从linux内核里来学习性能优化，和一个例子</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blogs/466">关于struct Hack, 优雅的FreeBSD</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - Yafang Shao -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>
