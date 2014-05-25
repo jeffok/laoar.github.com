@@ -1,0 +1,86 @@
+---
+layout: post
+title: '三言两语聊Kernel：从Linux到FreeBSD'
+date: 2013-9-21
+wordpress_id: 325
+permalink: /blogs/325
+comments: true
+---
+<em><strong><span style="color: #0000ff;">今晚恰好是中国好声音那英组的决赛，看完比赛后就一直听姚贝娜的《Dear Friend》，经过了无数个单曲循环后写完了这篇日志。姚贝娜唱的太好听了。</span></strong></em>
+
+总的来说，FreeBSD Kernel比Linux Kernel要简洁的多。我感觉可能是以下两个原因：1）linux考虑的场景多，所实现的功能也更多一些，所以linux比freebsd在编译时的配置要灵活。2）FreeBSD是个中央集权式的组织结构，linux则是民主式组织结构，所以freebsd的很多改进都是有组织有计划，代码看起来就很清晰，而linux是自底向上的改进，代码看起来就散乱些。
+
+下面来看下linux kernel 和freebsd kernel在代码上的主要差异：
+<h2><strong>1. 编译</strong></h2>
+Linux和FreeBSD都是使用Makefile来管理整个工程的。 二者在编译上最大的差异是configuration的不同。
+
+Linux为了灵活配置，在内核编译配置上使用了Kconfig机制，使用该机制能够很方便的选择编译哪些功能。Kconfig也是使用Makefile来控制的，使用make menuconfig这个命令。
+
+FreeBSD则是使用了一个专门的工具config来配置需要编译的内核代码。
+<h2><strong>2. 内核启动</strong></h2>
+bootstrap之后是OS的启动，这对于所有的操作系统都是一致的。
+
+二者在启动过程主要是如下的不同。
+
+<em>1）</em>linux内核使用了镜像压缩机制，在从bootloarder跳转到内核后先执行的是一个压缩的镜像，然后进行自解压。FreeBSD则没有这个压缩机制。
+
+<em>2）</em>linux模块的初始化是分层级进行，每个优先级都对应于一个section。linux首先初始化高优先级的initcall，再去初始化低优先级的initcall，在某个优先级内，比如A模块和B模块都属于优先级1,那么A模块和B模块的初始化顺序则是由链接过程决定的，哪个模块先被链接到section的前面，自然要先执行哪个模块。 FreeBSD的模块初始化是使用的SYSINIT，SYSINIT会在编译时首先定义好各个模块的初始化顺序，然后内核就按照这个顺序来初始化各个模块。
+
+<em>3）</em>swapper／init／idle线程
+
+不同在于SMP系统。linux内核的每个CPU都有自己的swapper线程（0号线程），init线程（1号线程）则只有主核有，对于linux而言，swapper线程就是idle线程，即在CPU空闲的时候会去唤醒idle线程。 FreeBSD的内核swapper线程和idle线程是不同的线程，只有主核有swapper线程（0核线程）和init线程（1号线程），每个核都有自己的idle线程，在CPU空闲的时候会唤醒该idle线程。
+<h2><strong>3.  Task Management 和 Scheduling Algorithm</strong></h2>
+### 1）主要数据结构
+Linux kernel使用task_struct这个结构体(include/linux/sched.h)来描述进程, 使用thread_info结构体（arch/arm/include/asm/thread_info.h）来描述线程状态信息,thread_info是和architecture强相关的，所以定义在了arch目录下。调度是以task_struct为基本单位来进行的，每个线程／进程都有自己的task_struct,线程和进程的区别主要在于，进程有自己独立地址空间，而线程则是共享进程的地址空间。
+
+FreeBSD使用proc这个结构体（sys/sys/proc.h）来描述进程,使用thread结构体（sys/sys/proc.h）来描述线程信息，FreeBSD的调度单位是thread，对于单线程的进程而言，它有一个proc结构体和一个thread结构体，对于多线程的进程而言，则是每个线程都有自己的thread结构体，多线程共用一个proc结构体。 线程和进程的主要区别也是线程没有自己的独立地址空间。
+### 2）调度机制
+Linux的进程分为实时进程和普通进程两种，实时进程有FIFO和RR两种调度策略， 普通进程则是CFS调度算法。 每个CPU都维护着自己的运行队列／等待队列链表。
+
+FreeBSD则是将进程分为以下几种调度类型：ITHD／KERN／REALTIME／TIMESHARE／IDLE，从左往右优先级递减。其中，ITHD是针对中断下半部的线程（FreeBSD用线程来处理中断，这是和linux的一个很大的区别），所以优先级最高；接着是内核线程；然后是实时用户态线程；接着是分时线程；CPU空闲的时候再唤醒idle线程。FreeBSD有三种调度算法：实时调度，针对实时进程；分时调度，针对普通进程；ULE调度算法，针对SMP系统的负载均衡。 每个CPU都维护着自己的idle队列／curren队列／next队列这三个链表。
+<h2><strong>4. Memory Management</strong></h2>
+### 1）主要数据结构
+Linux kernel使用mm_struct这个结构体（include/linux/mm_types.h）来描述进程的地址空间。
+
+FreeBSD使用vmspace这个结构体（sys/vm/vm_map.h）来描述进程的地址空间。
+### 2)  内存管理策略
+二者并无明显的差异。都是分页机制＋访问权限控制。
+<h2><strong>5. Filesystem</strong></h2>
+都是使用的VFS机制。差异在于具体文件系统上。
+
+linux kernel支持磁盘文件系统（EXT系列），块设备文件系统（yaffs2／jffs2）, 网络文件系统（NFS），虚拟文件系统（pseudo filesystem，例如procfs／devfs） 。
+
+FreeBSD在具体实现上跟linux略有不同，FreeBSD的具体存储机制是Filestore，filestore有三种管理方式：1）针对块设备：FFS， 2）针对内存：MFS， 3）日志文件系统。FreeBSD也支持NFS。FreeBSD也支持虚拟文件系统，略有不同的是，FreeBSD的procfs是指process filesystem，就类似于内核提供给用户态一个sysctl接口来查看进程信息。
+<h2><strong>6.  Interrupt</strong></h2>
+FreeBSD的中断下半部对应于一个内核线程，是由内核线程来处理中断服务程序。Linux的中断下半部则没有所谓的线程，直接由中断向量表进入中断中断服务程序。
+<h2><strong>7. Sync Mechanism</strong></h2>
+二者的同步机制基本一样，都是spinlock／mutex／semaphore这些机制以及衍生。
+<h2><strong>8. Debug </strong></h2>
+### 1）用户态
+linux和FreeBSD都支持GDB，GDB的实现在两个OS上也是一致的，都是通过ptrace系统调用。
+
+linux有个很强大的工具strace来跟踪系统调用，FreeBSD上没有该利器，不过FreeBSD可以使用ktrace＋kdump来实现strace的功能。
+### 2）内核态调试
+linux的kgdb可以分析crash dump，也可以对内核进行live debug。
+
+FreeBSD则是使用kgdb来分析crash dump，然后使用ddb工具来进行 live debug。
+### 3）其他杂项调试工具
+大同小异，半斤八两。
+
+&nbsp;
+
+P.S.:对FreeBSD代码看的还不多，很多地方也许写的不对。后续会继续完善。
+
+<span style="color: #ff0000;"><strong> TBD</strong></span>
+
+&nbsp;
+
+ref：
+
+<a title="linux kernel" href="http://http://www.amazon.cn/Understanding-the-Linux-Kernel-Bovet-Daniel-P/dp/0596005652/ref=sr_1_1?ie=UTF8&amp;qid=1379698958&amp;sr=8-1&amp;keywords=understanding+linux+kernel" target="_blank">[1] Understanding the Linux Kernel</a>
+
+<a title="FreeBSD Kernel" href="http://www.amazon.cn/FreeBSD%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0-%E9%BA%A6%E5%8D%A1%E6%80%9D%E5%85%8B/dp/B0012X9LD6/ref=sr_1_1?ie=UTF8&amp;qid=1379699151&amp;sr=8-1&amp;keywords=freebsd" target="_blank">[2]The Design and Implementation of the FreeBSD Operation System</a>
+
+&nbsp;
+
+&nbsp;

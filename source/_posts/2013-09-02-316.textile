@@ -1,0 +1,32 @@
+---
+layout: post
+title: '在高铁上聊Kernel：what's the fucking ABI(程序二进制接口)?'
+date: 2013-9-2
+wordpress_id: 316
+permalink: /blogs/316
+comments: true
+---
+P.S.:在高铁上写完的这篇文章。
+
+在定义ABI之前，先看下API，对于API我们更熟悉一些。 二者的对比会帮助我们来理解ABI。
+
+API是Application Programming Interface的缩写，它的意思是程序编程接口。 一个API是不同代码片段的连接纽带。它定义了一个函数的参数，函数的返回值，以及一些属性比如继承是否被允许。 因此API是用来约束编译器的：一个API是给编译器的一些指令，它规定了源代码可以做以及不可以做哪些事。在说到API的时候，也会涉及到函数的条件，行为以及出错环境。从这个角度看， 一个API也可以看作是被人使用：一个API是给程序员的一些指令，它规定了函数需要什么以及会做什么。
+
+ABI是Application Binary Interface的缩写，它的意思是程序二进制接口。 一个ABI是不同二进制片段的连接纽带。 它定义了函数被调用的规则：参数在调用者和被调用者之间如何传递，返回值怎么提供给调用者，库函数怎么被应用，以及程序怎么被加载到内存。 因此ABI是用来约束链接器的：一个ABI是无关的代码如何在一起工作的规则。 一个ABI也是不同进程如何在一个系统中共存的规则。 举例来说，在Linux系统中，一个ABI可能定义信号如何被执行，进程如何调用syscall，使用大端还是小端，以及栈如何增长。从这个角度看，一个API是用来约束在一个特定架构上操作系统的一系列规则，
+
+举个例子，在ARM 32bit架构上，对于如下代码片段而言：
+<span style="color: #993300;">    void foo_a(void)</span>
+<span style="color: #993300;">    {</span>
+<span style="color: #993300;">        int a[10];</span>
+<span style="color: #993300;">        int val;</span>
+<span style="color: #993300;">        val = foo_b(a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8], a[9]);</span>
+<span style="color: #993300;">    }</span>
+那么，参数a[0]~a[3]会被加载到r0～r3这四个寄存器中，参数a[4]~a[9]则会压入栈中，且压栈方向是从右至左，即a[9]先入栈，a[4]最后入栈。foo_b的返回值则会放在r0寄存器中。这就是ABI所约束的规则。
+
+一个ABI是被kernel／toolchain／架构这三驾马车共同定义的。这三者每一个都必须遵守它。一般，架构规划好标准的ABI，然后操作系统或多或少的采用这些标准，这些细节都会在架构手册里面文档化。
+
+Ref:
+
+[1] <a title="3 Volume Set of Intel® 64 and IA-32 Architectures Software Developer’s Manuals" href="http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html ">3 Volume Set of Intel® 64 and IA-32 Architectures Software Developer’s Manuals</a>
+
+[2] <a title="Application Binary Interface for   the ARM Architecture" href="http://infocenter.arm.com/help/topic/com.arm.doc.ihi0036b/IHI0036B_bsabi.pdf">Application Binary Interface for the ARM Architecture</a>

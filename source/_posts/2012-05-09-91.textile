@@ -1,0 +1,40 @@
+---
+layout: post
+title: 'iPhoneOS浅浅浅浅析（2）'
+date: 2012-5-9
+wordpress_id: 91
+permalink: /blogs/91
+comments: true
+---
+<div>继续（1）的计划，我在MacOS上需要一个反汇编工具。我想比较一下gcc和llvm-gcc编译出来的东西到底有何不同。于是我进行了如下的尝试：</div>
+<div>1）Port binutils to MacOS</div>
+<div>     很不幸的是，由于我对xcode这个工具还不是很熟悉，而我又是借助xcode来编译的，所以在我configure的时候就失败了。然后我一点点的尝试修改binutils的源码，可是越改错误越多。当然，错误的原因肯定不是因为binutils，很可能是因为我没有使用好xcode。</div>
+<div>2）单独编译objdump如何？</div>
+<div>     我简单看了下objdump的源码，就一个源文件objdump.c, 看样子不是很复杂，这个源文件的代码行是3600行。但是由于用到了binutils的一些公共数据结构，比如bfd，所以肯定是不能单独编译的，需要和其他源文件一起编译才可以，如果将objdump.c所需要的头文件源文件给剥离出来制作一个Makefile，最终编译生成一个objdump，简单的分析一下它的工作量，objdump.c包含的头文件如下：</div>
+<div><a href="http://www.laoar.net/wp-content/uploads/2012/05/includd2.png"><img class="alignnone size-full wp-image-105" title="includd" src="http://www.laoar.net/wp-content/uploads/2012/05/includd2.png" alt="" width="334" height="580" /></a></div>
+<div><img src="file:///Users/apple/Library/Application%20Support/Evernote/data/101370/content/p34/94a31eed30c08bdae9d9f757b533bd4d.png" alt="" name="en-media:image/png:94a31eed30c08bdae9d9f757b533bd4d:none:none" /></div>
+<div>     如果要剥离objdump，肯定是行得通的，但是工作量应该会很大。</div>
+<div>3）xcode有木有？</div>
+<div>     答案是：NO。 至少我没有找到。 xcode太过封闭了，似乎只能编译cococa框架的程序，如果编译一个简单的helloworld都不知道该怎么搞。VC也没有这么变态啊。</div>
+<div> </div>
+<div>于是这件事就被搁置了，再加上平实工作忙，周末又没有时间研究，所以一直脱啊脱啊脱。后来，我发现gdb也是可以反汇编可执行文件的！</div>
+<div>ok。那就借助gdb来搞吧。下面是一些很粗略的分析。只是比较gcc和llvm-gcc的反汇编代码到底有和不同。至于二者孰优孰劣，在以后会继续研究的。</div>
+<div> </div>
+<div>对于一个简单的helloworld程序，</div>
+<div>gcc编译生成的a.out的反汇编代码如下:</div>
+<div><a href="http://www.laoar.net/wp-content/uploads/2012/05/23.png"><img class="alignnone size-full wp-image-107" title="2" src="http://www.laoar.net/wp-content/uploads/2012/05/23.png" alt="" width="833" height="416" /></a></div>
+<div>llvm-gcc编译生成的a.out的反汇编代码如下：</div>
+<div><a href="http://www.laoar.net/wp-content/uploads/2012/05/5.png"><img class="alignnone size-full wp-image-110" title="5" src="http://www.laoar.net/wp-content/uploads/2012/05/5.png" alt="" width="837" height="592" /></a></div>
+<div>     可以发现，gcc编译的可执行文件的main函数部分有7条指令，而llvm-gcc编译出来的可执行文件的main函数部分有13条指令。两个最大的区别是对return 0;这条语句的处理不同。函数的返回值都是放在eax(或ax)这个寄存器中。gcc只是简单的mov 0 to eax就搞定了这件事。而llvm-gcc则处理的很复杂：先是将0放入rbp-8这个位置，再将rbp-8里面的值（即0）放入ecx，然后将ecx的值放入rbp-4，接着将eax的值放入放入rbp-0xc，最后将rbp-4的值放入eax，其效果也是将0放入eax。</div>
+<div>     mov rsp to rbp的作用是，在函数开始执行的时候，将函数的栈底和栈顶赋值为相同。llvm-gcc多了条指令，将rsp指针减去0x10，即空出16个字节，空出这些字节的作用就是前面所属的针对mov 0 to eax的一系列操作。至于为什么将return 0 处理的这么复杂， 其作用到底何在，现在还没有搞的很明白，隐约的觉得是为了保护eax寄存器中原来的值（原来的值不就是传递给该函数的参数嘛，有必要保护嘛？）</div>
+<div> </div>
+<div>再来看一组涉及到计算的对比：</div>
+<div>gcc:</div>
+<div><a href="http://www.laoar.net/wp-content/uploads/2012/05/3.jpg"><img class="alignnone size-full wp-image-100" title="3" src="http://www.laoar.net/wp-content/uploads/2012/05/3.jpg" alt="" width="600" height="661" /></a></div>
+<div><img src="file:///Users/apple/Library/Application%20Support/Evernote/data/101370/content/p34/b5835493cc65c9133d286a249a18a492.jpeg" alt="" name="en-media:image/jpeg:b5835493cc65c9133d286a249a18a492:none:none" /></div>
+<div>llvm-gcc:</div>
+<div><img src="file:///Users/apple/Library/Application%20Support/Evernote/data/101370/content/p34/52d274c41d5bd723f463772aabf35a87.png" alt="" name="en-media:image/png:52d274c41d5bd723f463772aabf35a87:none:none" /></div>
+<div> <a href="http://www.laoar.net/wp-content/uploads/2012/05/42.png"><img class="alignnone size-full wp-image-99" title="4" src="http://www.laoar.net/wp-content/uploads/2012/05/42.png" alt="" width="616" height="682" /></a></div>
+<div>     llvm-gcc同样比gcc要执行更多的指令，还有一个区别是，在计算过程中llvm-gcc值用到了eax这一个寄存器，而gcc用到了eax， edx两个寄存器。</div>
+<div> </div>
+<div>     更多深入的分析，稍后继续...</div>

@@ -1,0 +1,445 @@
+---
+layout: post
+title: '2012 memory'
+date: 2013-1-1
+wordpress_id: 227
+permalink: /blogs/227
+comments: true
+---
+<!--?xml version="1.0" encoding="UTF-8" standalone="no"?-->仅统计记录在案的，不过我看过的书和电影一般都会记录在豆瓣上，听过的音乐则比较多，只统计iPod里面听的次数较多的音乐。
+<div></div>
+<h1><strong>一 书 （13本）</strong></h1>
+<div>
+<table width="100%" border="1" cellspacing="0" cellpadding="2">
+<tbody>
+<tr>
+<td valign="top">书名</td>
+<td valign="top">豆瓣评分</td>
+<td valign="top">我的评分</td>
+</tr>
+<tr>
+<td valign="top">佛祖在一号线</td>
+<td valign="top">8.4</td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top">linux内核编程</td>
+<td valign="top">无</td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top">unix环境高级编程</td>
+<td valign="top">9.5</td>
+<td valign="top">5星</td>
+</tr>
+<tr>
+<td valign="top">1949年后的梁漱溟（港版）</td>
+<td valign="top">7.3</td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top">捉虫日记</td>
+<td valign="top">无</td>
+<td valign="top">4星</td>
+</tr>
+<tr>
+<td valign="top">冰与火之歌（卷一）</td>
+<td valign="top">9.4</td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top">大话处理器</td>
+<td valign="top">6.9</td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top">大江大海1949</td>
+<td valign="top">无</td>
+<td valign="top">5星</td>
+</tr>
+<tr>
+<td valign="top">linux/unix设计思想</td>
+<td valign="top">7.7</td>
+<td valign="top">4星</td>
+</tr>
+<tr>
+<td valign="top">底层中国的缓慢革命</td>
+<td valign="top">无</td>
+<td valign="top">4星</td>
+</tr>
+<tr>
+<td valign="top">影像中的文革农村</td>
+<td valign="top">无</td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top">这样事和谁细讲</td>
+<td valign="top">无</td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top">技术元素</td>
+<td valign="top">8.4</td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top"></td>
+<td valign="top"></td>
+<td valign="top"></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div>5本技术类书籍，8本非技术类书籍（其中有5本是禁书）。</div>
+<div></div>
+<div><!--?xml version="1.0" encoding="UTF-8" standalone="no"?-->
+<h1><strong>二 影（59部）</strong></h1>
+<div>
+<table width="100%" border="1" cellspacing="0" cellpadding="2">
+<tbody>
+<tr>
+<td valign="top">电影/电视名</td>
+<td valign="top">豆瓣评分</td>
+<td valign="top">我的评分</td>
+</tr>
+<tr>
+<td valign="top">亡命驾驶</td>
+<td valign="top"><span style="color: #97248d;">7.1</span></td>
+<td valign="top">4星</td>
+</tr>
+<tr>
+<td valign="top">三傻大闹宝莱坞</td>
+<td valign="top"><span style="color: #053df5;">9.1</span></td>
+<td valign="top">4星</td>
+</tr>
+<tr>
+<td valign="top">93航班</td>
+<td valign="top"><span style="color: #97248d;">7.6</span></td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top">飞天大盗（第一季）</td>
+<td valign="top"><span style="color: #ac784a;">8.9</span></td>
+<td valign="top">4星</td>
+</tr>
+<tr>
+<td valign="top">锅匠、裁缝、士兵、间谍</td>
+<td valign="top"><span style="color: #97248d;">7.8</span></td>
+<td valign="top">5星</td>
+</tr>
+<tr>
+<td valign="top">总统杀局</td>
+<td valign="top"><span style="color: #ff9132;">6.9</span></td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top">点球成金</td>
+<td valign="top"><span style="color: #ac784a;">8.1</span></td>
+<td valign="top">4星</td>
+</tr>
+<tr>
+<td valign="top">夺命金</td>
+<td valign="top"><span style="color: #97248d;">7.1</span></td>
+<td valign="top">5星</td>
+</tr>
+<tr>
+<td valign="top">谍中碟4</td>
+<td valign="top"><span style="color: #ac784a;">8.1</span></td>
+<td valign="top">4星</td>
+</tr>
+<tr>
+<td valign="top">龙门飞甲</td>
+<td valign="top"><span style="color: #ff9132;">6.8</span></td>
+<td valign="top">2星</td>
+</tr>
+<tr>
+<td valign="top">我愿意</td>
+<td valign="top"><span style="color: #ff1e18;">5.6</span></td>
+<td valign="top">2星</td>
+</tr>
+<tr>
+<td valign="top">齐达内：21世纪的肖像</td>
+<td valign="top"><span style="color: #97248d;">7.4</span></td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top">战马</td>
+<td valign="top"><span style="color: #97248d;">7.8</span></td>
+<td valign="top">4星</td>
+</tr>
+<tr>
+<td valign="top">抢钱大作战</td>
+<td valign="top"><span style="color: #97248d;">7.5</span></td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top">胡佛</td>
+<td valign="top"><span style="color: #97248d;">7.0</span></td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top">一次别离</td>
+<td valign="top"><span style="color: #ac784a;">8.8</span></td>
+<td valign="top">4星</td>
+</tr>
+<tr>
+<td valign="top">兵临城下之决战要塞</td>
+<td valign="top"><span style="color: #97248d;">7.6</span></td>
+<td valign="top">2星</td>
+</tr>
+<tr>
+<td valign="top">异星战场</td>
+<td valign="top"><span style="color: #ff9132;">6.0</span></td>
+<td valign="top">1星</td>
+</tr>
+<tr>
+<td valign="top">晚秋</td>
+<td valign="top"><span style="color: #ff9132;">6.6</span></td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top">春娇与志明</td>
+<td valign="top"><span style="color: #97248d;">7.3</span></td>
+<td valign="top">4星</td>
+</tr>
+<tr>
+<td valign="top">规则改变</td>
+<td valign="top"><span style="color: #ac784a;">8.0</span></td>
+<td valign="top">4星</td>
+</tr>
+<tr>
+<td valign="top">十加十</td>
+<td valign="top"><span style="color: #97248d;">7.0</span></td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top">桃姐</td>
+<td valign="top"><span style="color: #ac784a;">8.3</span></td>
+<td valign="top">5星</td>
+</tr>
+<tr>
+<td valign="top">超级战舰</td>
+<td valign="top"><span style="color: #ff9132;">6.5</span></td>
+<td valign="top">1星</td>
+</tr>
+<tr>
+<td valign="top">赛德克巴莱（上）</td>
+<td valign="top"><span style="color: #ac784a;">8.7</span></td>
+<td valign="top">4星</td>
+</tr>
+<tr>
+<td valign="top">复仇者联盟</td>
+<td valign="top"><span style="color: #ac784a;">8.0</span></td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top">赛德克巴莱（下）</td>
+<td valign="top"><span style="color: #ac784a;">8.4</span></td>
+<td valign="top">5星</td>
+</tr>
+<tr>
+<td valign="top">赛德克巴莱（大陆版）</td>
+<td valign="top"><span style="color: #ac784a;">8.5</span></td>
+<td valign="top">5星</td>
+</tr>
+<tr>
+<td valign="top">黄金大劫案</td>
+<td valign="top"><span style="color: #ff9132;">6.7</span></td>
+<td valign="top">2星</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div>
+<table width="100%" border="1" cellspacing="0" cellpadding="2">
+<tbody>
+<tr>
+<td valign="top">北京爱情故事</td>
+<td valign="top"><span style="color: #97248d;">7.3</span></td>
+<td valign="top">1星</td>
+</tr>
+<tr>
+<td valign="top">马达加斯加3</td>
+<td valign="top"><span style="color: #ac784a;">8.3</span></td>
+<td valign="top">5星</td>
+</tr>
+<tr>
+<td valign="top">画皮2</td>
+<td valign="top"><span style="color: #ff1e18;">5.7</span></td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top">抓住外国佬</td>
+<td valign="top"><span style="color: #97248d;">7.1</span></td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top">搜索</td>
+<td valign="top"><span style="color: #97248d;">7.1</span></td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top">突袭</td>
+<td valign="top"><span style="color: #97248d;">7.4</span></td>
+<td valign="top">4星</td>
+</tr>
+<tr>
+<td valign="top">神探亨特张</td>
+<td valign="top"><span style="color: #ff9132;">6.5</span></td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top">慕尼黑</td>
+<td valign="top"><span style="color: #97248d;">7.6</span></td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top">麦兜当当伴我心</td>
+<td valign="top"><span style="color: #ac784a;">8.3</span></td>
+<td valign="top">5星</td>
+</tr>
+<tr>
+<td valign="top">精英部队2</td>
+<td valign="top"><span style="color: #ac784a;">8.8</span></td>
+<td valign="top">4星</td>
+</tr>
+<tr>
+<td valign="top">麦兜故事</td>
+<td valign="top"><span style="color: #ac784a;">8.5</span></td>
+<td valign="top">5星</td>
+</tr>
+<tr>
+<td valign="top">普罗米修斯</td>
+<td valign="top"><span style="color: #97248d;">7.1</span></td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top">蝙蝠侠：黑暗骑士崛起</td>
+<td valign="top"><span style="color: #ac784a;">8.4</span></td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top">浪潮</td>
+<td valign="top"><span style="color: #ac784a;">8.7</span></td>
+<td valign="top">4星</td>
+</tr>
+<tr>
+<td valign="top">飓风营救</td>
+<td valign="top"><span style="color: #ac784a;">8.1</span></td>
+<td valign="top">4星</td>
+</tr>
+<tr>
+<td valign="top">飓风营救2</td>
+<td valign="top"><span style="color: #ff9132;">6.4</span></td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top">两杆大烟枪</td>
+<td valign="top"><span style="color: #053df5;">9.1</span></td>
+<td valign="top">5星</td>
+</tr>
+<tr>
+<td valign="top">从海底出击</td>
+<td valign="top"><span style="color: #ac784a;">8.9</span></td>
+<td valign="top">5星</td>
+</tr>
+<tr>
+<td valign="top">谍影重重4</td>
+<td valign="top"><span style="color: #ff9132;">6.7</span></td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top">英国病人</td>
+<td valign="top"><span style="color: #ac784a;">8.4</span></td>
+<td valign="top">4星</td>
+</tr>
+<tr>
+<td valign="top">触不可及</td>
+<td valign="top"><span style="color: #053df5;">9.0</span></td>
+<td valign="top">4星</td>
+</tr>
+<tr>
+<td valign="top">莫扎特传</td>
+<td valign="top"><span style="color: #ac784a;">8.6</span></td>
+<td valign="top">4星</td>
+</tr>
+<tr>
+<td valign="top">汉密尔顿：国家利益</td>
+<td valign="top"><span style="color: #ff9132;">6.5</span></td>
+<td valign="top">5星</td>
+</tr>
+<tr>
+<td valign="top">泰迪熊</td>
+<td valign="top"><span style="color: #97248d;">7.0</span></td>
+<td valign="top">4星</td>
+</tr>
+<tr>
+<td valign="top">加菲猫</td>
+<td valign="top"><span style="color: #97248d;">7.4</span></td>
+<td valign="top">4星</td>
+</tr>
+<tr>
+<td valign="top">少年派的奇幻漂流</td>
+<td valign="top"><span style="color: #053df5;">9.1</span></td>
+<td valign="top">4星</td>
+</tr>
+<tr>
+<td valign="top">我在伊朗长大</td>
+<td valign="top"><span style="color: #ac784a;">8.7</span></td>
+<td valign="top">4星</td>
+</tr>
+<tr>
+<td valign="top">寒战</td>
+<td valign="top"><span style="color: #97248d;">7.5</span></td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top">人在囧途之泰囧</td>
+<td valign="top"><span style="color: #97248d;">7.9</span></td>
+<td valign="top">3星</td>
+</tr>
+<tr>
+<td valign="top">车轮不息</td>
+<td valign="top"><span style="color: #053df5;">9.2</span></td>
+<td valign="top">5星</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div></div>
+<div>59部电影中，</div>
+<div>豆瓣评分超过9分的：5部</div>
+<div>豆瓣评分8~9的： 21部</div>
+<div>豆瓣评分7~8的：22部</div>
+<div>豆瓣评分6~7的：10部</div>
+<div>豆瓣评分5~6的：2部（这两部都是在影院看的）</div>
+<div>最低分：我愿意（5.6）</div>
+<div>最高分：车轮不息（9.2）</div>
+<div></div>
+<div></div>
+<div>我的评分：</div>
+<div>5星： 12部</div>
+<div>4星： 21部</div>
+<div>3星： 20部</div>
+<div>2星： 4部</div>
+<div>1星： 3部（两部在影院看的科幻片，1部电视剧）</div>
+<div></div>
+<div>在影院看的：20部</div>
+&nbsp;
+<div></div>
+<h1><strong>三 音（Top39）</strong></h1>
+<div><a href="http://www.laoar.net/wp-content/uploads/2013/01/1712d7866738b2a62065cb6d51d446a41.png"><img class="aligncenter size-full wp-image-229" title="1712d7866738b2a62065cb6d51d446a4" src="http://www.laoar.net/wp-content/uploads/2013/01/1712d7866738b2a62065cb6d51d446a41.png" alt="" width="981" height="607" /></a></div>
+<div><a href="http://www.laoar.net/wp-content/uploads/2013/01/7256253a68035639b20186989ef670dc.png"><img class="aligncenter size-full wp-image-230" title="7256253a68035639b20186989ef670dc" src="http://www.laoar.net/wp-content/uploads/2013/01/7256253a68035639b20186989ef670dc.png" alt="" width="968" height="425" /></a></div>
+</div>
+<div></div>
+<div><!--?xml version="1.0" encoding="UTF-8" standalone="no"?-->
+<div>这39首歌曲中：</div>
+<div>纯音乐：20首</div>
+<div>摇滚： 8首</div>
+<div></div>
+<div>影视原声：6首</div>
+<div></div>
+<div>粤语：3首</div>
+<div>国语：3首</div>
+<div>英语：11首</div>
+</div>

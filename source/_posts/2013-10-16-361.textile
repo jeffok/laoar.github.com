@@ -1,0 +1,72 @@
+---
+layout: post
+title: '三言两语聊Kernel：atomic '
+date: 2013-10-16
+wordpress_id: 361
+permalink: /blogs/361
+comments: true
+---
+atomic的意思是原子，那么原子操作该怎么来理解？
+
+<a href="http://www.kerneltravel.net/downloads/UnderstandLinuxKernel2nd.pdf">《Understading the Linux Kernel(2nd Section)》</a>的解释是，“操作是单个指令执行，中间不能中断，且避免其他CPU访问同一存储单元”。其实这样说的很不是清楚，会让人费解。我对于原子操作的理解是这样的，说白了，原子操作的目的是，我在对某个地址操作的过程中，这个地址空间里面的数据不会被其他的东西给修改。我们知道，对于CPU而言，它的最小执行单元就是一条指令，指令在流水线（取指／译码／执行等）线执行的过程是不会被打断的，而在两条指令间是可以被打断的，即，程序员的意思是让CPU执行完指令A就去执行指令B，但是CPU在执行完指令A后就可能会被其他东西打断而没有去执行指令B，比如被中断打断；除了被打断，还有可能会被别的CPU给改写数据。原子操作要做的事就是，如何保证在在这些情况下依然可以实现我们前面说的那个目的。
+
+先从atomic的数据结构来说起。看下<a href="http://lxr.oss.org.cn/source/include/linux/types.h?a=mips#L177">linux内核对于atomic type的定义</a>：
+<p style="padding-left: 60px;">typedef struct {int <a href="http://lxr.oss.org.cn/ident?a=mips;i=counter">counter</a>; } <a href="http://lxr.oss.org.cn/ident?a=mips;i=atomic_t">atomic_t</a>;
+typedef struct {long <a href="http://lxr.oss.org.cn/ident?a=mips;i=counter">counter</a>; } <a href="http://lxr.oss.org.cn/ident?a=mips;i=atomic64_t">atomic64_t</a>;</p>
+看到这个定义，想必你的第一感一定是，为什么要定义成结构体，而不是直接定义成：
+<p style="padding-left: 60px;">typedef int atomic_t: ?</p>
+这样定义有什么好处吗，我可以定义成int吗？
+
+我们再来看下freebsd对于atomic_t的定义，很遗憾的是，<a href="https://github.com/freebsd/freebsd/blob/master/sys/mips/include/atomic.h">较新的freebsd源码已经看不到atomic_t的定义了，原子操作都是直接使用volatile uin32_t。 </a> 。对于较老版本的freebsd，它是这样定义atomic_t的：
+<p style="padding-left: 60px;">typedef volatile int aotmic32_t.
+typedef volatile long long atomic64_t;</p>
+ All right, freebsd和linux确实看起来是两个世界，两帮天才各实现自己的东西，都觉得自己的实现是好的。
+
+我举freebsd对于atomic_t的定义，是为了说明，直接使用typedef int atomic_t不是不可以，一样可以实现要做的事，从语言技巧的角度来看，定义成struct跟不定义成struct没有什么区别。那，为什么linux要定义成一个结构体哪？
+
+再来看下<a href="http://lxr.oss.org.cn/source/Documentation/atomic_ops.txt">linux kernel atomic的maintainer对此的解释</a>：
+
+<em>"The atomic_t type should be defined as a signed integer. Also, it should be made opaque such that any kind of cast to a normal C integer type will fail.  "</em>
+
+他说的倒是很严重的样子，“any kind of cast to a normal C int type will fail”，其实就是说，你丫别随便操作atomic_t这个类型，又是类型转换又是直接操作counter，出了事别怪我丫没有提醒你，你要使用atomic_t 这样类型，就必须得通过我给你提供的一系列atomic interface，我之所以费那么大劲用个结构体来把它给封装起来就是为了防止你乱用。 所以，这句话完全等价于:"hey, you guy, it is my territery". 可以看出，定义成struct代表了该<span style="color: #0000ff;">作者的设计理念，即：一起操作都要通过接口，别走捷径</span>。所以内核开发者切记直接使用atomic_data_p-&gt;counter，这是没有理解作者的设计意图，应该要atomic_read(atomic_data_p)这样来用。
+
+解释完了struct，再来看下volatile。
+
+想必大家都知道，volatile是告诉编译器的指令，让编译器编译的时候别做任何优化，就按照程序员的意图来，不要为了适应机器而改变什么。 该maintainer接下来又解释了为什么没有volatile：
+
+<em>Historically, counter has been declared volatile.  This is now discouraged. See Documentation/volatile-considered-harmful.txt for the complete rationale.</em>
+
+之所以去掉volatile, Jonathan Corbet先生的解释是,没有必要用volatile,因为它对性能的损害太大了,在必要的地方用barrier()就可以了.  David S. Miller相信了Corbet的话, 正所谓艺高人胆大,于是三下五除二的把atomic.h里面的volatile都给去掉了,然后在必要的地方加了barrier. 不过freebsd guys没有听信Corbet这一套,而依旧很稳妥的在所有的地方都加着volatile.
+
+在这里我解释下volatile和barrier的区别, volatile是用来限制编译器的,它告诉编译器别自作聪明的调整代码或加或减代码来谋取性能,barrier则是限制cpu的,它告诉cpu要按照二进制的指令顺序去执行不要去搞一些乱序来谋求性能. 二者的杀伤力自然不一样, volatile显然更威猛一些.  当然barrier也细分了一些小弟来干不同的事,毕竟它依然对性能有很大的伤害,比如有些是防止指令乱序的,有些是防止对内存访问乱序的.
+
+说完了数据结构，接着看下具体的操作。以mips为例来说明，感觉mips设计的挺优雅的：）
+
+我们知道，一条指令是不会被打断的，自然对于一条指令就能够搞定的事情，我们是没有必要费劲去考虑它的原子性的，比如读和写，都可以用一条指令来完成，所以atomic_read和atomic_write会写成这个样子：
+<p style="padding-left: 60px;">#define atomic_read(v) ((v)-&gt;counter)
+#define atomic_write(v, i) ((v)-&gt;counter = i)</p>
+搞成这个样子，就是我前面说的，这是作者的理念：一切操作通过接口。
+
+&nbsp;
+
+MIPS是RISC架构, RISC架构都是load/store Architecture,  即它对于内存的读是通过load，写是通过strore。显然，对于这种架构，是不能够在内存地址间传递数据的，必须要通过寄存器来进行，那么指令的操作数显然不能包含两个不同的地址。比如我给某个地址里面的值加1， 那就得首先把这个地址里面的数据load到寄存器，然后给寄存器加1，再把该值store到那个内存地址。 于是问题就来了，这个add操作涉及到3条指令，在指令间就可能会被中断打断，也可能在store之前被其他的cpu给抢先一步改了这个内存里面的值。于是，就有了mips的<a href="http://en.wikipedia.org/wiki/Load-link/store-conditional">ll/sc</a>这个指令组合，ll/sc这个指令组合通过下面这段代码来保证对内存访问的原子性：
+<p style="padding-left: 60px;">1:
+ll rt, offset(base)
+addi rt, rt, 1
+sc rt, offset(base)
+beqz rt, 1b</p>
+    首先来解释下，它是怎么处理被中断打断的情况的。
+
+mips为了处理ll/sc指令被中断打断的情况，专门搞了一个flag，叫做<a href="http://www.cs.cornell.edu/courses/cs3410/2013sp/MIPS_Vol2.pdf">LLbit</a>，这个flag对于程序员是不可见的，即程序员无法操作该flag。 当执行ll指令的时候，cpu会把LLbit给置为1,然后在执行sc指令的时候如果该bit依然为1,就认为操作的这个内存空间没有被改写，然后store新值进去，如果sc的时候发现该bit变为了0,那么就认为操作的内存空间在ll执行后sc执行前被改写了，此时sc就不往该内存空间更新新值。 中断返回时会把该bit给清零，由此来确保如果ll/sc之间被中断打断，那么就要重新ll（beqz指令就是做这个事的）。
+
+然后来看下它是怎么处理多处理同时操作同一个内存地址的情况的。
+
+为了处理这种情况，mips又专门搞了个寄存器，叫做<a href="http://www.cs.cornell.edu/courses/cs3410/2013sp/MIPS_Vol3.pdf">LLAddr</a>，它是一个协处理器的寄存器。当cpu执行ll指令的时候，会把ll的地址给保存在自己的协处理器寄存器LLAddr里面，然后cpu就会监控该地址，看是否在ll/sc之间别的处理器会写该地址，如果别的cpu写了该地址，就把LLbit给清零，于是接下来sc失败（即不往内存地址store数据，同时赋rt为0），再去重新ll（beqz跳转到前面的ll）。 Well，问题来了，假如两个cpu都执行ll/sc, 而且是操作的同一个内存地址，会出现什么情况？ 我们知道，在ll/sc之间的指令是不会去写这个内存地址的（否则，还要sc干嘛），那么总有一个cpu会首先执行到sc，第一个执行sc指令的cpu会成功的stroe进去新值，另外一个cpu发现自己LLAddr被别人改写了，于是将自己的LLbit置为0,那么sc失败，重新来过。你也许还会继续钻牛角尖，这俩CPU赶巧了，同时执行sc了，那会发生什么？很遗憾的是，mips manual里没有说这种情况，只说了这么一句话：
+
+<em>“Executing LL on one processor does not cause an action that, by itself, causes an SC for the same block to fail on another processor.”</em>
+
+这句话的意思就是我前面说的，两个cpu同时ll/sc一个内存地址，sc的时候会让另外一个cpu的sc失败，而自己sc成功。我找遍了各种资料，也没有见详细说明两个cpu同时ll/sc同一个内存地址时，sc指令又碰巧同时执行了，到底会发生什么。我觉得，我们可以这样想，就像世界杯踢点球一样，要是俩决赛的队伍到了最后要踢点球了，而每一个球员又碰巧都罚进了，那岂不是这俩队就一直射到世界末日？Hmm… 相信我，总有人会成为倒霉蛋的。
+
+&nbsp;
+
+P.S.: 写这篇blog，花了一些精力在找各种链接上，anyway， 治学要严谨。 我之前的领域是linux kernel，从未看过freebsd，现在一对比freebsd，发现这两者的区别确实很有趣。感觉这就像为什么很多人喜欢旅游一样，虽然旅游归来又继续朝九晚五的按步就班，看似没有任何改变，但终究两个地域的对比会对你有所影响，只是没有那么明显而已，这是一个量变到质变的过程，没有人会一下子成为千万富翁的，除非你去抢银行。 所以，我们在一个地方呆久了，就应该出去走一走，看看外面是什么样子。在一个公司或者一个领域也是这样，抬起头来看看外面，否则就像世外桃源似的，乃不知有汉，无论魏晋。不过这样未尝不是件好事，北朝鲜的人民生活就很幸福，谁说不是哪。关键是，就像李国柱大牛（注：华为公司一位德高望重的前辈）说的，看你自己追求的是什么。
