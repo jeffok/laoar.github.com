@@ -1,6 +1,6 @@
 ---
 layout: post
-title: '在高铁上聊Kernel：what's the fucking ABI(程序二进制接口)?'
+title: '在高铁上聊Kernel：what is the fucking ABI(程序二进制接口)?'
 date: 2013-9-2
 wordpress_id: 316
 permalink: /blogs/316
