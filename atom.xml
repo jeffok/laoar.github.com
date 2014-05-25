@@ -4,7 +4,7 @@
   <title><![CDATA[The Complaint of laoar]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2014-05-25T10:23:21+08:00</updated>
+  <updated>2014-05-25T12:30:55+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -525,10 +525,10 @@ linux的kgdb可以分析crash dump，也可以对内核进行live debug。</li>
   </entry>
   
   <entry>
-    <title type="html"><![CDATA[316]]></title>
-    <link href="http://laoar.github.io/blog/2013/09/02/316/"/>
+    <title type="html"><![CDATA[在高铁上聊Kernel：what Is the Fucking ABI(程序二进制接口)?]]></title>
+    <link href="http://laoar.github.io/blogs/316"/>
     <updated>2013-09-02T00:00:00+08:00</updated>
-    <id>http://laoar.github.io/blog/2013/09/02/316</id>
+    <id>http://laoar.github.io/blogs/316</id>
     <content type="html"><![CDATA[<p>P.S.:在高铁上写完的这篇文章。</p>
 <p>在定义ABI之前，先看下API，对于API我们更熟悉一些。 二者的对比会帮助我们来理解ABI。</p>
 <p>API是Application Programming Interface的缩写，它的意思是程序编程接口。 一个API是不同代码片段的连接纽带。它定义了一个函数的参数，函数的返回值，以及一些属性比如继承是否被允许。 因此API是用来约束编译器的：一个API是给编译器的一些指令，它规定了源代码可以做以及不可以做哪些事。在说到API的时候，也会涉及到函数的条件，行为以及出错环境。从这个角度看， 一个API也可以看作是被人使用：一个API是给程序员的一些指令，它规定了函数需要什么以及会做什么。</p>

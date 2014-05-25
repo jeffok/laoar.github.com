@@ -1,0 +1,229 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>在高铁上聊Kernel：what Is the Fucking ABI(程序二进制接口)? - The Complaint of laoar</title>
+  <meta name="author" content="Yafang Shao">
+
+  
+  <meta name="description" content="P.S.:在高铁上写完的这篇文章。
+在定义ABI之前，先看下API，对于API我们更熟悉一些。 二者的对比会帮助我们来理解ABI。
+API是Application Programming Interface的缩写，它的意思是程序编程接口。 一个API是不同代码片段的连接纽带。它定义了一个函数的参数 &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://laoar.github.io/blogs/316">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="The Complaint of laoar" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">The Complaint of laoar</a></h1>
+  
+    <h2>纯属歪歪</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:laoar.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">在高铁上聊Kernel：what Is the Fucking ABI(程序二进制接口)?</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-02T00:00:00+08:00" pubdate data-updated="true">Sep 2<span>nd</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>P.S.:在高铁上写完的这篇文章。</p>
+<p>在定义ABI之前，先看下API，对于API我们更熟悉一些。 二者的对比会帮助我们来理解ABI。</p>
+<p>API是Application Programming Interface的缩写，它的意思是程序编程接口。 一个API是不同代码片段的连接纽带。它定义了一个函数的参数，函数的返回值，以及一些属性比如继承是否被允许。 因此API是用来约束编译器的：一个API是给编译器的一些指令，它规定了源代码可以做以及不可以做哪些事。在说到API的时候，也会涉及到函数的条件，行为以及出错环境。从这个角度看， 一个API也可以看作是被人使用：一个API是给程序员的一些指令，它规定了函数需要什么以及会做什么。</p>
+<p>ABI是Application Binary Interface的缩写，它的意思是程序二进制接口。 一个ABI是不同二进制片段的连接纽带。 它定义了函数被调用的规则：参数在调用者和被调用者之间如何传递，返回值怎么提供给调用者，库函数怎么被应用，以及程序怎么被加载到内存。 因此ABI是用来约束链接器的：一个ABI是无关的代码如何在一起工作的规则。 一个ABI也是不同进程如何在一个系统中共存的规则。 举例来说，在Linux系统中，一个ABI可能定义信号如何被执行，进程如何调用syscall，使用大端还是小端，以及栈如何增长。从这个角度看，一个API是用来约束在一个特定架构上操作系统的一系列规则，</p>
+<p>举个例子，在ARM 32bit架构上，对于如下代码片段而言：<br />
+<span style="color: #993300;">    void foo_a(void)</span><br />
+<span style="color: #993300;">    {</span><br />
+<span style="color: #993300;">        int a<sup class="footnote" id="fnr10"><a href="#fn10">10</a></sup>;</span><br />
+<span style="color: #993300;">        int val;</span><br />
+<span style="color: #993300;">        val = foo_b(a<sup class="footnote" id="fnr0"><a href="#fn0">0</a></sup>, a<sup class="footnote" id="fnr1"><a href="#fn1">1</a></sup>, a<sup class="footnote" id="fnr2"><a href="#fn2">2</a></sup>, a<sup class="footnote" id="fnr3"><a href="#fn3">3</a></sup>, a<sup class="footnote" id="fnr4"><a href="#fn4">4</a></sup>, a<sup class="footnote" id="fnr5"><a href="#fn5">5</a></sup>, a<sup class="footnote" id="fnr6"><a href="#fn6">6</a></sup>, a<sup class="footnote" id="fnr7"><a href="#fn7">7</a></sup>, a<sup class="footnote" id="fnr8"><a href="#fn8">8</a></sup>, a<sup class="footnote" id="fnr9"><a href="#fn9">9</a></sup>);</span><br />
+<span style="color: #993300;">    }</span><br />
+那么，参数a<sup class="footnote" id="fnr0"><a href="#fn0">0</a></sup>~a<sup class="footnote" id="fnr3"><a href="#fn3">3</a></sup>会被加载到r0～r3这四个寄存器中，参数a<sup class="footnote" id="fnr4"><a href="#fn4">4</a></sup>~a<sup class="footnote" id="fnr9"><a href="#fn9">9</a></sup>则会压入栈中，且压栈方向是从右至左，即a<sup class="footnote" id="fnr9"><a href="#fn9">9</a></sup>先入栈，a<sup class="footnote" id="fnr4"><a href="#fn4">4</a></sup>最后入栈。foo_b的返回值则会放在r0寄存器中。这就是ABI所约束的规则。</p>
+<p>一个ABI是被kernel／toolchain／架构这三驾马车共同定义的。这三者每一个都必须遵守它。一般，架构规划好标准的ABI，然后操作系统或多或少的采用这些标准，这些细节都会在架构手册里面文档化。</p>
+<p>Ref:</p>
+<p><sup class="footnote" id="fnr1"><a href="#fn1">1</a></sup> <a title="3 Volume Set of Intel® 64 and IA-32 Architectures Software Developer’s Manuals" href="http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html ">3 Volume Set of Intel® 64 and IA-32 Architectures Software Developer’s Manuals</a></p>
+<p><sup class="footnote" id="fnr2"><a href="#fn2">2</a></sup> <a title="Application Binary Interface for   the ARM Architecture" href="http://infocenter.arm.com/help/topic/com.arm.doc.ihi0036b/IHI0036B_bsabi.pdf">Application Binary Interface for the ARM Architecture</a></p></div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Yafang Shao</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-02T00:00:00+08:00" pubdate data-updated="true">Sep 2<span>nd</span>, 2013</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <span>
+  <iframe 
+    width="86" 
+    scrolling="no" 
+    height="16" 
+    frameborder="0" 
+    src=
+      "http://hits.sinajs.cn/A1/weiboshare.html?url=http://laoar.github.io/blogs/316&amp;type=6&amp;language=zh_cn" allowtransparency="true">
+  </iframe>
+  </span>
+  
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blogs/299" title="Previous Post: 三言两语聊Kernel：Busy Waiting or Sleeping？">&laquo; 三言两语聊Kernel：Busy Waiting or Sleeping？</a>
+      
+      
+        <a class="basic-alignment right" href="/blogs/325" title="Next Post: 三言两语聊Kernel：从Linux到FreeBSD">三言两语聊Kernel：从Linux到FreeBSD &raquo;</a>
+      
+    </p>
+  </footer>
+</article>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/05/25/hello-github/">Hello Github</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blogs/501">性能优化：一些很有意思的尝试</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/05/20/test/">Test</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blogs/482">从linux内核里来学习性能优化，和一个例子</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blogs/466">关于struct Hack, 优雅的FreeBSD</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - Yafang Shao -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>
