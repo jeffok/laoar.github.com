@@ -97,3 +97,7 @@ weibo_show: true    # Whether you want your weibo content to be shown
 weibo_pic: true     # Whether you want the pictures in weibo to be shown
 weibo_skin: 10      # Please refer to http://weibo.com/tool/weiboshow
 weibo_share: true
+
+# duoshuo comments
+duoshuo_comments: false 
+duoshuo_short_name: laoar
