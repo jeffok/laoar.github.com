@@ -85,7 +85,7 @@ delicious_count: 3
 
 # Disqus Comments
 disqus_short_name: laoar
-disqus_show_comment_count: true
+disqus_show_comment_count: false 
 
 # Google Analytics
 google_analytics_tracking_id:
@@ -99,5 +99,5 @@ weibo_skin: 10      # Please refer to http://weibo.com/tool/weiboshow
 weibo_share: true
 
 # duoshuo comments
-duoshuo_comments: false 
-duoshuo_short_name: laoar
+#duoshuo_comments: false 
+#duoshuo_short_name: laoar
