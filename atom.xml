@@ -4,7 +4,7 @@
   <title><![CDATA[The Complaint of laoar]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2014-05-29T23:06:18+08:00</updated>
+  <updated>2014-05-31T22:13:51+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -45,7 +45,7 @@ vim -d iamge1.sym image2.sym<br />
 然后我痛苦的发现，这两个符号表竟然有10多万个差异。 这要是一个个的去查，那得查到天荒地老了。<br />
 然而这些差异很多都是符号地址的差异，符号的大小基本都一样的。 所以接下来，我就把image1.sym和image2.<wbr />sym的地址这一列给删除再做比较。<wbr />在vim的visual模式下可以按列删除，<wbr />具体请google，此处不缀述。<br />
 然后问题就稍微简化了些，很快就找到了一个值得怀疑的地方，<wbr />如下图。（为了不泄漏某松柏公司的信息，我对图片做了些处理。<wbr />虽然这些信息可能也无关紧要，不过做人要职业些嘛）<br />
-<a href="http://www.laoar.net/wp-content/uploads/2014/05/Image2.jpg"><img class="aligncenter size-full wp-image-502" alt="Image2" src="http://www.laoar.net/wp-content/uploads/2014/05/Image2.jpg" width="1417" height="169" /></a></p>
+<img src="http://laoar.github.io/images/501.jpg"></p>
 <p>我们可以看到深蓝色的那一行就是两个的差异，<wbr />该符号的大小由0x910增大到了0xaa8，<wbr />共增加了102条指令。于是我验证了下，<wbr />果然是这个差异导致的性能由900Kpps下降到了780Kpp<wbr />s。<br />
 既然知道了是哪里导致性能下降的了，问题就简单了，<wbr />肯定是有办法来解决的。<br />
 不过我要说的，到这里并没有结束，接下来才是关键。事实上，<wbr />这个符号在data path里并不会执行到，也就是说，<wbr />UDP的吞吐量根本就不会执行这个函数，<wbr />但是这个函数的改动又切切实实的导致了性能的下降。<wbr />唯二的可能性就是a)这个符号的改动影响了后续符号的地址，<wbr />导致一些cache line对齐问题，b)这个符号的改动使得critical path里面的函数／数据出现了cache line的冲突。然而由于符号的差异确实太多了，<wbr />而且critical path里面的函数和数据也很多，<wbr />所以我没有太多的时间和精力来查找到底是哪个原因。<wbr />对于b这种可能性相对好验证一些，只要知道了cache line的大小，和组相连的set，就能够知道cache line冲突的单位是set*line_size, 然后以这个值为基本单位来比较相差这个大小的符号即可。<wbr />对于情况a，可能就不太好验证了，因为要排查的东西太多了，<wbr />时间不允许，不过对于这种情况，我们可以有一些预防措施，<wbr />比如使用__attribute__(signed(128))<wbr />来将一些大的数据结构cache line对齐。注意我们将大数据结构cache line对齐并不是说对齐可以提高访问速度，oh god，如果你这么想那就真的是太悲哀了，<wbr />RISC的访问必须是对齐访问，<wbr />CISC的访问可以不对齐访问多花一个cycle。<wbr />这里所说的cache line对齐，是指，避免这个大数据结构占用多个cache line，比如如果这个大数据结构是136字节，<wbr />不对齐的话它完全是有可能占用3个cache line的（假设cache line的大小是128字节），而对齐的话只需要2个cache line。接下来如果我有充足的时间的话，<wbr />我会继续深入的做一下这件事的琢磨，看看能不能发现一些东西。<wbr />当然也可能花费很多时间什么都做不出来。<br />
