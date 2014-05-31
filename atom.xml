@@ -4,7 +4,7 @@
   <title><![CDATA[The Complaint of laoar]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2014-05-31T23:13:16+08:00</updated>
+  <updated>2014-05-31T23:20:30+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -398,7 +398,7 @@ beqz rt, 1b</p><br />
 <p>然后来看下它是怎么处理多处理同时操作同一个内存地址的情况的。</p>
 <p>为了处理这种情况，mips又专门搞了个寄存器，叫做<a href="http://www.cs.cornell.edu/courses/cs3410/2013sp/MIPS_Vol3.pdf">LLAddr</a>，它是一个协处理器的寄存器。当cpu执行ll指令的时候，会把ll的地址给保存在自己的协处理器寄存器LLAddr里面，然后cpu就会监控该地址，看是否在ll/sc之间别的处理器会写该地址，如果别的cpu写了该地址，就把LLbit给清零，于是接下来sc失败（即不往内存地址store数据，同时赋rt为0），再去重新ll（beqz跳转到前面的ll）。 Well，问题来了，假如两个cpu都执行ll/sc, 而且是操作的同一个内存地址，会出现什么情况？ 我们知道，在ll/sc之间的指令是不会去写这个内存地址的（否则，还要sc干嘛），那么总有一个cpu会首先执行到sc，第一个执行sc指令的cpu会成功的stroe进去新值，另外一个cpu发现自己LLAddr被别人改写了，于是将自己的LLbit置为0,那么sc失败，重新来过。你也许还会继续钻牛角尖，这俩CPU赶巧了，同时执行sc了，那会发生什么？很遗憾的是，mips manual里没有说这种情况，只说了这么一句话：</p>
 <p><em>“Executing LL on one processor does not cause an action that, by itself, causes an SC for the same block to fail on another processor.”</em></p>
-<p>这句话的意思就是我前面说的，两个cpu同时ll/sc一个内存地址，sc的时候会让另外一个cpu的sc失败，而自己sc成功。我找遍了各种资料，也没有见详细说明两个cpu同时ll/sc同一个内存地址时，sc指令又碰巧同时执行了，到底会发生什么。我觉得，我们可以这样想，就像世界杯踢点球一样，要是俩决赛的队伍到了最后要踢点球了，而每一个球员又碰巧都罚进了，那岂不是这俩队就一直射到世界末日？Hmm… 相信我，总有人会成为倒霉蛋的。</p>
+<p>这句话的意思就是我前面说的，两个cpu同时ll/sc一个内存地址，sc的时候会让另外一个cpu的sc失败，而自己sc成功。我找遍了各种资料，也没有见详细说明两个cpu同时ll/sc同一个内存地址时，sc指令又碰巧同时执行了，到底会发生什么。我觉得，我们可以这样想，就像世界杯踢点球一样，要是俩决赛的队伍到了最后要踢点球了，而每一个球员又碰巧都罚进了，那岂不是这俩队就一直射到世界末日？Hmm… 相信我，总有人会成为倒霉蛋的。球场上不是有裁判么，CPU也有类似的决策：总线裁决。这种情况下就要靠总线裁决。</p>
 <p>&nbsp;</p>
 <p>P.S.: 写这篇blog，花了一些精力在找各种链接上，anyway， 治学要严谨。 我之前的领域是linux kernel，从未看过freebsd，现在一对比freebsd，发现这两者的区别确实很有趣。感觉这就像为什么很多人喜欢旅游一样，虽然旅游归来又继续朝九晚五的按步就班，看似没有任何改变，但终究两个地域的对比会对你有所影响，只是没有那么明显而已，这是一个量变到质变的过程，没有人会一下子成为千万富翁的，除非你去抢银行。 所以，我们在一个地方呆久了，就应该出去走一走，看看外面是什么样子。在一个公司或者一个领域也是这样，抬起头来看看外面，否则就像世外桃源似的，乃不知有汉，无论魏晋。不过这样未尝不是件好事，北朝鲜的人民生活就很幸福，谁说不是哪。关键是，就像李国柱大牛（注：华为公司一位德高望重的前辈）说的，看你自己追求的是什么。</p>]]></content>
   </entry>
