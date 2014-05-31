@@ -24,7 +24,7 @@ vim -d iamge1.sym image2.sym
 然后我痛苦的发现，这两个符号表竟然有10多万个差异。 这要是一个个的去查，那得查到天荒地老了。
 然而这些差异很多都是符号地址的差异，符号的大小基本都一样的。 所以接下来，我就把image1.sym和image2.<wbr />sym的地址这一列给删除再做比较。<wbr />在vim的visual模式下可以按列删除，<wbr />具体请google，此处不缀述。
 然后问题就稍微简化了些，很快就找到了一个值得怀疑的地方，<wbr />如下图。（为了不泄漏某松柏公司的信息，我对图片做了些处理。<wbr />虽然这些信息可能也无关紧要，不过做人要职业些嘛）
-<a href="http://www.laoar.net/wp-content/uploads/2014/05/Image2.jpg"><img class="aligncenter size-full wp-image-502" alt="Image2" src="http://www.laoar.net/wp-content/uploads/2014/05/Image2.jpg" width="1417" height="169" /></a>
+{% img /images/501.jpg %}
 
 我们可以看到深蓝色的那一行就是两个的差异，<wbr />该符号的大小由0x910增大到了0xaa8，<wbr />共增加了102条指令。于是我验证了下，<wbr />果然是这个差异导致的性能由900Kpps下降到了780Kpp<wbr />s。
 既然知道了是哪里导致性能下降的了，问题就简单了，<wbr />肯定是有办法来解决的。
