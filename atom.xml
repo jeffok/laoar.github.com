@@ -4,7 +4,7 @@
   <title><![CDATA[The Complaint of laoar]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2014-05-31T22:37:44+08:00</updated>
+  <updated>2014-05-31T22:51:39+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -111,8 +111,9 @@ int free_inittext(unsigned long start, unsigned long end);<br />
 <p style="padding-left: 30px;"></p><br />
     好了，言归正传。<br />
 <p style="padding-left: 60px;"></p><br />
-    我们对于struct stack熟知的是下面这种情况。</p>
-<p><a href="http://www.laoar.net/wp-content/uploads/2014/03/1.png"><img class="aligncenter size-full wp-image-468" alt="1" src="http://www.laoar.net/wp-content/uploads/2014/03/1.png" width="645" height="572" /></a>我们定义一个结构体family来记录一个正常家庭的人的年龄，显然对于一个正常家庭来说，爸妈各只有一个，但是孩子有多少就不确定了，所以我们把family的最后一个成员baby定义为了变长数组。对于这种在一个结构体里面最后一个变量是变长数组而且仅有这一个成员是变长数组的情况，我们称之为struct hack。这属于C语言里面的一个trick。<br />
+    我们对于struct stack熟知的是下面这种情况。<br />
+<img src="http://laoar.github.io/images/466.jpg"><br />
+我们定义一个结构体family来记录一个正常家庭的人的年龄，显然对于一个正常家庭来说，爸妈各只有一个，但是孩子有多少就不确定了，所以我们把family的最后一个成员baby定义为了变长数组。对于这种在一个结构体里面最后一个变量是变长数组而且仅有这一个成员是变长数组的情况，我们称之为struct hack。这属于C语言里面的一个trick。<br />
 <p style="padding-left: 30px;"></p><br />
     我这边博客要讨论的不是这种情况，我要说的是我在FreeBSD内核里面看到的一个很有意思的代码，也是一种struct的trick。它起的名字是struct __hack, 所以我就联想到了前面的struc hack ：）<br />
 <p style="padding-left: 30px;"></p><br />
@@ -125,12 +126,12 @@ if  (…)  {<br />
 }</p><br />
 即使里面只有一句话。<br />
 <p style="padding-left: 30px;">然后在来看这个struct __hack。</p><br />
-<a href="http://www.laoar.net/wp-content/uploads/2014/03/2.png"><img class="aligncenter size-full wp-image-469" alt="2" src="http://www.laoar.net/wp-content/uploads/2014/03/2.png" width="769" height="418" /></a>上面这个宏来自FreeBSD内核的sys/sys/taskqueue.h这个头文件。 请注意最后一行的这个struct __hack是不是很奇怪。我第一次看到这个代码的时候也诧异了一阵子，研究了一会才忽然明白，原来这个struct __hack的作用是告诉程序员使用这个宏的时候必须在后面加个“;”, 否则就产生一个编译错误。 由于”strut __hack;”并不是一个完整的结构体，而且在程序里面也不会使用到它，因而编译器在编译的时候会将其自动的给优化掉，不会对程序的体积有任何影响。<br />
+<img src="http://laoar.github.io/images/466-2.jpg"><br />
 <p style="padding-left: 90px;"></p><br />
-<p style="text-align: left;">     任何技术或者技巧的出现都是为了解决一些问题的，那么这里的struct __hack是为了解决什么问题哪？ 其实它是用来告诉程序员这个宏只用作函数声明。我们知道函数什么一般都是下面这个样子：</p><br />
+<p style="text-align: left;">     任何技术或者技巧的出现都是为了解决一些问题的，那么这里的struct __hack是为了解决什么问题哪？ 其实它是用来告诉程序员这个宏只用作函数声明。我们知道函数声明一般都是下面这个样子：</p><br />
 <p style="text-align: left; padding-left: 150px;"><br />
 void foobar(void);</p><br />
-<p style="text-align: left;">这个宏也是为了模拟这种形式。比如：</p><br />
+<p style="text-align: left;">这个宏也是为了模拟这种形式, 当然事实上它仍然是宏定义了一个函数, 这里要模拟，是说，它的函数体在别处。比如：</p><br />
 <p style="text-align: left; padding-left: 150px;">TASKQUEUE_DEFINE_THREAD(kqueue);</p><br />
 <p style="padding-left: 30px;"></p><br />
     总之，这个小小的细节正体现出了FreeBSD所追求的优雅性.<br />
