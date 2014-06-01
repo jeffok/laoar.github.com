@@ -4,7 +4,7 @@
   <title><![CDATA[The Complaint of laoar]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2014-06-01T15:52:06+08:00</updated>
+  <updated>2014-06-01T16:11:03+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -223,9 +223,9 @@ perror(&#8220;malloc&#8221;);  // 原谅我没有缩进<br />
 <table>
 <tbody>
 <tr>
-            <td><b>Name</b></td>
-            <td><b>Author</b></td>
-            <td><b>Rate</b></td>
+            <td><strong>Name</strong></td>
+            <td><strong>Author</strong></td>
+            <td><strong>Rate</strong></td>
 </tr>
 <tr>
             <td>看见</td>
@@ -332,8 +332,8 @@ perror(&#8220;malloc&#8221;);  // 原谅我没有缩进<br />
 		<td>  BBC纪录片 </td>
 	</tr>
 	<tr>
-		<td><i>合计</i></td>
-		<td> <i>49</i>      </td>
+		<td><strong>合计</strong></td>
+		<td> <strong>49</strong>      </td>
 		<td>    </td>
 	</tr>
 </table>
@@ -349,7 +349,7 @@ perror(&#8220;malloc&#8221;);  // 原谅我没有缩进<br />
 <p>&nbsp;</p>
 <p>注：<br />
 <sup class="footnote" id="fnr1"><a href="#fn1">1</a></sup>  一开始是写在豆瓣上的<br />
-<sup class="footnote" id="fnr2"><a href="#fn2">2</a></sup> <a href="http://www.laoar.net">我的2012</a></p>]]></content>
+<sup class="footnote" id="fnr2"><a href="#fn2">2</a></sup> <a href="http://www.laoar.net/blogs/227">我的2012</a></p>]]></content>
   </entry>
   
   <entry>
