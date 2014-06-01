@@ -95,17 +95,17 @@
 
 
 <div class="entry-content"><p>Oops! MacOS不支持proc文件系统，这或许是BSD系统最值得吐槽的地方吧。无奈只好到linux机器上写了这篇文章。</p>
-<p>下面是一个比较简单的多线程程序。程序如下，</p>
-<p><a href="http://www.laoar.net/wp-content/uploads/2013/05/prog.png"><img class="aligncenter size-full wp-image-252" title="prog" src="http://www.laoar.net/wp-content/uploads/2013/05/prog.png" alt="" width="484" height="458" /></a></p>
-<p>上图是我的测试程序，我创建了3个线程。程序运行以后，我们可以通过/ proc/<span class="caps">PID</span>/task来看该程序有多少线程在运行：</p>
-<p><a href="http://www.laoar.net/wp-content/uploads/2013/05/task.png"><img class="aligncenter size-full wp-image-253" title="task" src="http://www.laoar.net/wp-content/uploads/2013/05/task.png" alt="" width="272" height="56" /></a></p>
-<p>然后我们来看一下进程的地址空间。 /proc/<span class="caps">PID</span>/maps就是进程的地址空间。如下所示：</p>
-<p><a href="http://www.laoar.net/wp-content/uploads/2013/05/maps.png"><img title="maps" src="http://www.laoar.net/wp-content/uploads/2013/05/maps.png" alt="" width="533" height="368" /></a></p>
-<p>可以看出，进程的地址空间从低到高依次是：进程代码段(标志含有x)、只读数据段、可读写数据段、堆、栈（包括动态库的栈空间）。<br />
+<p>下面是一个比较简单的多线程程序。程序如下，<br />
+<img src="/images/250.jpg"><br />
+上图是我的测试程序，我创建了3个线程。程序运行以后，我们可以通过/ proc/<span class="caps">PID</span>/task来看该程序有多少线程在运行：<br />
+<img src="/images/250-2.jpg"><br />
+然后我们来看一下进程的地址空间。 /proc/<span class="caps">PID</span>/maps就是进程的地址空间。如下所示：<br />
+<img src="/images/250-3.jpg"><br />
+可以看出，进程的地址空间从低到高依次是：进程代码段(标志含有x)、只读数据段、可读写数据段、堆、栈（包括动态库的栈空间）。<br />
 <div><br />
 <div>    线程83438的栈：0xb7570000 &#8211; 0xb6d70000的值恰好是8M，线程栈默认大小是8M。0xb6d70000 &#8211; 0xb6d6f000的值是1K，这1K是保护页。</div><br />
 <div>    为什么这三个线程的栈都是8M？可以从ulimit命令来得出，这是进程的资源限制：</div><br />
-<div><a href="http://www.laoar.net/wp-content/uploads/2013/05/ulimit.png"><img class="aligncenter size-full wp-image-254" title="ulimit" src="http://www.laoar.net/wp-content/uploads/2013/05/ulimit.png" alt="" width="336" height="254" /></a></div><br />
+<img src="/images/250-4.jpg"><br />
 <div>    使用ulimit <del>a命令可以看出，进程资源限制中栈大小的限制是8194K，即8M。</div><br />
 <div>     那么，这个8M大小是不是可以更改的？以及后面会什么会有一个4K大小的保护页？这可以从glibc代码里面来获取答案：</div><br />
 <div><br />
@@ -139,11 +139,11 @@
 <div><span style="color: #000000;">    下面我们来调整线程栈：</span></div>
 <div><span style="color: #000000;">   <strong> 1. 设置pthread_attr属性</strong></span></div>
 </div>
-<div><a href="http://www.laoar.net/wp-content/uploads/2013/05/Image.png"><img class="aligncenter size-full wp-image-255" title="Image" src="http://www.laoar.net/wp-content/uploads/2013/05/Image.png" alt="" width="530" height="171" /></a></div>
-<div></div>
-<div><a href="http://www.laoar.net/wp-content/uploads/2013/05/new.png"><img class="aligncenter" title="new" src="http://www.laoar.net/wp-content/uploads/2013/05/new.png" alt="" width="515" height="115" /></a></div>
-<div>
-<div>可以看到此时的线程栈大小是： 0xb758f000 &#8211; 0xb756f000 = 128K.</div>
+<p><img src="/images/250-5.jpg"><br />
+<div></div><br />
+<img src="/images/250-6.jpg"><br />
+<div><br />
+<div>可以看到此时的线程栈大小是： 0xb758f000 &#8211; 0xb756f000 = 128K.</div></p>
 </div>
 <div>    <strong>2.通过ulimit来统一设置当前shell下将要执行的程序的线程栈 </strong></div>
 <div>        ulimit -s  128</div>
