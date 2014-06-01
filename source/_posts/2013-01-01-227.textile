@@ -6,14 +6,16 @@ wordpress_id: 227
 permalink: /blogs/227
 comments: true
 ---
-<!--?xml version="1.0" encoding="UTF-8" standalone="no"?-->仅统计记录在案的，不过我看过的书和电影一般都会记录在豆瓣上，听过的音乐则比较多，只统计iPod里面听的次数较多的音乐。
-<h3> 一 书 </h3>
-<table width="100%" border="1" cellspacing="0" cellpadding="2">
+<span>仅统计记录在案的，不过我看过的书和电影一般都会记录在豆瓣上，听过的音乐则比较多，只统计iPod里面听的次数较多的音乐。</span>
+&nbsp;
+<h3>一 书</h3>
+<div> </div>
+<table width="100%">
 <tbody>
 <tr>
-<td valign="top"><strong>书名</strong></td>
-<td valign="top"><strong>豆瓣评分</strong></td>
-<td valign="top"><strong>我的评分</strong></td>
+<td><strong>书名</strong></td>
+<td><strong>豆瓣评分</strong></td>
+<td><strong>我的评分</strong></td>
 </tr>
 <tr>
 <td valign="top">佛祖在一号线</td>
@@ -80,16 +82,10 @@ comments: true
 <td valign="top">8.4</td>
 <td valign="top">3星</td>
 </tr>
-<tr>
-<td valign="top"></td>
-<td valign="top"></td>
-<td valign="top"></td>
-</tr>
 </tbody>
 </table>
 <div>5本技术类书籍，8本非技术类书籍（其中有5本是禁书）。</div>
-<div></div>
-<div><!--?xml version="1.0" encoding="UTF-8" standalone="no"?-->
+&nbsp;
 <h3>二 影（59部）</h3>
 <div>
 <table width="100%" border="1" cellspacing="0" cellpadding="2">
@@ -244,12 +240,6 @@ comments: true
 <td valign="top"><span style="color: #ff9132;">6.7</span></td>
 <td valign="top">2星</td>
 </tr>
-</tbody>
-</table>
-</div>
-<div>
-<table width="100%" border="1" cellspacing="0" cellpadding="2">
-<tbody>
 <tr>
 <td valign="top">北京爱情故事</td>
 <td valign="top"><span style="color: #97248d;">7.3</span></td>
@@ -425,17 +415,11 @@ comments: true
 &nbsp;
 <div></div>
 <h3>三 音（Top39）</h3>
-<div><a href="http://www.laoar.net/wp-content/uploads/2013/01/1712d7866738b2a62065cb6d51d446a41.png"><img class="aligncenter size-full wp-image-229" title="1712d7866738b2a62065cb6d51d446a4" src="http://www.laoar.net/wp-content/uploads/2013/01/1712d7866738b2a62065cb6d51d446a41.png" alt="" width="981" height="607" /></a></div>
-<div><a href="http://www.laoar.net/wp-content/uploads/2013/01/7256253a68035639b20186989ef670dc.png"><img class="aligncenter size-full wp-image-230" title="7256253a68035639b20186989ef670dc" src="http://www.laoar.net/wp-content/uploads/2013/01/7256253a68035639b20186989ef670dc.png" alt="" width="968" height="425" /></a></div>
-</div>
-<div></div>
 <div><!--?xml version="1.0" encoding="UTF-8" standalone="no"?-->
 <div>这39首歌曲中：</div>
 <div>纯音乐：20首</div>
 <div>摇滚： 8首</div>
-<div></div>
 <div>影视原声：6首</div>
-<div></div>
 <div>粤语：3首</div>
 <div>国语：3首</div>
 <div>英语：11首</div>
