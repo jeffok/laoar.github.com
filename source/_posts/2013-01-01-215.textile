@@ -34,11 +34,13 @@ comments: true
 <div style="padding-left: 30px;">     ...</div>
 <div style="padding-left: 30px;">}</div>
 <div></div>
-<div>    __init这个宏的定义如下：</div>
-<div><a href="http://www.laoar.net/wp-content/uploads/2013/01/2dc250f6dd2ab58b5b03df658953ef501.png"><img class="aligncenter size-full wp-image-217" title="2dc250f6dd2ab58b5b03df658953ef50" src="http://www.laoar.net/wp-content/uploads/2013/01/2dc250f6dd2ab58b5b03df658953ef501.png" alt="" width="754" height="111" /></a>    它的作用是，将这个函数放到.init.text这个section中。section是elf格式的一个概念，具体可google之。 os是怎么处理.init.text这个section的哪？</div>
+   __init这个宏的定义如下：
+{% img /images/215.jpg %}
+它的作用是，将这个函数放到.init.text这个section中。section是elf格式的一个概念，具体可google之。 os是怎么处理.init.text这个section的哪？
 <div></div>
-<div>    在free_initmem()这个函数里面会将这个section所占用的内存给释放掉：</div>
-<div><a href="http://www.laoar.net/wp-content/uploads/2013/01/c07559b7c01affcc71884aed64c6f0712.png"><img class="aligncenter size-full wp-image-221" title="c07559b7c01affcc71884aed64c6f071" src="http://www.laoar.net/wp-content/uploads/2013/01/c07559b7c01affcc71884aed64c6f0712.png" alt="" width="825" height="378" /></a>注释：</div>
+    在free_initmem()这个函数里面会将这个section所占用的内存给释放掉：
+{% img /images/215-2.jpg %}
+注释：
 <div>1） __init_begin和__init_end的的初始化是在vmlinux.lds.S这个文件里面。 INIT_TEXT_SETION位于这两个变量之间。</div>
 <div>2）INIT_TEXT_SETION的定义是在include/asm-generic/vmlinux.lds.h这个头文件中，就是.init.text这个节。</div>
 <div></div>

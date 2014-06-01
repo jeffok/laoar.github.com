@@ -9,22 +9,16 @@ comments: true
 Oops! MacOS不支持proc文件系统，这或许是BSD系统最值得吐槽的地方吧。无奈只好到linux机器上写了这篇文章。
 
 下面是一个比较简单的多线程程序。程序如下，
-
-<a href="http://www.laoar.net/wp-content/uploads/2013/05/prog.png"><img class="aligncenter size-full wp-image-252" title="prog" src="http://www.laoar.net/wp-content/uploads/2013/05/prog.png" alt="" width="484" height="458" /></a>
-
+{% img /images/250.jpg %}
 上图是我的测试程序，我创建了3个线程。程序运行以后，我们可以通过/ proc/PID/task来看该程序有多少线程在运行：
-
-<a href="http://www.laoar.net/wp-content/uploads/2013/05/task.png"><img class="aligncenter size-full wp-image-253" title="task" src="http://www.laoar.net/wp-content/uploads/2013/05/task.png" alt="" width="272" height="56" /></a>
-
+{% img /images/250-2.jpg %}
 然后我们来看一下进程的地址空间。 /proc/PID/maps就是进程的地址空间。如下所示：
-
-<a href="http://www.laoar.net/wp-content/uploads/2013/05/maps.png"><img title="maps" src="http://www.laoar.net/wp-content/uploads/2013/05/maps.png" alt="" width="533" height="368" /></a>
-
+{% img /images/250-3.jpg %}
 可以看出，进程的地址空间从低到高依次是：进程代码段(标志含有x)、只读数据段、可读写数据段、堆、栈（包括动态库的栈空间）。
 <div>
 <div>    线程83438的栈：0xb7570000 - 0xb6d70000的值恰好是8M，线程栈默认大小是8M。0xb6d70000 - 0xb6d6f000的值是1K，这1K是保护页。</div>
 <div>    为什么这三个线程的栈都是8M？可以从ulimit命令来得出，这是进程的资源限制：</div>
-<div><a href="http://www.laoar.net/wp-content/uploads/2013/05/ulimit.png"><img class="aligncenter size-full wp-image-254" title="ulimit" src="http://www.laoar.net/wp-content/uploads/2013/05/ulimit.png" alt="" width="336" height="254" /></a></div>
+{% img /images/250-4.jpg %}
 <div>    使用ulimit -a命令可以看出，进程资源限制中栈大小的限制是8194K，即8M。</div>
 <div>     那么，这个8M大小是不是可以更改的？以及后面会什么会有一个4K大小的保护页？这可以从glibc代码里面来获取答案：</div>
 <div>
@@ -59,9 +53,9 @@ Oops! MacOS不支持proc文件系统，这或许是BSD系统最值得吐槽的�
 <div><span style="color: #000000;">    下面我们来调整线程栈：</span></div>
 <div><span style="color: #000000;">   <strong> 1. 设置pthread_attr属性</strong></span></div>
 </div>
-<div><a href="http://www.laoar.net/wp-content/uploads/2013/05/Image.png"><img class="aligncenter size-full wp-image-255" title="Image" src="http://www.laoar.net/wp-content/uploads/2013/05/Image.png" alt="" width="530" height="171" /></a></div>
+{% img /images/250-5.jpg %}
 <div></div>
-<div><a href="http://www.laoar.net/wp-content/uploads/2013/05/new.png"><img class="aligncenter" title="new" src="http://www.laoar.net/wp-content/uploads/2013/05/new.png" alt="" width="515" height="115" /></a></div>
+{% img /images/250-6.jpg %}
 <div>
 <div>可以看到此时的线程栈大小是： 0xb758f000 - 0xb756f000 = 128K.</div>
 </div>
