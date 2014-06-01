@@ -7,15 +7,13 @@ permalink: /blogs/227
 comments: true
 ---
 <!--?xml version="1.0" encoding="UTF-8" standalone="no"?-->仅统计记录在案的，不过我看过的书和电影一般都会记录在豆瓣上，听过的音乐则比较多，只统计iPod里面听的次数较多的音乐。
-<div></div>
-<h1><strong>一 书 （13本）</strong></h1>
-<div>
+<h3> 一 书 </h3>
 <table width="100%" border="1" cellspacing="0" cellpadding="2">
 <tbody>
 <tr>
-<td valign="top">书名</td>
-<td valign="top">豆瓣评分</td>
-<td valign="top">我的评分</td>
+<td valign="top"><strong>书名</strong></td>
+<td valign="top"><strong>豆瓣评分</strong></td>
+<td valign="top"><strong>我的评分</strong></td>
 </tr>
 <tr>
 <td valign="top">佛祖在一号线</td>
@@ -89,11 +87,10 @@ comments: true
 </tr>
 </tbody>
 </table>
-</div>
 <div>5本技术类书籍，8本非技术类书籍（其中有5本是禁书）。</div>
 <div></div>
 <div><!--?xml version="1.0" encoding="UTF-8" standalone="no"?-->
-<h1><strong>二 影（59部）</strong></h1>
+<h3>二 影（59部）</h3>
 <div>
 <table width="100%" border="1" cellspacing="0" cellpadding="2">
 <tbody>
@@ -427,7 +424,7 @@ comments: true
 <div>在影院看的：20部</div>
 &nbsp;
 <div></div>
-<h1><strong>三 音（Top39）</strong></h1>
+<h3>三 音（Top39）</h3>
 <div><a href="http://www.laoar.net/wp-content/uploads/2013/01/1712d7866738b2a62065cb6d51d446a41.png"><img class="aligncenter size-full wp-image-229" title="1712d7866738b2a62065cb6d51d446a4" src="http://www.laoar.net/wp-content/uploads/2013/01/1712d7866738b2a62065cb6d51d446a41.png" alt="" width="981" height="607" /></a></div>
 <div><a href="http://www.laoar.net/wp-content/uploads/2013/01/7256253a68035639b20186989ef670dc.png"><img class="aligncenter size-full wp-image-230" title="7256253a68035639b20186989ef670dc" src="http://www.laoar.net/wp-content/uploads/2013/01/7256253a68035639b20186989ef670dc.png" alt="" width="968" height="425" /></a></div>
 </div>
