@@ -13,9 +13,9 @@ comments: true
 <table width="100%">
 <tbody>
 <tr>
-<td><strong>书名</strong></td>
-<td><strong>豆瓣评分</strong></td>
-<td><strong>我的评分</strong></td>
+<th><strong>书名</strong></td>
+<th><strong>豆瓣评分</strong></td>
+<th><strong>我的评分</strong></td>
 </tr>
 <tr>
 <td valign="top">佛祖在一号线</td>
@@ -91,9 +91,9 @@ comments: true
 <table width="100%" border="1" cellspacing="0" cellpadding="2">
 <tbody>
 <tr>
-<td valign="top">电影/电视名</td>
-<td valign="top">豆瓣评分</td>
-<td valign="top">我的评分</td>
+<th valign="top">电影/电视名</td>
+<th valign="top">豆瓣评分</td>
+<th valign="top">我的评分</td>
 </tr>
 <tr>
 <td valign="top">亡命驾驶</td>
