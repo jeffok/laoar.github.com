@@ -4,7 +4,7 @@
   <title><![CDATA[The Complaint of laoar]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2014-06-01T16:37:46+08:00</updated>
+  <updated>2014-06-01T23:30:44+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -223,9 +223,9 @@ perror(&#8220;malloc&#8221;);  // 原谅我没有缩进<br />
 <table>
 <tbody>
 <tr>
-            <td><strong>Name</strong></td>
-            <td><strong>Author</strong></td>
-            <td><strong>Rate</strong></td>
+            <th><strong>Name</strong></td>
+            <th><strong>Author</strong></td>
+            <th><strong>Rate</strong></td>
 </tr>
 <tr>
             <td>看见</td>
@@ -332,10 +332,9 @@ perror(&#8220;malloc&#8221;);  // 原谅我没有缩进<br />
 		<td>  BBC纪录片 </td>
 	</tr>
 	<tr>
-		<td><strong>合计</strong></td>
-		<td> <strong>49</strong>      </td>
-		<td>    </td>
-	</tr>
+		<td>合计</td>
+		<td>49</td>
+		<td> </td>
 </table>
 <p><span style="line-height: 1.5;">    今年看的电影数目相比去年大大下降，去年仅在影院就看了20部。13年第三季度由于跳槽至外企工作，所以看了一些美剧和英剧来提高自己的英语。事实上，看美剧还是有助于提高英语的，至少，假如你不幸也在朝阳门被老外闯红灯给撞了，当他用一口流利的北京话对你说“滚你丫妈X的”时， 你也能操着一口伦敦腔优雅的对他说“You, son of a bitch”. </span></div><br />
 <span style="line-height: 1.5;">    来到北京后，观影的体验确实发生了用翻天覆地形容也不为过的变化。在深圳看电影一般都是用各个影院的电影兑换券，这些兑换券随处有卖的。假如你跟你女朋友逛街累了想去看场电影，最简便省事又省钱的办法就是，到这个影院最近的报刊亭，然后说“哎，师傅，来两张东海太平洋的兑换券”就可以了。 在深圳，一般是一张兑换券换一张普通电影票，二张换一张3D的，三张换一张iMax的。深圳最好的影院毫无疑问是KKMall，时尚现代又有深圳最大的iMax。但是，如果是情侣看电影的话， 首选毋庸置疑是中影国际，地处欢乐海岸，毗邻红树林，逛、玩、游、憩、吃皆不勿，KKMall除了逛就是逛还是逛。</span><br />
