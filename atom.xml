@@ -4,7 +4,7 @@
   <title><![CDATA[The Complaint of laoar]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2014-06-01T13:13:32+08:00</updated>
+  <updated>2014-06-01T14:46:03+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -219,42 +219,118 @@ perror(&#8220;malloc&#8221;);  // 原谅我没有缩进<br />
     <updated>2014-01-01T00:00:00+08:00</updated>
     <id>http://laoar.github.io/blogs/422</id>
     <content type="html"><![CDATA[<p><span style="line-height: 1.5;">    这一年，翻了很多书，走了很多路，看过不少电影，听过不少音乐。回过头来总结一下自己的2013，只谈风月，不论国是。 </span></p>
-
-		<ol>
-			<li></li>
-		</ol><p>一 书 （以阅读时间先后排序）<br />
-<div><br />
-<table><br />
-<tbody><br />
-<tr><br />
-<td><img src="http://img5.douban.com/view/note/large/public/p10687638.jpg" alt="" /></td></p>
+<h3> 一 书 （以阅读时间先后排序）</h3>
+<table>
+<tbody>
+<tr>
+            <td>Name</td>
+            <td>Author</td>
+            <td>Rate</td>
+</tr>
+<tr>
+            <td>看见</td>
+            <td>柴静</td>
+            <td>3星</td>
+</tr>
+<tr>
+			<td>全世界人民都知道</td>
+			<td>李承鹏</td>
+			<td>3星</td>
+</tr>
+<tr>
+			<td>只是孩子</td>
+			<td>帕蒂・史密斯</td>
+			<td>3星</td>
+</tr>
+<tr>
+			<td>梁启超传</td>
+			<td>解玺璋</td>
+			<td>2星</td>
+</tr>
+<tr>
+			<td>夹边沟记事</td>
+			<td>杨显惠</td>
+			<td>5星</td>
+</tr>
+<tr>
+			<td>中国近代史（下）港版</td>
+			<td>徐中约 </td>
+			<td>5星</td>
+</tr>
+<tr>
+			<td>C陷阱与缺陷 </td>
+			<td>凯尼格</td>
+			<td>5星</td>
+</tr>
+<tr>
+			<td>我的人生九局</td>
+			<td>聂卫平</td>
+			<td>3星</td>
+</tr>
+<tr>
+			<td>定西孤儿院记事</td>
+			<td>杨显惠</td>
+			<td>5星</td>
+</tr>
+<tr>
+			<td>Linux/Unix设计思想</td>
+			<td>甘卡兹</td>
+			<td>3星</td>
+</tr>
+<tr>
+			<td>淘宝技术这十年</td>
+			<td>子柳</td>
+			<td>3星</td>
+</tr>
+<tr>
+			<td>Linux内核设计的艺术</td>
+			<td>新设计团队</td>
+			<td>1星</td>
+</tr>
+<tr>
+			<td>叫魂</td>
+			<td>孔飞力</td>
+			<td>3星</td>
+</tr>
+<tr>
+			<td>The Design and Implementation of <br />
+			the FreeBSD Operating System</td>
+			<td>Marshall Kirk Mckusicd</td>
+			<td>5星</td>
+</tr>
+<tr>
+			<td>无非求碗热汤喝</td>
+			<td>张佳玮</td>
+			<td>4星</td>
+</tr>
+<tr>
+			<td>七周七语言</td>
+			<td>Bruce A.Tate</td>
+			<td>4星</td>
 </tr>
 </tbody>
 </table>
-</div>
 <p><span style="line-height: 1.5;">     总计16本书，平均3.25周看一本书。 其中有10本是非技术类书籍，6本是技术类书籍。13年看的书相比12年增加了3本，一本技术书，二本非技术书。 </span><br />
 <span style="line-height: 1.5;">    每当看到别人总结的”XXXX年我的年度十大好书“之类的东西时，就感觉一阵汗颜，我也想弄这么一个列表，可是回过头一看自己一年也就那10来本书。</span><br />
 <span style="line-height: 1.5;">    在2013年12月初的时候，我买了一个Kindle Paperwhite II。买这个kindle有一个主要原因就是发觉我的阅读量太少了，一年一年的没啥变化，所以索性买个kindle，这样，在地铁上、等公交时、排队中我都可以随手从口袋里掏出来看书了。而且，再也不用担心在拥挤的地铁里别人拿文艺青年的眼神来看你了，被爱书之人称作文艺青年是一种荣耀，被从不看书之人称作文艺青年则是一句笑话。kindle的尺寸恰好能够放在外衣（比如冲锋衣）的口袋里，很是便携，于是之前习惯从口袋里掏出iPhone刷微博也变成了拿出kindle来看书，套用马化腾的一句话就是，取代微博的一定不是另一个微博，是kindle。 </span><br />
 <span style="line-height: 1.5;">    kindle也有很多缺点，比如书太少、技术类书籍跟纸质书差不多贵，不过这丝毫掩盖不了它的优势：1）随手看书 2）书即买即得。</span></p>
-
-		<ol>
-			<li>二 影<br />
-<div><br />
-<table><br />
-<tbody><br />
-<tr><br />
-<td><img src="http://img5.douban.com/view/note/large/public/p10687639.jpg" alt="" /></td><br />
-</tr><br />
-</tbody><br />
-</table><br />
-<span style="line-height: 1.5;">    今年看的电影数目相比去年大大下降，去年仅在影院就看了20部。13年第三季度由于跳槽至外企工作，所以看了一些美剧和英剧来提高自己的英语。事实上，看美剧还是有助于提高英语的，至少，假如你不幸也在朝阳门被老外闯红灯给撞了，当他用一口流利的北京话对你说“滚你丫妈X的”时， 你也能操着一口伦敦腔优雅的对他说“You, son of a bitch”. </span></div><br />
+<h3>二 影</h3>
+<div>
+<table>
+<tbody>
+<tr>
+<td><img src="http://img5.douban.com/view/note/large/public/p10687639.jpg" alt="" /></td>
+</tr>
+</tbody>
+</table>
+<p><span style="line-height: 1.5;">    今年看的电影数目相比去年大大下降，去年仅在影院就看了20部。13年第三季度由于跳槽至外企工作，所以看了一些美剧和英剧来提高自己的英语。事实上，看美剧还是有助于提高英语的，至少，假如你不幸也在朝阳门被老外闯红灯给撞了，当他用一口流利的北京话对你说“滚你丫妈X的”时， 你也能操着一口伦敦腔优雅的对他说“You, son of a bitch”. </span></div><br />
 <span style="line-height: 1.5;">    来到北京后，观影的体验确实发生了用翻天覆地形容也不为过的变化。在深圳看电影一般都是用各个影院的电影兑换券，这些兑换券随处有卖的。假如你跟你女朋友逛街累了想去看场电影，最简便省事又省钱的办法就是，到这个影院最近的报刊亭，然后说“哎，师傅，来两张东海太平洋的兑换券”就可以了。 在深圳，一般是一张兑换券换一张普通电影票，二张换一张3D的，三张换一张iMax的。深圳最好的影院毫无疑问是KKMall，时尚现代又有深圳最大的iMax。但是，如果是情侣看电影的话， 首选毋庸置疑是中影国际，地处欢乐海岸，毗邻红树林，逛、玩、游、憩、吃皆不勿，KKMall除了逛就是逛还是逛。</span><br />
-<span style="line-height: 1.5;">    在北京，FESCO每个季度会为外企员工发6张电影优惠券，不过1张只面值10元。各个影院对FESCO券的要求还不一样，比如，中影电影院4张FESCO券可换一张3D电影票，国安剧院是4张换一张2D的，星美则是6张换一张2D的。 然后就是，我发现北京的影院比较破旧，毫无深圳（关内）影院的时尚大气感。一个文艺美女告诉我说百老汇在北京是较好的影院，但是我感觉它在深圳属于不想去第二次的影院，因为破和旧。地处全宇宙中心的五道口电影院，跟90年代的录像厅一般无二，屏幕巨小，影厅还巨狭长。</span></li>
-			<li>三 音<br />
-<span style="line-height: 1.5;">    很意外的是，当我查看我的iPod的播放记录时，我发现终于有首歌曲被我单曲循环了超过100遍，它也是我iPod里唯一一首单曲循环过百的歌曲：Depapepe的《风向仪》。我在想，单曲循环超过1000次的歌曲会在什么时候出现？十年以后？</span></li>
-			<li>四 路<br />
-<span style="line-height: 1.5;">    这一年确实走了很多路，现在我依然走路上下班，假如我一天走5公里，那么一年就是1825公里。深圳到北京的距离是2400公里，也就是，我用了差不多一年半的时间从深圳走到了北京。 </span></li>
-		</ol><p>&nbsp;</p>
+<span style="line-height: 1.5;">    在北京，FESCO每个季度会为外企员工发6张电影优惠券，不过1张只面值10元。各个影院对FESCO券的要求还不一样，比如，中影电影院4张FESCO券可换一张3D电影票，国安剧院是4张换一张2D的，星美则是6张换一张2D的。 然后就是，我发现北京的影院比较破旧，毫无深圳（关内）影院的时尚大气感。一个文艺美女告诉我说百老汇在北京是较好的影院，但是我感觉它在深圳属于不想去第二次的影院，因为破和旧。地处全宇宙中心的五道口电影院，跟90年代的录像厅一般无二，屏幕巨小，影厅还巨狭长。</span></p>
+<h3>三 音</h3>
+<p><span style="line-height: 1.5;">    很意外的是，当我查看我的iPod的播放记录时，我发现终于有首歌曲被我单曲循环了超过100遍，它也是我iPod里唯一一首单曲循环过百的歌曲：Depapepe的《风向仪》。我在想，单曲循环超过1000次的歌曲会在什么时候出现？十年以后？</span></p>
+<h3>四 路</h3>
+<p><span style="line-height: 1.5;">    这一年确实走了很多路，现在我依然走路上下班，假如我一天走5公里，那么一年就是1825公里。深圳到北京的距离是2400公里，也就是，我用了差不多一年半的时间从深圳走到了北京。 </span></p>
+<p>&nbsp;</p>
 <p><span style="line-height: 1.5;">    2013年过去了，我很怀念它，希望我的每一年都如2013这般精彩。</span></p>
 <p>&nbsp;</p>
 <p>注：<br />
