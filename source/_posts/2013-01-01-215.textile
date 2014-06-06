@@ -28,12 +28,13 @@ comments: true
 <div></div>
 <div>    打印出来的数据显示，func_a()这个函数里面的内容都被踩掉了。于是就去研究，为什么被踩。</div>
 <div></div>
-<div>    在追内核代码的过程中，发现func_a()这个函数其实是初始化部分的函数。函数定义如下：</div>
-<div style="padding-left: 30px;">int __init func_a()</div>
-<div style="padding-left: 30px;">{</div>
-<div style="padding-left: 30px;">     ...</div>
-<div style="padding-left: 30px;">}</div>
-<div></div>
+在追内核代码的过程中，发现func_a()这个函数其实是初始化部分的函数。函数定义如下：
+``` c
+int __init func_a()
+{
+	// ...
+}
+```
    __init这个宏的定义如下：
 {% img /images/215.jpg %}
 它的作用是，将这个函数放到.init.text这个section中。section是elf格式的一个概念，具体可google之。 os是怎么处理.init.text这个section的哪？
