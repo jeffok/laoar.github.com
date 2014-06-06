@@ -120,16 +120,23 @@ int free_inittext(unsigned long start, unsigned long end);<br />
     然而，我之所以选择这样做也是迫不得已，我更理想的想法是将另外一个函数给定义成inline，然而无奈另外一个函数有多处调用，如定义成inline可能会得不偿失，因为可执行文件的size就会变大了。结果也恰如我所料，将其定义为inline反而导致性能下降。<br />
 <p style="padding-left: 30px;"></p><br />
     所以我就想，C语言里面是否应该有这种设计：inline不是用来作为函数定义的限制词，而是作为函数调用的限制词，即我在调用的时候来决定是否将该函数给内嵌过来，而不是在定义该函数的时候限制其为inline。 比如：<br />
-<ol><br />
-	<li>int func_b(int a, int b);</li><br />
-	<li></li><br />
-	<li>void func_a(void)</li><br />
-	<li>{</li><br />
-	<li>     …</li><br />
-	<li>     c = func_b(a, b) __inline;</li><br />
-	<li>     &#8230;</li><br />
-	<li>}</li></p>
-</ol></div>
+<div class='bogus-wrapper'><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="kt">int</span> <span class="nf">func_c</span><span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'><span class="kt">void</span> <span class="nf">func_a</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="c1">//...</span>
+</span><span class='line'>    <span class="n">c</span> <span class="o">=</span> <span class="n">func_b</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span> <span class="kr">__inline</span><span class="p">;</span>
+</span><span class='line'>    <span class="c1">//...</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure></div></p></div>
 
 
   <footer>
