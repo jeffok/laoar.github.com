@@ -1,105 +1,83 @@
 
-<!DOCTYPE html>
-<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
-<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
-<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<!DOCTYPE HTML>
+<html>
 <head>
-  <meta charset="utf-8">
-  <title>三言两语聊Kernel：Busy Waiting or Sleeping？ - The Complaint of laoar</title>
-  <meta name="author" content="Yafang Shao">
+	<meta charset="utf-8">
+	<title>三言两语聊Kernel：Busy Waiting or Sleeping？ - The Complaint of laoar</title>
+	<meta name="author" content="Yafang Shao">
 
-  
-  <meta name="description" content="     在某些情况下，我们需要将当前线程的执行挂起，直至某一事件发生。这个事件可能是一个有争抢的资源变为可用，时间的流逝，或者锁的释放。这个等待可以通过两种基本的方式来实现：Busy Waiting 和Sleeping。     &hellip;">
-  
+	
+	<meta name="description" content="     在某些情况下，我们需要将当前线程的执行挂起，直至某一事件发生。这个事件可能是一个有争抢的资源变为可用，时间的流逝，或者锁的释放。这个等待可以通过两种基本的方式来实现：Busy Waiting 和Sleeping。     &hellip;">
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
-  <!-- http://t.co/dKP3o1e -->
-  <meta name="HandheldFriendly" content="True">
-  <meta name="MobileOptimized" content="320">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  
-  <link rel="canonical" href="http://laoar.github.io/blogs/299">
-  <link href="/favicon.png" rel="icon">
-  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
-  <link href="/stylesheets/data-table.css" media="screen, projection" rel="stylesheet" type="text/css" />
-  <link href="/atom.xml" rel="alternate" title="The Complaint of laoar" type="application/atom+xml">
-  <script src="/javascripts/modernizr-2.0.js"></script>
-  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
-  <script src="/javascripts/octopress.js" type="text/javascript"></script>
-  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
-<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
-<link href="//fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
-
-  
-
+	<link href="/atom.xml" rel="alternate" title="The Complaint of laoar" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/favicon.png" rel="shortcut icon">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	<script async="true" src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+	
 </head>
 
-<!--
-<body   >
--->
-<body class="no-sidebar">
-  <header role="banner"><hgroup>
-  <h1><a href="/">The Complaint of laoar</a></h1>
-  
-    <h2>我不为什么 我就是觉得好玩</h2>
-  
-</hgroup>
+
+<body>
+	<header id="header" class="inner"><h1><a href="/">The Complaint of laoar</a></h1>
+<nav id="main-nav"><ul class="main">
+	<li><a href="/">Blog</a></li>
+	<li><a href="/blog/archives">Archives</a></li>
+	<li><a href="/aboutme">About laoar</a></li>
+</ul>
+</nav>
+<nav id="mobile-nav">
+	<div class="alignleft menu">
+		<a class="button">Menu</a>
+		<div class="container"><ul class="main">
+	<li><a href="/">Blog</a></li>
+	<li><a href="/blog/archives">Archives</a></li>
+	<li><a href="/aboutme">About laoar</a></li>
+</ul>
+</div>
+	</div>
+	<div class="alignright search">
+		<a class="button"></a>
+		<div class="container">
+			<form action="https://www.google.com/search" method="get">
+				<input type="text" name="q" results="0">
+				<input type="hidden" name="q" value="site:laoar.github.io">
+			</form>
+		</div>
+	</div>
+</nav>
+<nav id="sub-nav" class="alignright">
+	<div class="social">
+		
+		
+		
+		
+    
+		
+		
+		
+		
+		
+		<a class="rss" href="/atom.xml" title="RSS">RSS</a>
+		
+    
+	</div>
+	<form class="search" action="https://www.google.com/search" method="get">
+		<input class="alignright" type="text" name="q" results="0">
+		<input type="hidden" name="q" value="site:laoar.github.io">
+	</form>
+</nav>
 
 </header>
-  <nav role="navigation"><ul class="subscription" data-subscription="rss">
-  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
-  
-</ul>
-  
-<form action="https://www.google.com/search" method="get">
-  <fieldset role="search">
-    <input type="hidden" name="q" value="site:laoar.github.io" />
-    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
-  </fieldset>
-</form>
-  
-<ul class="main-navigation">
-  <li><a href="/">Blog</a></li>
-<!--  
-  <li><a href="/blog/archives">Archives</a></li>
--->  
-  <li><a href="/aboutme">About laoar</a></li>
-</ul>
-
-</nav>
-  <div id="main">
-    <div id="content">
-      <div>
-<article class="hentry" role="article">
-  
-  <header>
-    
-      <h1 class="entry-title">三言两语聊Kernel：Busy Waiting or Sleeping？</h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-08-31T00:00:00+08:00" pubdate data-updated="true">Aug 31<span>st</span>, 2013</time>
-        
-        
-      </p>
-    
-  </header>
-
-
-<div class="entry-content"><p style="padding-left: 30px;"></p>
+	
+		
+	
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">三言两语聊Kernel：Busy Waiting or Sleeping？</h2>
+	<div class="entry-content"><p style="padding-left: 30px;"></p>
 <p>     在某些情况下，我们需要将当前线程的执行挂起，直至某一事件发生。这个事件可能是一个有争抢的资源变为可用，时间的流逝，或者锁的释放。这个等待可以通过两种基本的方式来实现：Busy Waiting 和Sleeping。<br />
 <p style="padding-left: 30px;"></p><br />
     系统通过在循环里面旋转并且不停的去检查问题事件是否发生来实现Busy Waiting。   比如，如果我们想要等待5s，可以这样来实现：<br />
@@ -117,14 +95,8 @@
      Sleeping相对于Busy Waiting的好处是，内核可以在等待期间去执行有意义的事情。坏处则是它的开销：维护一个链表，让你自己去睡眠，上下文切换到一个新的进程（再加上切换回你自己）。如果等待的时间较短，显然使用Busy Waiting更合理。</p></div>
 
 
-  <footer>
-    <p class="meta">
-      
-  
-
-<span class="byline author vcard">Posted by <span class="fn">Yafang Shao</span></span>
-
-      
+<div class="meta">
+	<div class="date">
 
 
 
@@ -136,105 +108,45 @@
   
 
 
-<time datetime="2013-08-31T00:00:00+08:00" pubdate data-updated="true">Aug 31<span>st</span>, 2013</time>
-      
+<time datetime="2013-08-31T00:00:00+08:00" pubdate data-updated="true">Aug 31<span>st</span>, 2013</time></div>
+	<div class="tags">
 
-
-    </p>
-    
-      <div class="sharing">
-  
-  <span>
-  <iframe 
-    width="86" 
-    scrolling="no" 
-    height="16" 
-    frameborder="0" 
-    src=
-      "http://hits.sinajs.cn/A1/weiboshare.html?url=http://laoar.github.io/blogs/299&amp;type=6&amp;language=zh_cn" allowtransparency="true">
-  </iframe>
-  </span>
-  
-  
-  
-  
 </div>
-
-    
-    <p class="meta">
-      
-        <a class="basic-alignment left" href="/blogs/289" title="Previous Post: 三言两语聊Kernel：do{…}while(0)">&laquo; 三言两语聊Kernel：do{…}while(0)</a>
-      
-      
-        <a class="basic-alignment right" href="/blogs/316" title="Next Post: 在高铁上聊Kernel：what is the fucking ABI(程序二进制接口)?">在高铁上聊Kernel：what is the fucking ABI(程序二进制接口)? &raquo;</a>
-      
-    </p>
-  </footer>
+	
+</div>
 </article>
 
-  <section>
-    <h1>Comments</h1>
+	<div class="share">
+	<div class="addthis_toolbox addthis_default_style ">
+		
+		
+		
+		
+	</div>
+	
+</div>
+
+
+
+<section id="comment">
+    <h2 class="title">Comments</h2>
     <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
 </div>
-  </section>
-
-<!--
-
--->
+</section>
 </div>
-<!--
+	<footer id="footer" class="inner">Copyright &copy; 2014
 
-<aside class="sidebar">
-  
-    <section>
-  <h1>About laoar</h1>
-  <p>A little something about me.</p>
-</section>
-<section>
-  <h1>Recent Posts</h1>
-  <ul id="recent_posts">
-    
-      <li class="post">
-        <a href="/blog/2014/05/25/hello-github/">Hello Github</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blogs/501">性能优化：一些很有意思的尝试</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/05/20/test/">Test</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blogs/482">从linux内核里来学习性能优化，和一个例子</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blogs/466">关于struct Hack, 优雅的FreeBSD</a>
-      </li>
-    
-  </ul>
-</section>
-
-
-
-
-
-  
-</aside>
-
--->
-
-    </div>
-  </div>
-  <footer role="contentinfo"><p>
-  Copyright &copy; 2014 - Yafang Shao -
-  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
-</p>
+    Yafang Shao
 
 </footer>
-  
+	<script src="/javascripts/slash.js"></script>
+<script src="/javascripts/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+	$('.fancybox').fancybox();
+})(jQuery);
+</script> <!-- Delete or comment this line to disable Fancybox -->
+
 
 <script type="text/javascript">
       var disqus_shortname = 'laoar';
@@ -247,16 +159,10 @@
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      dsq.src = '//go.disqus.com/' + disqus_script;
       (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
     }());
 </script>
-
-
-
-
-
-
 
 
 

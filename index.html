@@ -1,354 +1,777 @@
 
-<!DOCTYPE html>
-<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
-<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
-<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<!DOCTYPE HTML>
+<html>
 <head>
-  <meta charset="utf-8">
-  <title>The Complaint of laoar</title>
-  <meta name="author" content="Yafang Shao">
+	<meta charset="utf-8">
+	<title>The Complaint of laoar</title>
+	<meta name="author" content="Yafang Shao">
 
-  
-  <meta name="description" content="2014 Hello Github 性能优化：一些很有意思的尝试 Test 从linux内核里来学习性能优化，和一个例子 关于struct Hack, 优雅的FreeBSD 关于Profiling 为什么发送segment fault信号的进程总是PID0 ？ 我的2013 2013 MacOS &hellip;">
-  
+	
+	<meta name="description" content=" May 25th, 2014 ">
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
-  <!-- http://t.co/dKP3o1e -->
-  <meta name="HandheldFriendly" content="True">
-  <meta name="MobileOptimized" content="320">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  
-  <link rel="canonical" href="http://laoar.github.io">
-  <link href="/favicon.png" rel="icon">
-  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
-  <link href="/stylesheets/data-table.css" media="screen, projection" rel="stylesheet" type="text/css" />
-  <link href="/atom.xml" rel="alternate" title="The Complaint of laoar" type="application/atom+xml">
-  <script src="/javascripts/modernizr-2.0.js"></script>
-  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
-  <script src="/javascripts/octopress.js" type="text/javascript"></script>
-  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
-<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
-<link href="//fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
-
-  
-
+	<link href="/atom.xml" rel="alternate" title="The Complaint of laoar" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/favicon.png" rel="shortcut icon">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	<script async="true" src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+	
 </head>
 
-<!--
-<body   >
--->
-<body class="no-sidebar">
-  <header role="banner"><hgroup>
-  <h1><a href="/">The Complaint of laoar</a></h1>
-  
-    <h2>我不为什么 我就是觉得好玩</h2>
-  
-</hgroup>
+
+<body>
+	<header id="header" class="inner"><h1><a href="/">The Complaint of laoar</a></h1>
+<nav id="main-nav"><ul class="main">
+	<li><a href="/">Blog</a></li>
+	<li><a href="/blog/archives">Archives</a></li>
+	<li><a href="/aboutme">About laoar</a></li>
+</ul>
+</nav>
+<nav id="mobile-nav">
+	<div class="alignleft menu">
+		<a class="button">Menu</a>
+		<div class="container"><ul class="main">
+	<li><a href="/">Blog</a></li>
+	<li><a href="/blog/archives">Archives</a></li>
+	<li><a href="/aboutme">About laoar</a></li>
+</ul>
+</div>
+	</div>
+	<div class="alignright search">
+		<a class="button"></a>
+		<div class="container">
+			<form action="https://www.google.com/search" method="get">
+				<input type="text" name="q" results="0">
+				<input type="hidden" name="q" value="site:laoar.github.io">
+			</form>
+		</div>
+	</div>
+</nav>
+<nav id="sub-nav" class="alignright">
+	<div class="social">
+		
+		
+		
+		
+    
+		
+		
+		
+		
+		
+		<a class="rss" href="/atom.xml" title="RSS">RSS</a>
+		
+    
+	</div>
+	<form class="search" action="https://www.google.com/search" method="get">
+		<input class="alignright" type="text" name="q" results="0">
+		<input type="hidden" name="q" value="site:laoar.github.io">
+	</form>
+</nav>
 
 </header>
-  <nav role="navigation"><ul class="subscription" data-subscription="rss">
-  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
-  
-</ul>
-  
-<form action="https://www.google.com/search" method="get">
-  <fieldset role="search">
-    <input type="hidden" name="q" value="site:laoar.github.io" />
-    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
-  </fieldset>
-</form>
-  
-<ul class="main-navigation">
-  <li><a href="/">Blog</a></li>
-<!--  
-  <li><a href="/blog/archives">Archives</a></li>
--->  
-  <li><a href="/aboutme">About laoar</a></li>
-</ul>
-
-</nav>
-  <div id="main">
-    <div id="content">
-      <div id="blog-index">
+	
+		
+	
+	<div id="content" class="inner">
 
 
+   <article class="post">
+	<h2 class="title">
+		
+		<a href="/blog/2014/05/25/hello-github/">
+		
+			Hello Github</a>
+	</h2>
+	<div class="entry-content">
+		
 
-  
-  <h2>2014</h2>
+		
+		
+	</div>
 
-<article>
 
-<h5><a href=" /blog/2014/05/25/hello-github/ ">Hello Github</a></h6>
-
-</article>
+<div class="meta">
+	<div class="date">
 
 
 
-<article>
-
-<h5><a href=" /blogs/501 ">性能优化：一些很有意思的尝试</a></h6>
-
-</article>
 
 
-
-<article>
-
-<h5><a href=" /blog/2014/05/20/test/ ">Test</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/482 ">从linux内核里来学习性能优化，和一个例子</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/466 ">关于struct Hack, 优雅的FreeBSD</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/455 ">关于Profiling</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/435 ">为什么发送segment fault信号的进程总是PID0 ？</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/422 ">我的2013</a></h6>
-
-</article>
 
 
 
   
-  <h2>2013</h2>
 
-<article>
 
-<h5><a href=" /blogs/402 ">MacOS:mdworker曾让我很不爽</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/393 ">我为什么从华为离职</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/367 ">三言两语聊Kernel：linux Kernel和bsd Kernel实现doubly-linked List的差异</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/361 ">三言两语聊Kernel：atomic</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/338 ">三言两语聊Kernel：该怎么理解Terminal</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/325 ">三言两语聊Kernel：从Linux到FreeBSD</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/316 ">在高铁上聊Kernel：what Is the Fucking ABI(程序二进制接口)?</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/299 ">三言两语聊Kernel：Busy Waiting or Sleeping？</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/289 ">三言两语聊Kernel：do{…}while(0)</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/269 ">三言两语聊kernel：调度入门</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/266 ">三言两语聊kernel：内存管理入门</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/250 ">三言两语聊kernel：线程栈</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/227 ">2012 Memory</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/215 ">三言两语聊Kernel： Undefined Instruction</a></h6>
-
-</article>
-
-
-
-  
-  <h2>2012</h2>
-
-<article>
-
-<h5><a href=" /blogs/197 ">三言两语聊Kernel：flash驱动及文件系统</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/195 ">Test</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/180 ">《捉虫日记》书评</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/133 ">我的阅读史</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/119 ">iPhoneOS浅浅浅浅析(4):不做学术派</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/112 ">iPhoneOS浅浅浅浅析（3）</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/91 ">iPhoneOS浅浅浅浅析（2）</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/79 ">iPhoneOS浅浅浅浅析</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/66 ">是闰土，还是马克？</a></h6>
-
-</article>
-
-
-
-<article>
-
-<h5><a href=" /blogs/3 ">Hello World!</a></h6>
-
-</article>
+<time datetime="2014-05-25T00:27:48+08:00" pubdate data-updated="true">May 25<span>th</span>, 2014</time></div>
+	<div class="tags">
 
 </div>
+	
+</div>
+</article> &#8211;>
 
 
-    </div>
-  </div>
-  <footer role="contentinfo"><p>
-  Copyright &copy; 2014 - Yafang Shao -
-  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
-</p>
+   <article class="post">
+	<h2 class="title">
+		
+		<a href="/blogs/501">
+		
+			性能优化：一些很有意思的尝试</a>
+	</h2>
+	<div class="entry-content">
+		<p>Cliff跟我说，做性能优化就得花时间去琢磨，<wbr />你要天天琢磨这个事，慢慢的就能找到办法了。 Boss的相对宽容，就给了我足够的时间来做一些琢磨（<wbr />一开始写的是研究，想着自己也不是啥科学家，<wbr />研究这个词还是太高大上了），<wbr />我也得以能够做一些实验来证明自己的想法。<br />
+我在前一篇博客里也说过，<wbr />关于性能优化的经验文章可谓汗牛充栋数不胜数，<wbr />然而这一类的文章大多数都是纸上谈兵，纯理论派，<wbr />实际操作性太差。所以我就说下我的实际操作经验，<wbr />这些操作经验在理论派达人眼里可能是小儿科，<wbr />远不及他们指点江山挥斥方遒的派头，<wbr />然而实用的终究要比花拳绣腿好。<br />
+因为有些东西我还没有想明白，<wbr />所以这篇博客可能最终没有真正的结论，只有实际的效果。<wbr />仅举几个有趣的例子。<br />
+某松柏公司的版本管理方案大致是下面这个这个样子，<wbr />首先有一个主线版本，在每个迭代的开始会拉出一个开发分支，<wbr />开发分支开发完毕再sync到主线，<wbr />然后再从主线拉出一个发布分支做版本发布。注：<wbr />开发分支主要是针对一些大的特性的改动，一些bug fix可能只是commit到主线，<wbr />而不会commit到开发分支。<br />
+对于开发分支，会定期有一些sanity check，即做一些测试来监控开发版本的一些指标，<wbr />比如性能指标。主线由于相对稳定，因而就没有这些sanity check。<br />
+开发分支由于有daily build的性能测试，因而能够及时的发现问题，<wbr />所以它的性能状况一向都比较良好。<br />
+于是问题就来了。最近再把开发分支sync到主线，<wbr />然后从主线拉出来一个发布分支后，发布分支的性能非常之低。 比如开发分支的UDP吞吐量是900Kpps，<wbr />发布分支的UDP吞吐量竟然下降到了780Kpps，<wbr />版本经理的预期是要达到850Kpps，<wbr />因而我需要找出来为什么性能下降这么大，<wbr />以及怎么样来提升它的性能。<br />
+理论派达人如果过来指点下江山的话，可能会说，<wbr />用profile工具来比较性能较好（开发分支）和性能很差（<wbr />发布分支）的两个image，看看他们的关键路径上有什么差异，<wbr />先找出差异来，再做调整。 但是，实际情况是，性能差异这么巨大，<wbr />很大的可能性不是由于critical path的代码改动导致的，<wbr />而是由一些无关痛痒的代码改动导致cache的sensitiv<wbr />e。 如果花时间的话，这种想法也的确可行，<wbr />然而最终效果总是看起来很美实际上只是老大爷打太极有板有眼就是<wbr />敌不过一双拳。<br />
+再稍微务实一点的想法是，<wbr />我们找到主线分支上性能较好的一个revision，<wbr />然后利用二分查找法来找出是不是由于某个check－<wbr />in导致的。这里的难点在于，首先，<wbr />代码的性能变化是一个波浪型的曲线，<wbr />你没有办法来确认你找到的性能较高的revision是一个合理<wbr />的revision。这种想法更务实一点，<wbr />花费的时间可能也会很多。<br />
+更务实一点的想法是，我们找出哪些代码只commit到了主线（<wbr />性能较低）而没有commit到开发分支（性能很好），<wbr />那么性能下降必然是由这些check－in导致的。难点在于，<wbr />每天的代码的check－in少则有4、5个，多则有十几个，<wbr />这个比较也是一个吃力不讨好的事。<br />
+所以，我们玩点有技术含量的吧，比较二进制！ 坦白说，在我打算这么做的时候，我不知道结果会怎么样，<wbr />也不知道能不能搞定，反正当时心一横，管它哪，干吧！<br />
+于是，<wbr />我将开发分支和发布分支的两个image的符号表给dump出来<wbr />，然后由低地址到高地址sort排序。 大致命令如下：<br />
+objdump -t image1.elf | sort &gt; iamge2.sym<br />
+objdump -t image2.elf | sort &gt; image2.sym<br />
+vim -d iamge1.sym image2.sym<br />
+然后我痛苦的发现，这两个符号表竟然有10多万个差异。 这要是一个个的去查，那得查到天荒地老了。<br />
+然而这些差异很多都是符号地址的差异，符号的大小基本都一样的。 所以接下来，我就把image1.sym和image2.<wbr />sym的地址这一列给删除再做比较。<wbr />在vim的visual模式下可以按列删除，<wbr />具体请google，此处不缀述。<br />
+然后问题就稍微简化了些，很快就找到了一个值得怀疑的地方，<wbr />如下图。（为了不泄漏某松柏公司的信息，我对图片做了些处理。<wbr />虽然这些信息可能也无关紧要，不过做人要职业些嘛）<br />
+<img src="/images/501.jpg"></p>
+<p>我们可以看到深蓝色的那一行就是两个的差异，<wbr />该符号的大小由0x910增大到了0xaa8，<wbr />共增加了102条指令。于是我验证了下，<wbr />果然是这个差异导致的性能由900Kpps下降到了780Kpp<wbr />s。<br />
+既然知道了是哪里导致性能下降的了，问题就简单了，<wbr />肯定是有办法来解决的。<br />
+不过我要说的，到这里并没有结束，接下来才是关键。事实上，<wbr />这个符号在data path里并不会执行到，也就是说，<wbr />UDP的吞吐量根本就不会执行这个函数，<wbr />但是这个函数的改动又切切实实的导致了性能的下降。<wbr />唯二的可能性就是a)这个符号的改动影响了后续符号的地址，<wbr />导致一些cache line对齐问题，b)这个符号的改动使得critical path里面的函数／数据出现了cache line的冲突。然而由于符号的差异确实太多了，<wbr />而且critical path里面的函数和数据也很多，<wbr />所以我没有太多的时间和精力来查找到底是哪个原因。<wbr />对于b这种可能性相对好验证一些，只要知道了cache line的大小，和组相连的set，就能够知道cache line冲突的单位是set*line_size, 然后以这个值为基本单位来比较相差这个大小的符号即可。<wbr />对于情况a，可能就不太好验证了，因为要排查的东西太多了，<wbr />时间不允许，不过对于这种情况，我们可以有一些预防措施，<wbr />比如使用__attribute__(signed(128))<wbr />来将一些大的数据结构cache line对齐。注意我们将大数据结构cache line对齐并不是说对齐可以提高访问速度，oh god，如果你这么想那就真的是太悲哀了，<wbr />RISC的访问必须是对齐访问，<wbr />CISC的访问可以不对齐访问多花一个cycle。<wbr />这里所说的cache line对齐，是指，避免这个大数据结构占用多个cache line，比如如果这个大数据结构是136字节，<wbr />不对齐的话它完全是有可能占用3个cache line的（假设cache line的大小是128字节），而对齐的话只需要2个cache line。接下来如果我有充足的时间的话，<wbr />我会继续深入的做一下这件事的琢磨，看看能不能发现一些东西。<wbr />当然也可能花费很多时间什么都做不出来。<br />
+事情到这里还没有结束。我们还得再琢磨琢磨。<br />
+我们也看到了，<wbr />这明显是无关代码改动导致关键路径性能下降的例子，<wbr />那么我们为何不将关键路径，<wbr />或者说主要功能的代码给放到符号地址空间的前面，<wbr />而将这些次要功能或者说不是很重要的代码给放到后面，<wbr />这样这些无关代码的改动就不会太明显的影响了关键路径了。<wbr />这也说明，对于大型软件系统而言，<wbr />合理的划分地址空间是多么的重要，<wbr />不然以后就只能疲于奔命的去解决这些很无奈的问题了。<br />
+合理的划分地址空间，就设计到Makefile／<wbr />链接脚本的设计。这些也不是一个想当然的事，<wbr />而是要根据具体情况来做。 在设计大型软件之初，也不必要去过多的关注这方面，<wbr />等到需要改变的时候再去改变也不迟，毕竟，高司令也教导我们，“<wbr />过早优化是万恶之源”。</p>
+		
+		
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-05-24T00:00:00+08:00" pubdate data-updated="true">May 24<span>th</span>, 2014</time></div>
+	<div class="tags">
+
+</div>
+	
+</div>
+</article> &#8211;>
+
+
+   <article class="post">
+	<h2 class="title">
+		
+		<a href="/blog/2014/05/20/test/">
+		
+			Test</a>
+	</h2>
+	<div class="entry-content">
+		
+
+		
+		
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-05-20T22:38:39+08:00" pubdate data-updated="true">May 20<span>th</span>, 2014</time></div>
+	<div class="tags">
+
+</div>
+	
+</div>
+</article> &#8211;>
+
+
+   <article class="post">
+	<h2 class="title">
+		
+		<a href="/blogs/482">
+		
+			从linux内核里来学习性能优化，和一个例子</a>
+	</h2>
+	<div class="entry-content">
+		<p style="padding-left: 30px;"></p>
+<p>    我对“案例”这个词比较反感，所以标题是“一个例子”。 “案例”这个词，就跟“拉通”、“沟通”、“跟产品PK”、“奋斗者”、“客户”一样，在我眼里属于洗脑文化，所以我比较忌讳使用这些词。使用“例子”、“员工”、“customer”这些词(很抱歉我不知道“拉通”、“沟通”、“和产品PK”是什么意思，因而找不到对应的词，还好我生活和工作中也不会用到这些词)会让我更舒服一些。<br />
+<p style="padding-left: 30px;"></p><br />
+    对于性能优化，相信稍微懂点编程的人都能说出个二五六来。比如对于inline的使用，只要是会写C语言，相信你一定能够口若悬河滔滔不绝的说出一大坨一大坨inline的优劣以及对性能的影响，然而这一大坨一大坨的经验都是bullshit，一切要看结果怎么样（我心里忽然不由自主的冒出了“以结果为导向”这个词，oh god，愿上帝拯救我）。就像木心在《文学回忆录》说的，“思想过剩的人，行动力往往较差”，关于性能优化这件事也是这样，不要迷信前人的经验，要自己动手去做。注意“迷信”的前提是了解，你要去了解他们的说法，但是不要去相信他们。<span style="line-height: 1.5em;">   </span></p>
+<p><span style="line-height: 1.5em;">    再来看inline这个问题，有个哥哥根据自己的实验发现，</span><span style="text-decoration: underline;"><a href="https://lwn.net/Articles/82494/">在skbbuff里面的一些skb__函数都不应该使用inline，因为去掉这些inline后能够提升3%的性</a>能</span><span style="line-height: 1.5em;">。所以说，这些想当然的经验都是bullshit，一切要看实际结果，写代码时不要傻逼兮兮的一上来就到处加inline，毕竟高司令也说过，“过早优化是万恶之源‘。</span><br />
+<p style="padding-left: 30px;"></p><br />
+    当然我要说的例子不是这个inline的例子。<br />
+<p style="padding-left: 30px;"></p><br />
+    我们知道Linux Kernel跟GNU是密切联系的，所以在Linux Kernel里面到处可见GCC的一些优化手段，比如GCC的attribute这个东西。《GNU/Linux Application Programming》的作者Tim Jones在他的文章《GCC hacks in Linux Kernel》里对GCC的这些手段做了些总结，写的也挺好。不过这个老兄忽略了一个很重要的东西，__attribute__((section(&#8220;name&#8221;))). 如果你要是写过内核驱动或者做过内核启动的话，你应该对__attribute__((section(&#8220;.init.text&#8221;)))不会陌生，没错他就是__init这个宏。__init这个宏的作用是，Gcc会把这个函数放在.init.text的输入段给链接器，这样所有以__init来声明的符号都会放在.init.text这个section里面。然后在初始化完毕，这些初始化代码显然就不会再执行了，那么他们占用的内存就可以被释放掉，所以在kernel初始化结束会调用一个free_initmem()函数来释放所有位于.init这个section的函数。<br />
+<p style="padding-left: 30px;"></p><br />
+    不过可惜的是，由于释放的是代码段的页表，因而必须得在内核里面来做，而且内核也没有提供这样的系统调用给用户态 ，对于用户态而言就没有办法来这样处理。事实上有很多用户态程序的初始化代码也很大，几百KB的初始化代码也是很正常的，释放这部分空间也是很可观。不清楚内核开发者为什么不考虑将这个方法以一个系统调用的形式导出到用户态。即提供这样一个系统调用：<br />
+int free_inittext(unsigned long start, unsigned long end);<br />
+释放页表要求是页对齐，这部分工作可以在内核里面进行检查，并将start向后对齐，以及end向前对齐，该系统调用的返回值是实际释放的page数目，如果没有释放就返回负值。<br />
+<p style="padding-left: 30px;"></p><br />
+    我们已经知道__attribute__((section(“name&quot;)))的作用是将这个函数给放在一起，这样就给我们提供了一个优化思路，我们完全可以将hot function用这种方法给放在一起，来减少icache miss。之所以是将hot function放在一起，而不是将逻辑上顺序执行的代码顺序排放，是因为icache的替换算法是LRU，即最近最少使用。既然是hot function，显然是会经常调用的，那么，我们把经常调用的函数给放在一起，当某一个函数得到执行时就会可能将另外的hot function一并给预取到cache line里面，其实本质上就是利用cpu的指令预取特性，有点类似于likely()；并且由于这个cache line里都是hot instruction，它总是会得到执行，被替换出去的可能性就大大减少，从而提高cache hit rate。这里需要澄清的一点是，当执行到某一个函数的时候，由于cpu不直接跟memory打交道，它会把该函数读取到cache里面再load到寄存器里面去执行，它把函数读取到cache里面时并不是把整个函数给读取到cache里，而是只读取一个cache line。比如我某一个函数它的起始地址是0x40000008, 假设cache line大小是32bytes， 那么我要执行这个函数的时候就会一次性的将0x40000000～0x40000020这部分的指令给读取到cache，某些cpu会有critical设计，即先读取0x40000008开始的4字节（对于32bits的CPU而言，其read path是4字节）读取到cache接下来再读取其余的28bytes。<br />
+<p style="padding-left: 30px;"></p><br />
+    这里就是我要说的一个例子。我在做性能优化的时候，仅仅是将critical path里的2个函数利用这种方法给放在了一起，就将UDP的throughput给提升了&gt;10%.<br />
+<p style="padding-left: 30px;"></p><br />
+    然而，我之所以选择这样做也是迫不得已，我更理想的想法是将另外一个函数给定义成inline，然而无奈另外一个函数有多处调用，如定义成inline可能会得不偿失，因为可执行文件的size就会变大了。结果也恰如我所料，将其定义为inline反而导致性能下降。<br />
+<p style="padding-left: 30px;"></p><br />
+    所以我就想，C语言里面是否应该有这种设计：inline不是用来作为函数定义的限制词，而是作为函数调用的限制词，即我在调用的时候来决定是否将该函数给内嵌过来，而不是在定义该函数的时候限制其为inline。 比如：<br />
+<div class='bogus-wrapper'><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="kt">int</span> <span class="nf">func_c</span><span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'><span class="kt">void</span> <span class="nf">func_a</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="c1">//...</span>
+</span><span class='line'>    <span class="n">c</span> <span class="o">=</span> <span class="n">func_b</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span> <span class="kr">__inline</span><span class="p">;</span>
+</span><span class='line'>    <span class="c1">//...</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure></div></p>
+		
+		
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-04-29T00:00:00+08:00" pubdate data-updated="true">Apr 29<span>th</span>, 2014</time></div>
+	<div class="tags">
+
+</div>
+	
+</div>
+</article> &#8211;>
+
+
+   <article class="post">
+	<h2 class="title">
+		
+		<a href="/blogs/466">
+		
+			关于struct Hack, 优雅的FreeBSD</a>
+	</h2>
+	<div class="entry-content">
+		<p style="padding-left: 30px;"></p>
+<p>    本来今晚计划去健身的，谁知道正打算去的时候发现背包里只带着运动裤，忘了带跑步鞋了，脚上的Northface鞋实在不适合健身，于是无奈放弃了。然后趁这个机会写点东西。<br />
+<p style="padding-left: 30px;"></p><br />
+    好了，言归正传。<br />
+<p style="padding-left: 60px;"></p><br />
+    我们对于struct stack熟知的是下面这种情况。<br />
+<img src="/images/466.jpg"><br />
+我们定义一个结构体family来记录一个正常家庭的人的年龄，显然对于一个正常家庭来说，爸妈各只有一个，但是孩子有多少就不确定了，所以我们把family的最后一个成员baby定义为了变长数组。对于这种在一个结构体里面最后一个变量是变长数组而且仅有这一个成员是变长数组的情况，我们称之为struct hack。这属于C语言里面的一个trick。<br />
+<p style="padding-left: 30px;"></p><br />
+    我这边博客要讨论的不是这种情况，我要说的是我在FreeBSD内核里面看到的一个很有意思的代码，也是一种struct的trick。它起的名字是struct __hack, 所以我就联想到了前面的struc hack ：）<br />
+<p style="padding-left: 30px;"></p><br />
+    在说FreeBSD内核的struct __hack之前，先来说下Linux内核里的do{ }while(0) 。 在我之前一个<a href="http://www.laoar.net/?p=289">blog</a>里，我说了 do{} while(0) 的目的是为了防止悬挂else问题。之所以会出现悬挂else问题，就是因为代码写的不是太规范。所以说，对于if/else,我们还是要尽量写成<br />
+<p style="text-align: left; padding-left: 150px;"><br />
+if  (…)  {<br />
+&#8230;<br />
+} else {<br />
+&#8230;<br />
+}</p><br />
+即使里面只有一句话。<br />
+<p style="padding-left: 30px;">然后在来看这个struct __hack。</p><br />
+<img src="/images/466-2.jpg"><br />
+<p style="padding-left: 90px;"></p><br />
+<p style="text-align: left;">     任何技术或者技巧的出现都是为了解决一些问题的，那么这里的struct __hack是为了解决什么问题哪？ 其实它是用来告诉程序员这个宏只用作函数声明。我们知道函数声明一般都是下面这个样子：</p><br />
+<p style="text-align: left; padding-left: 150px;"><br />
+void foobar(void);</p><br />
+<p style="text-align: left;">这个宏也是为了模拟这种形式, 当然事实上它仍然是宏定义了一个函数, 这里要模拟，是说，它的函数体在别处。比如：</p><br />
+<p style="text-align: left; padding-left: 150px;">TASKQUEUE_DEFINE_THREAD(kqueue);</p><br />
+<p style="padding-left: 30px;"></p><br />
+    总之，这个小小的细节正体现出了FreeBSD所追求的优雅性.<br />
+<p style="padding-left: 30px;"></p><br />
+    写完发现字数太少了。所以在歪歪唧唧一些。最近写blog经常中英混杂，貌似好像大概可能也许很多人都讨厌这个样子，不过目测讨厌这样的多半都不是计算机这个行业或者工作中和英语打交道较少的。假如英语真的影响到你的薪水，进而又影响到你的生活质量，显然你也会不自觉的变成这样，无他，赚钱糊口而已。正应了那句话，叫做，屌丝的生活高富帅永远都不懂，只有经历了你才会明白：）<br />
+<p style="padding-left: 30px;"></p><br />
+    计算机这个东西本身就是美国的，凡事都是原汁原味的好，而且在绝大多数情况下，你面对的只有英文。比如对于一个C编译器的编译错误信息“discards qualifiers from pointer target type”， 如果你要Google一下才知道这是什么错误的话，那么恭喜你，码农的苦逼生活不适合你：）<br />
+<p style="padding-left: 30px;"></p><br />
+    其实反过来想也是这样。我在的小区附近老外特别多，旁边一个小区住着N多的韩国人。最近楼下新开了一家店，为了招徕老外，显然得起个英文名，它的英文名字叫“Chinese Humberger”，你猜它的中文名叫什么？ 肉夹馍！ 哈哈，很不伦不类，莫名其妙不是。所以说，原汁原味的才是最好的。</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+		
+		
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-03-20T00:00:00+08:00" pubdate data-updated="true">Mar 20<span>th</span>, 2014</time></div>
+	<div class="tags">
+
+</div>
+	
+</div>
+</article> &#8211;>
+
+
+   <article class="post">
+	<h2 class="title">
+		
+		<a href="/blogs/455">
+		
+			关于Profiling</a>
+	</h2>
+	<div class="entry-content">
+		<p style="padding-left: 30px;"></p>
+<p>    对于大型软件系统而言，可维护性是很重要的一个方面，否则到了最后没人能够搞懂全部的代码那就是一个灾难了。这方面的例子可谓比比皆是，比如华为VRP平台的Linux内核，因为模块间耦合太严重很难升级Linux内核版本，搞到最后实在搞不下去，于是团队解散，投奔中软的RTOS。松本行弘在《代码的未来》这本书里说，开发人员的成本越来越高，机器成本则是越来越便宜，所以我们的编程语言应该要侧重于开发效率和维护效率，而不应该太过于关注性能，至于性能这件事，完全可以通过升级更牛逼的硬件来很轻松的搞定。其实Ruby之父的这个观点在很久之前就被Donald Kunth说过了，“premature  optimization is the root of all evil”。两位大师的观点可谓殊途同归。<br />
+<p style="padding-left: 30px;"></p><br />
+    Donald Knuth在大多数软件工程师眼里可谓神一般的存在，它的这句名言也一直被码农们牢记在心。 Donald Knuth前辈并不是反对optimization，它只是反对premature optimization，即盲目无意义的优化，optimization应该要针对critical的东西。如何寻找critical的代码，就是一个profiling系统需要做的事情。当然profiling本身也属于可维护性的一部分。<br />
+<p style="padding-left: 30px;"></p><br />
+    Profiling的本质，是为了充分发挥CPU的能力。现代CPU的体系结构已经很牛逼了，但是相对而言，软件开发语言则没多大进步，再加上软件开发人员水平的良莠不齐，直接的后果就是，CPU的能力没有得到充分利用。虽然说使用更牛逼的CPU更牛逼的内存更牛逼的散热系统可以大幅的提高性能，但是在相同的配置下，比别人有更牛逼的表现不是更好嘛。iPhone和三星Andriod手机的对比不就是很好的证明嘛。<br />
+<p style="padding-left: 30px;">现代CPU的流水线体系结构大概是这个样的。</p><br />
+<img src="/images/455.jpg"><br />
+Instruction Fetch Unit用来从memory中取指令到寄存器中，Decode and Issue Unit则是将指令翻译成CPU能够识别的编码然后发射到Functional Units（比如运算器等等）来执行这些指令，FU的执行结果再放回到寄存器中。 所以一条指令的执行完毕最好的情况下需要4个CPU cycles就可以搞定了。我们都已经知道流水线的原理就是，指令A在FU执行时，指令B在译码准备发射，指令C在被从内存中读取到寄存器中，于是这样就实现了不同指令的并行工作来提高CPU的效率。 CPU的这个设计思想被Unix开发人员学来了，于是就是有了管道（pipe）。再接着Erlang又把管道的原理用在了语言特性上来实现并发编程，最后Golang又把Erlang的管道特性给学了去。这并不是说CPU的设计人员有多么牛逼，而是说，软件开发人员要在CPU设计人员制定的规则下做事才能充分利用CPU的性能。<br />
+<p style="padding-left: 30px;"></p><br />
+    CPU的这种流水线存在的缺点，或者说，要依赖编程人员水平的地方在于，指令A可能是JUMP D，这样就导致指令B和指令C要被从流水线里面刷出去了，就造成CPU cycle的浪费。 要想避免这种浪费，就要要求程序自身具有很好的分支预测特性，即要充分迎合CPU的这种预测执行的特性。 在Linux内核里面随处可见的likely()/unlikely()就是做这个事情的，likely()/unlikely()是告诉编译器要去做什么以及不去做什么。因为CPU最后执行的是编译器生成的二进制，而不是我们写的代码，所以一个好的编译器对于程序性能的影响是巨大的。现在的编译器要比程序员聪明的多，它往往能够预测出程序接下来要执行的指令是什么，有时候我们加的likely()/unlikely()可能根本就没有意义甚至适得其反，因为程序员相比编译器而言太蠢了。有一个例子就是real-time Linux Kernel的maintainer Steven Rostedt做的一个统计，他发现内核里面有<a href="https://lwn.net/Articles/419102/">大量误用likely()/unlikely()的地方</a>，其中在<a href="https://lwn.net/Articles/420028/">page_mapping()函数里面的一个unlikely()有39%的概率是错误的</a>，然后这位大神就提交了一个patch把这个unlikely()给去掉了。所以，如果你没有十足的把握，就不要随便使用unlikely()/likely()这俩宏。 不过有一个基本准确的经验就是，在错误处理的分支上加unlikely()大致不会是坏事。比如：<br />
+char * p = (char *)malloc(<span class="caps">SIZE</span>);<br />
+if (unlikely(!p)) {<br />
+perror(&#8220;malloc&#8221;);  // 原谅我没有缩进<br />
+}</p>
+<p>这里的unlikely()在绝大多数情况下都能够提升性能，不过，如果这段代码是non-critical的，那么这个unlikely()就是non-sense的，因为在这种情况下它对性能的提升可能近似为0.0000%，而且进一步而言，牛逼点的编译器自己也能够做这个事。如果这段代码真的是critical的话，那么这个unlikely()就有必要了。我们可以统计下linux内核的代码，unlikely()的使用次数大概是likely()的10倍，就是很多错误处理的分支都加了unlikely()的缘故。<br />
+<p style="padding-left: 30px;"></p><br />
+    除了这个分支预测之外，还有一个性质对流水线的影响较大，那就是数据依赖。指令B已经译码完成，准备要发出去的时候，发现它的操作数不可用，有可能别的CPU在使用这个操作数，于是指令B只能在这里傻傻的等待另外的CPU释放这个操作数。<br />
+<p style="padding-left: 30px;"></p><br />
+    所以对于流水线型的CPU，主要就这两方面决定着性能的好坏：1）数据依赖 2）分支预测。现在的并发编程也主要是解决的这两件事。<br />
+<p style="padding-left: 30px;"></p><br />
+    CPU的设计人员为了让程序员能够更直观的感受这两件事的表现，就给程序员提供了一些性能统计的寄存器，这些寄存器都在协处理0里面。他们做的事情，就是统计多长时间cpu cycle内，指令的issue/retire的数目，icache/dcache的hit/miss,以及l2 icache/dcache的hit/miss等等。比如说，如果icache的miss较大，那显然是程序的分支预测较差。<br />
+<p style="padding-left: 30px;"></p><br />
+    对于应用程序开发人员而言，是没有必要了解这么详细的性能寄存器信息的，或者说在这个上面花费精力意义不大。因而就有了perf、oprofile、systemtap、dtrace这些性能调试工具的应运而生。这些工具提供给程序员更友好的方式来分析程序，借助这些工具能够很直观的找到程序的critical部分。</p>
+<p>注：<br />
+<sup class="footnote" id="fnr1"><a href="#fn1">1</a></sup> 图是用Google Doc画的，第一次使用Google Doc画图，画的较差:(<br />
+<sup class="footnote" id="fnr2"><a href="#fn2">2</a></sup> 本文的观点纯属个人歪歪，未必准确，但基本正确（所以说，汉语很博大精深不是） ：）</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+		
+		
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-03-06T00:00:00+08:00" pubdate data-updated="true">Mar 6<span>th</span>, 2014</time></div>
+	<div class="tags">
+
+</div>
+	
+</div>
+</article> &#8211;>
+
+
+   <article class="post">
+	<h2 class="title">
+		
+		<a href="/blogs/435">
+		
+			为什么发送segment fault信号的进程总是PID0 ？</a>
+	</h2>
+	<div class="entry-content">
+		<p>让我们先来看一个小程序。<br />
+<img src="/images/435.jpg"><br />
+这个小程序的大概意思就是，注册了一个segmentation fault的handler， 在该handler里把SIGSEGV信号的一些信息打印出来，我这里打印了两个值，一个是进程自身的PID，另外一个是info-&gt;si_pid, Linux内核里对它的解释是发送信号的进程的PID。</p>
+<p>来看下它的执行结果：<br />
+<img src="/images/435-2.jpg"><br />
+我们可以看到当前进程的PID是1060，info-&gt;si_pid的值则是0。</p>
+<p>我们看下&lt;sys/signal.h&gt;对si_pid的解释，<br />
+<img src="/images/435-3.jpg"><br />
+这里清清楚楚的写的是，sending process，即发送该信号的进程ID。</p>
+<p>于是，问题就来了，为什么SIGSEGV信号的发送进程是PID0 哪？</p>
+<p>我们从头来理一下Kernel对signal的处理机制， 以我们前面这个小程序为例。</p>
+<p>在我们的程序里，Line 17定义了一个指针p并初始化为NULL，接着在Line 22对p指向的内容赋值为1，我们都已经知道对空指针解引用会导致segment fault。那么，segment fault具体是怎么产生的？</p>
+<p>Kernel为了提高App的执行效率采取的是惰性分配机制，即只有在第一次写的时候才会给它分配具体的物理内存。那么在Line 22由于还没有为指针p分配物理内存，所以这里会首先产生一个缺页异常(page fault), 通过缺页异常陷入内核，接着执行内核的缺页异常处理流程。在内核缺页异常处理流程里，它判断出这是一个用户态的缺页异常，于是就尝试该缺页异常是否可以通过一些手段来解决掉。很遗憾的是，由于没给p申请内存空间，所以p不属于合法的vma区域，即所谓的bad area。于是就产生一个SIGSEGV信号给我们的这个进程。于是异常流程就执行完毕了，开始返回用户态。在返回用户态之前，进程会判断是否有信号需要处理。由于在之前产生了一个SIGSEGV信号，所以又去执行SIGSEGV的信号处理流程了，注意此时已然是在user land来执行了。SIGSEGV的默认处理流程是产生一个segment fault，并且生成一个core文件。由于我们这个程序自己注册了一个SIGSEGV的信号处理程序void handler (int sig, siginfo_t *info, void *ctx), 从内核态返回后就开始执行这个handler函数。 在信号处理程序结束后，如果没有让程序退出，即没有那个exit(-1), 那么就返回到我们程序产生异常的地方，即Line 22，继续执行（PS : 这就是为什么如果没有这个exit，该程序就会死循环的原因）。 这就是Line 22这个语言在内核里的一些动作。</p>
+<p>从我们的这个分析可以看出，应该不关PID0鸟事才会。可是事实现实，PID0确实插了一脚，很困惑不是，它到底插在哪儿了哪？</p>
+<p>唯一的可能之处就是SIGSEGV产生的地方。我们打开Kernel代码来看看这里到底发生了什么。<br />
+<img src="/images/435-4.jpg"><br />
+这一小段代码就是SIGSEGV产生的地方。可以看到这里对info的si_signo/si_error/si_addr进行了赋值，在前面还对si_code进行了赋值，即SIGSEGV信号只用到了这四个字段。 也就是说，对于SIGSEGV而言，si_pid啥意义都没有。 </span></p>
+<p>我们可以对比看下SIGKILL这个信号。<br />
+<img src="/images/435-5.jpg"><br />
+可以看到在产生SIGKILL的地方，将当前的活动进程赋值给了si_pid, 这也是我们在终端里按下CRTL+C来杀死一个进程的原理。接受键盘输入的进程(bash进程)给目标进程发送了一个SIGKILL信号，然后就把目标进程干掉了。</p>
+<p>想了并研究了这么一段时间，却得出了这么一个结论（对SIGSEGV而言，si_pid没有任何意义也就没处理），表示很失望，Kernel工程师能够再爱岗敬业一些么？ 至少把那句注释“sending process”改称“sending process(if needed)” 也好么，至少不会引起太多的误解。</p>
+<p>&nbsp;</p>
+<p>PS. : 写完一看字数，又是1000字，看来很适合写千字文。不深不浅聊技术，千字文是也。</p>
+		
+		
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-02-15T00:00:00+08:00" pubdate data-updated="true">Feb 15<span>th</span>, 2014</time></div>
+	<div class="tags">
+
+</div>
+	
+</div>
+</article> &#8211;>
+
+
+   <article class="post">
+	<h2 class="title">
+		
+		<a href="/blogs/422">
+		
+			我的2013</a>
+	</h2>
+	<div class="entry-content">
+		<p><span style="line-height: 1.5;">    这一年，翻了很多书，走了很多路，看过不少电影，听过不少音乐。回过头来总结一下自己的2013，只谈风月，不论国是。 </span></p>
+<h3> 一 书 （以阅读时间先后排序）</h3>
+<table>
+<tbody>
+<tr>
+            <th><strong>Name</strong></td>
+            <th><strong>Author</strong></td>
+            <th><strong>Rate</strong></td>
+</tr>
+<tr>
+            <td>看见</td>
+            <td>柴静</td>
+            <td>3星</td>
+</tr>
+<tr>
+			<td>全世界人民都知道</td>
+			<td>李承鹏</td>
+			<td>3星</td>
+</tr>
+<tr>
+			<td>只是孩子</td>
+			<td>帕蒂・史密斯</td>
+			<td>3星</td>
+</tr>
+<tr>
+			<td>梁启超传</td>
+			<td>解玺璋</td>
+			<td>2星</td>
+</tr>
+<tr>
+			<td>夹边沟记事</td>
+			<td>杨显惠</td>
+			<td>5星</td>
+</tr>
+<tr>
+			<td>中国近代史（下）港版</td>
+			<td>徐中约 </td>
+			<td>5星</td>
+</tr>
+<tr>
+			<td>C陷阱与缺陷 </td>
+			<td>凯尼格</td>
+			<td>5星</td>
+</tr>
+<tr>
+			<td>我的人生九局</td>
+			<td>聂卫平</td>
+			<td>3星</td>
+</tr>
+<tr>
+			<td>定西孤儿院记事</td>
+			<td>杨显惠</td>
+			<td>5星</td>
+</tr>
+<tr>
+			<td>Linux/Unix设计思想</td>
+			<td>甘卡兹</td>
+			<td>3星</td>
+</tr>
+<tr>
+			<td>淘宝技术这十年</td>
+			<td>子柳</td>
+			<td>3星</td>
+</tr>
+<tr>
+			<td>Linux内核设计的艺术</td>
+			<td>新设计团队</td>
+			<td>1星</td>
+</tr>
+<tr>
+			<td>叫魂</td>
+			<td>孔飞力</td>
+			<td>3星</td>
+</tr>
+<tr>
+			<td>The Design and Implementation of <br />
+			the FreeBSD Operating System</td>
+			<td>Marshall Kirk Mckusicd</td>
+			<td>5星</td>
+</tr>
+<tr>
+			<td>无非求碗热汤喝</td>
+			<td>张佳玮</td>
+			<td>4星</td>
+</tr>
+<tr>
+			<td>七周七语言</td>
+			<td>Bruce A.Tate</td>
+			<td>4星</td>
+</tr>
+</tbody>
+</table>
+<p><span style="line-height: 1.5;">     总计16本书，平均3.25周看一本书。 其中有10本是非技术类书籍，6本是技术类书籍。13年看的书相比12年增加了3本，一本技术书，二本非技术书。 </span><br />
+<span style="line-height: 1.5;">    每当看到别人总结的”XXXX年我的年度十大好书“之类的东西时，就感觉一阵汗颜，我也想弄这么一个列表，可是回过头一看自己一年也就那10来本书。</span><br />
+<span style="line-height: 1.5;">    在2013年12月初的时候，我买了一个Kindle Paperwhite II。买这个kindle有一个主要原因就是发觉我的阅读量太少了，一年一年的没啥变化，所以索性买个kindle，这样，在地铁上、等公交时、排队中我都可以随手从口袋里掏出来看书了。而且，再也不用担心在拥挤的地铁里别人拿文艺青年的眼神来看你了，被爱书之人称作文艺青年是一种荣耀，被从不看书之人称作文艺青年则是一句笑话。kindle的尺寸恰好能够放在外衣（比如冲锋衣）的口袋里，很是便携，于是之前习惯从口袋里掏出iPhone刷微博也变成了拿出kindle来看书，套用马化腾的一句话就是，取代微博的一定不是另一个微博，是kindle。 </span><br />
+<span style="line-height: 1.5;">    kindle也有很多缺点，比如书太少、技术类书籍跟纸质书差不多贵，不过这丝毫掩盖不了它的优势：1）随手看书 2）书即买即得。</span></p>
+<h3>二 影</h3>
+<table>
+	<tr>
+		<td>电影 </td>
+		<td>23</td>
+		<td> 其中在影院看了9部，占比40%  </td>
+	</tr>
+	<tr>
+		<td>电视剧</td>
+		<td> 15 </td>
+		<td> 其中英剧8部，美剧7部 </td>
+	</tr>
+	<tr>
+		<td>纪录片</td>
+		<td> 1      </td>
+		<td>  BBC纪录片 </td>
+	</tr>
+	<tr>
+		<td>合计</td>
+		<td>49</td>
+		<td> </td>
+</table>
+<span style="line-height: 1.5;">    今年看的电影数目相比去年大大下降，去年仅在影院就看了20部。13年第三季度由于跳槽至外企工作，所以看了一些美剧和英剧来提高自己的英语。事实上，看美剧还是有助于提高英语的，至少，假如你不幸也在朝阳门被老外闯红灯给撞了，当他用一口流利的北京话对你说“滚你丫妈X的”时， 你也能操着一口伦敦腔优雅的对他说“You, son of a bitch”. </span></div>
+<span style="line-height: 1.5;">    来到北京后，观影的体验确实发生了用翻天覆地形容也不为过的变化。在深圳看电影一般都是用各个影院的电影兑换券，这些兑换券随处有卖的。假如你跟你女朋友逛街累了想去看场电影，最简便省事又省钱的办法就是，到这个影院最近的报刊亭，然后说“哎，师傅，来两张东海太平洋的兑换券”就可以了。 在深圳，一般是一张兑换券换一张普通电影票，二张换一张3D的，三张换一张iMax的。深圳最好的影院毫无疑问是KKMall，时尚现代又有深圳最大的iMax。但是，如果是情侣看电影的话， 首选毋庸置疑是中影国际，地处欢乐海岸，毗邻红树林，逛、玩、游、憩、吃皆不勿，KKMall除了逛就是逛还是逛。</span>
+<span style="line-height: 1.5;">    在北京，FESCO每个季度会为外企员工发6张电影优惠券，不过1张只面值10元。各个影院对FESCO券的要求还不一样，比如，中影电影院4张FESCO券可换一张3D电影票，国安剧院是4张换一张2D的，星美则是6张换一张2D的。 然后就是，我发现北京的影院比较破旧，毫无深圳（关内）影院的时尚大气感。一个文艺美女告诉我说百老汇在北京是较好的影院，但是我感觉它在深圳属于不想去第二次的影院，因为破和旧。地处全宇宙中心的五道口电影院，跟90年代的录像厅一般无二，屏幕巨小，影厅还巨狭长。</span><h3>三 音</h3>
+<p><span style="line-height: 1.5;">    很意外的是，当我查看我的iPod的播放记录时，我发现终于有首歌曲被我单曲循环了超过100遍，它也是我iPod里唯一一首单曲循环过百的歌曲：Depapepe的《风向仪》。我在想，单曲循环超过1000次的歌曲会在什么时候出现？十年以后？</span></p>
+<h3>四 路</h3>
+<p><span style="line-height: 1.5;">    这一年确实走了很多路，现在我依然走路上下班，假如我一天走5公里，那么一年就是1825公里。深圳到北京的距离是2400公里，也就是，我用了差不多一年半的时间从深圳走到了北京。 </span></p>
+<p>&nbsp;</p>
+<p><span style="line-height: 1.5;">    2013年过去了，我很怀念它，希望我的每一年都如2013这般精彩。</span></p>
+<p>&nbsp;</p>
+<p>注：<br />
+<sup class="footnote" id="fnr1"><a href="#fn1">1</a></sup>  一开始是写在豆瓣上的<br />
+<sup class="footnote" id="fnr2"><a href="#fn2">2</a></sup> <a href="http://www.laoar.net/blogs/227">我的2012</a></p>
+		
+		
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-01-01T00:00:00+08:00" pubdate data-updated="true">Jan 1<span>st</span>, 2014</time></div>
+	<div class="tags">
+
+</div>
+	
+</div>
+</article> &#8211;>
+
+
+   <article class="post">
+	<h2 class="title">
+		
+		<a href="/blogs/402">
+		
+			MacOS:mdworker曾让我很不爽</a>
+	</h2>
+	<div class="entry-content">
+		<p><span style="line-height: 1.5;">    一开始，我以为mdworker是“memory decompress worker”， 好吧，谁让我是linux内核出身的哪，正应了那句话，叫做“往往以自己的立场来揣测别人”。 事实上，它是“metadata server worker”。不过它让我很不爽的原因与它的名字无关，在我的Macbook刚升级到Mavericks的时候，大概是升级后还有很多善后工作要处理，它老是偷偷摸摸的运行，导致我看个优酷都卡的不行，你能体会到正到精彩处电脑却卡的连鼠标都动不了的那种心情。 需要声明的是，那段时间我在看《绝命毒师》，别想多。 </span></p>
+<p><span style="line-height: 1.5;">     然后我就有了要干掉这个mdworker的念头。作为一个内核出身的工程师，自然是不屑于打开control panal，这里勾一下那里选一下的这种毫无技术含量的做法的。I do it on my own。我打算自己写个C代码来控制它，虽然这不是个好方法，甚至都不是个正确的方法，但是至少我在思考并且知道是可行的,而且我还能搞定它。</span></p>
+<p><span style="line-height: 1.5;">    再然后我就发现我不太适合做一个freelance，我的这个想法一直拖拖拉拉都没动笔，过了段时间Maverick竟然很流畅了，mdworker也轻易不出山了，即使出山也没那么大动静了，这更让我没动力来写了。 </span></p>
+<p><span style="line-height: 1.5;">    最后，有一天我感冒了，周末躺在床上什么都不想动，于是打开了电脑就开始写这个很无聊的工具了。 </span></p>
+<p><span style="line-height: 1.5;">    我的目的是这样的：我要让这个进程的cpu占用率低于某个值，比如10%。</span></p>
+<p><span style="line-height: 1.5;">    接着我就想该怎么来实现，虽然当时我躺在床上浑身无力，可是大脑还能正常运转，下面是我的思路：</span></p>
+<p><span style="line-height: 1.5;">1） 根据mdworker这个名字来找到对应的进程<br />
+</span>      关键点：<br />
+<span style="line-height: 1.5;">      可能会有多个进程，注意是起多个进程，不是指多线程。</span></p>
+<p><span style="line-height: 1.5;"><br />
+</span>2） 我需要遍历整个进程链表来进行名字匹配，如果某个进程的名字mdworker，就认为找到了对应的进程。<br />
+<span style="line-height: 1.5;">    关键点：<br />
+</span>    bsd系统维护着两个进程链表，一个是allproc，一个是zomproc。zomproc是bsd的僵死进程链表，非僵死进程都在allproc链表里面。所谓僵死进程是指，这个进程挂掉了，但是它没有通知它的父进程，打个比方就是，你死了但是还没有去民政局里登记你的死亡，此时你就是处在僵死状态。<br />
+要明白allproc和zomproc这两个链表的特性，我们只需要知道他们使用的是什么结构体就好了。他们两个使用的都是bsd系统的通用结构体LIST_ENTRY，于是我们就可以在心里默念一下这个结构体的特点，它是一个双向非循环链表，会使用一个全局变量header来标识这个链表，这个header会指向链表的头部和尾部，在通常情况下我们都是把新元素插入到链表的头部。我们知道系统中进程的PID是按照由小到大递增的，也就是现有PID0，然后是PID1&#8230; 于是我们就知道这个allproc和zomproc链表里的元素（进程）从尾部到头部的PID是逐渐增大的，当然如果fork的进程数超过了PID MAX，那就另说了。</p>
+<p>3） 抓取到这个进程后，我们就可以使用它的pid来控制它了，如何来控制？<br />
+<span style="line-height: 1.5;">    关键点：<br />
+</span>    进程A如何来控制一个毫不相干的进程B？ 也许你一下子想不起来该怎么来实现，但是你再仔细想一想，这不就是GDB干的事嘛！gdb使用的ptrace系统调用来将目标进程变成自己的子进程，然后attach到这个子进程后就可以任意的玩这个子进程了，想必对于我们国人而言这个不太难理解，上司自然是可以控制自己的下属的，或者说，我要想让你听我的话得先把你变成我的下属。人之本性在技术层面也是被体现的淋漓尽致啊！     如果使用ptrace的话，在这里可能就有些大材小用了，我一开始设想是使用ptrace系统调用，后来发现实现起来相对复杂些。 然后我又想到，CTRL＋C不也是可以停止一个进程嘛，它使用的是信号，我可以使用signal来实现我的目的。 即，如果进程老是占用CPU，我就给它发一个stop信号来停止它，过段时间我再给它发个continue信号让它运行。当然前提是它可以接受信号。<br />
+至于说让它停止多长时间和运行多长时间则是一个小学数学问题了。 比如我想让这个进程的CPU占用率不超过10%，那么只要检测到该进程的CPU占用率超过了10%，我就强制让它睡眠。假如我以1S为一个周期，我只要让进程的工作时间不超过100ms就可以了。</p>
+<p>4） 如何计算一个进程的CPU占用率<br />
+<span style="line-height: 1.5;">    关键点：<br />
+</span><span style="line-height: 1.5;">    我的计算方式是，在时间点a我记录下进程执行了多长时间pa，然后在时间点b我再记录进程执行了多长时间pb。那么(pb-pa)/(b-a)就是这段时间进程的CPU占用率。 </span></p>
+<p>5） 我要想控制别人，得比别人拥有更大的权利<br />
+<span style="line-height: 1.5;">    关键点：<br />
+</span><span style="line-height: 1.5;">    这个进程既然是控制进程，那么它得比被控制的进程具有更高的优先级来执行，不然被控制进程都执行完了那这个控制进程也没啥用了。<br />
+</span>    首先，这个控制进程选用什么样的调度策略。Oh, come on! 当然是选用Normal了，如果选用FIFO或者RR不是会更影响整个系统的性能嘛！<br />
+接着，normal进程可以通过调整它的nice值来调整它的优先级，nice的范围是（－20，＋20），－20具有最高优先级，＋20的优先级最低。<br />
+最后，我们可以通过setpriority()这个函数来减小进程的nice值，不过，Only the super-user may lower priorities.（man手册）。也就是说，你要使用root权限。</p>
+<p><span style="line-height: 1.5;">    有了上面的思路之后，我就开始动笔写了，虽然躺在床上浑身乏力，可是手指还算灵活，敲起键盘来也还能噼里啪啦。 </span></p>
+<p><span style="line-height: 1.5;">    然后，我就在github上发现了一个类似的东西，叫做</span><a title="cpulimit" href="https://github.com/laoar/cpulimit"><span style="text-decoration: underline;">cpulimit</span></a><span style="line-height: 1.5;"> 。我看了一下它的代码，发现了很多bug，也想到了解决方案，后来看到这个项目只活跃了半年时间，而且都一年多没有commit了，就没有心思去给这个项目贡献点自己的力量了。 我的代码可以说是这个cpulimit的郭敬明版，虽然短小功能少，可是很强悍，正所谓浓缩的都是精华。 我正在着手将我的代码保存到github上时，忽然卡特打了个电话喊我一起打篮球。大概是写了点代码精神爽吧，虽然感冒没好完，我还是毫不犹豫的披挂上阵了。于是那个周日的下午，我和卡特,姚明一起在中科院电子所和其他几个人3v3了两三个小时，等到周一我起来去上班时感觉整个身子骨都散架了。 </span></p>
+<p><span style="line-height: 1.5;">    在我打算写这篇博客时，也将这个郭敬明版的cpulimit给放到了github上：</span><a title="my-task-manager" href="https://github.com/laoar/my-task-manager"><span style="text-decoration: underline;">my－task－manager</span><span style="line-height: 1.5;"> 。 </span></a></p>
+<p><span style="line-height: 1.5;">    github确实是个好东西，你想写点什么时，总能在上面找到个类似的做参考。 作为一个程序员，如果都不知道github的话，那就太过于不思进取了。</span></p>
+		
+		
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-12-15T00:00:00+08:00" pubdate data-updated="true">Dec 15<span>th</span>, 2013</time></div>
+	<div class="tags">
+
+</div>
+	
+</div>
+</article> &#8211;>
+
+
+   <article class="post">
+	<h2 class="title">
+		
+		<a href="/blogs/393">
+		
+			我为什么从华为离职</a>
+	</h2>
+	<div class="entry-content">
+		<p><span style="line-height: 13px;">    最近知乎上有很多“我为什么从XX离职”这一类的问题，很火热，所以也忍不住想写点东西。 </span></p>
+<p><span style="line-height: 1.5;">    有些事情现在不是太想说，也许等到成了个老头后，那个时候大家对这些事情都不太care了，再来写一写回忆录挺好的。  </span></p>
+<p><span style="line-height: 1.5;">    有一次我去武汉出差，早上8点钟左右(大概是这个时间点，反正很早)的样子我到了武研所，然后去打卡。在我进门的时候，我忽然感觉有个人从里面出来与我擦肩而过很熟悉，由于我走的太快，所以一时没想起来是谁。 于是我在回忆了几秒钟后赶紧再走到大楼的外面，然后我就认出了那个熟悉的背影，他是我的第二个徒弟。他是去食堂吃早饭，看着他在寒风中渐渐远去的背影，我很想跑过去跟他打声招呼，“hey，现在怎么样，挺好的吧”。但是理智告诉我，我还是别去了，于是我就看着他的背影消失在我的视线里，心里很难受。 我之所以不敢上前跟他打招呼，是因为他的第一年考评成绩为C，C在华为意味着什么想必大家都清楚。在我知道他的成绩是C的时候，我很震惊，我不知道为什么会是C。那个时候他还没有转正，只来华为有4，5个月的样子。后来到了他的转正答辩，由于他转正答辩前转到了另外一个组，所以我跟另外一个组我们一起来决定最终给他的转正成绩是什么。另外一个组的人坚持要给他B＋，我就找各种理由给他B，因为我知道假如我同意给了他B＋，我以后在华为的路可能会很坎坷。最终他的成绩还是B，这是我违背良心做的一件事，从此以后我一直对这件事很惭愧，一直觉得愧对于他。在这里我并不是想说什么好什么不好，只是我的一个忏悔，或者说，愿上帝原谅我，我想与人为善。</span></p>
+<p><span style="line-height: 1.5;">     在华为的经历，我的理解是成长的代价。这个时候是我由年轻热血到成熟稳重必须要经历的一个阶段，只不过这个阶段恰巧在华为而已（这句话是不是很熟悉，没错，孙董事长也说过），也许可能华为是加速了我的成长。如果再回到3年前，我会拒绝华为的offer，这样至少华为在我心里仍然是中国民族企业的骄傲。 </span></p>
+		
+		
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-11-23T00:00:00+08:00" pubdate data-updated="true">Nov 23<span>rd</span>, 2013</time></div>
+	<div class="tags">
+
+</div>
+	
+</div>
+</article> &#8211;>
+
+<nav id="pagenavi">
+    
+    
+        <a href="/blog/page/2/" class="next">Next</a>
+    
+    <div class="center"><a href="/blog/archives">Blog Archives</a></div>
+</nav>
+
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2014
+
+    Yafang Shao
 
 </footer>
-  
+	<script src="/javascripts/slash.js"></script>
+<script src="/javascripts/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+	$('.fancybox').fancybox();
+})(jQuery);
+</script> <!-- Delete or comment this line to disable Fancybox -->
+
 
 <script type="text/javascript">
       var disqus_shortname = 'laoar';
@@ -358,16 +781,10 @@
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      dsq.src = '//go.disqus.com/' + disqus_script;
       (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
     }());
 </script>
-
-
-
-
-
-
 
 
 

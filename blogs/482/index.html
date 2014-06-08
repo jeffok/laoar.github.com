@@ -1,105 +1,83 @@
 
-<!DOCTYPE html>
-<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
-<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
-<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<!DOCTYPE HTML>
+<html>
 <head>
-  <meta charset="utf-8">
-  <title>从linux内核里来学习性能优化，和一个例子 - The Complaint of laoar</title>
-  <meta name="author" content="Yafang Shao">
+	<meta charset="utf-8">
+	<title>从linux内核里来学习性能优化，和一个例子 - The Complaint of laoar</title>
+	<meta name="author" content="Yafang Shao">
 
-  
-  <meta name="description" content="    我对“案例”这个词比较反感，所以标题是“一个例子”。 “案例”这个词，就跟“拉通”、“沟通”、“跟产品PK”、“奋斗者”、“客户”一样，在我眼里属于洗脑文化，所以我比较忌讳使用这些词。使用“例子”、“员工”、“customer”这些词(很抱歉我不知道“拉通”、“沟通”、“和产品PK” &hellip;">
-  
+	
+	<meta name="description" content="    我对“案例”这个词比较反感，所以标题是“一个例子”。 “案例”这个词，就跟“拉通”、“沟通”、“跟产品PK”、“奋斗者”、“客户”一样，在我眼里属于洗脑文化，所以我比较忌讳使用这些词。使用“例子”、“员工”、“customer”这些词(很抱歉我不知道“拉通”、“沟通”、“和产品PK” &hellip;">
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
-  <!-- http://t.co/dKP3o1e -->
-  <meta name="HandheldFriendly" content="True">
-  <meta name="MobileOptimized" content="320">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  
-  <link rel="canonical" href="http://laoar.github.io/blogs/482">
-  <link href="/favicon.png" rel="icon">
-  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
-  <link href="/stylesheets/data-table.css" media="screen, projection" rel="stylesheet" type="text/css" />
-  <link href="/atom.xml" rel="alternate" title="The Complaint of laoar" type="application/atom+xml">
-  <script src="/javascripts/modernizr-2.0.js"></script>
-  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
-  <script src="/javascripts/octopress.js" type="text/javascript"></script>
-  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
-<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
-<link href="//fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
-
-  
-
+	<link href="/atom.xml" rel="alternate" title="The Complaint of laoar" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/favicon.png" rel="shortcut icon">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	<script async="true" src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+	
 </head>
 
-<!--
-<body   >
--->
-<body class="no-sidebar">
-  <header role="banner"><hgroup>
-  <h1><a href="/">The Complaint of laoar</a></h1>
-  
-    <h2>我不为什么 我就是觉得好玩</h2>
-  
-</hgroup>
+
+<body>
+	<header id="header" class="inner"><h1><a href="/">The Complaint of laoar</a></h1>
+<nav id="main-nav"><ul class="main">
+	<li><a href="/">Blog</a></li>
+	<li><a href="/blog/archives">Archives</a></li>
+	<li><a href="/aboutme">About laoar</a></li>
+</ul>
+</nav>
+<nav id="mobile-nav">
+	<div class="alignleft menu">
+		<a class="button">Menu</a>
+		<div class="container"><ul class="main">
+	<li><a href="/">Blog</a></li>
+	<li><a href="/blog/archives">Archives</a></li>
+	<li><a href="/aboutme">About laoar</a></li>
+</ul>
+</div>
+	</div>
+	<div class="alignright search">
+		<a class="button"></a>
+		<div class="container">
+			<form action="https://www.google.com/search" method="get">
+				<input type="text" name="q" results="0">
+				<input type="hidden" name="q" value="site:laoar.github.io">
+			</form>
+		</div>
+	</div>
+</nav>
+<nav id="sub-nav" class="alignright">
+	<div class="social">
+		
+		
+		
+		
+    
+		
+		
+		
+		
+		
+		<a class="rss" href="/atom.xml" title="RSS">RSS</a>
+		
+    
+	</div>
+	<form class="search" action="https://www.google.com/search" method="get">
+		<input class="alignright" type="text" name="q" results="0">
+		<input type="hidden" name="q" value="site:laoar.github.io">
+	</form>
+</nav>
 
 </header>
-  <nav role="navigation"><ul class="subscription" data-subscription="rss">
-  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
-  
-</ul>
-  
-<form action="https://www.google.com/search" method="get">
-  <fieldset role="search">
-    <input type="hidden" name="q" value="site:laoar.github.io" />
-    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
-  </fieldset>
-</form>
-  
-<ul class="main-navigation">
-  <li><a href="/">Blog</a></li>
-<!--  
-  <li><a href="/blog/archives">Archives</a></li>
--->  
-  <li><a href="/aboutme">About laoar</a></li>
-</ul>
-
-</nav>
-  <div id="main">
-    <div id="content">
-      <div>
-<article class="hentry" role="article">
-  
-  <header>
-    
-      <h1 class="entry-title">从linux内核里来学习性能优化，和一个例子</h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-04-29T00:00:00+08:00" pubdate data-updated="true">Apr 29<span>th</span>, 2014</time>
-        
-        
-      </p>
-    
-  </header>
-
-
-<div class="entry-content"><p style="padding-left: 30px;"></p>
+	
+		
+	
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">从linux内核里来学习性能优化，和一个例子</h2>
+	<div class="entry-content"><p style="padding-left: 30px;"></p>
 <p>    我对“案例”这个词比较反感，所以标题是“一个例子”。 “案例”这个词，就跟“拉通”、“沟通”、“跟产品PK”、“奋斗者”、“客户”一样，在我眼里属于洗脑文化，所以我比较忌讳使用这些词。使用“例子”、“员工”、“customer”这些词(很抱歉我不知道“拉通”、“沟通”、“和产品PK”是什么意思，因而找不到对应的词，还好我生活和工作中也不会用到这些词)会让我更舒服一些。<br />
 <p style="padding-left: 30px;"></p><br />
     对于性能优化，相信稍微懂点编程的人都能说出个二五六来。比如对于inline的使用，只要是会写C语言，相信你一定能够口若悬河滔滔不绝的说出一大坨一大坨inline的优劣以及对性能的影响，然而这一大坨一大坨的经验都是bullshit，一切要看结果怎么样（我心里忽然不由自主的冒出了“以结果为导向”这个词，oh god，愿上帝拯救我）。就像木心在《文学回忆录》说的，“思想过剩的人，行动力往往较差”，关于性能优化这件事也是这样，不要迷信前人的经验，要自己动手去做。注意“迷信”的前提是了解，你要去了解他们的说法，但是不要去相信他们。<span style="line-height: 1.5em;">   </span></p>
@@ -139,14 +117,8 @@ int free_inittext(unsigned long start, unsigned long end);<br />
 </span></code></pre></td></tr></table></div></figure></div></p></div>
 
 
-  <footer>
-    <p class="meta">
-      
-  
-
-<span class="byline author vcard">Posted by <span class="fn">Yafang Shao</span></span>
-
-      
+<div class="meta">
+	<div class="date">
 
 
 
@@ -158,105 +130,45 @@ int free_inittext(unsigned long start, unsigned long end);<br />
   
 
 
-<time datetime="2014-04-29T00:00:00+08:00" pubdate data-updated="true">Apr 29<span>th</span>, 2014</time>
-      
+<time datetime="2014-04-29T00:00:00+08:00" pubdate data-updated="true">Apr 29<span>th</span>, 2014</time></div>
+	<div class="tags">
 
-
-    </p>
-    
-      <div class="sharing">
-  
-  <span>
-  <iframe 
-    width="86" 
-    scrolling="no" 
-    height="16" 
-    frameborder="0" 
-    src=
-      "http://hits.sinajs.cn/A1/weiboshare.html?url=http://laoar.github.io/blogs/482&amp;type=6&amp;language=zh_cn" allowtransparency="true">
-  </iframe>
-  </span>
-  
-  
-  
-  
 </div>
-
-    
-    <p class="meta">
-      
-        <a class="basic-alignment left" href="/blogs/466" title="Previous Post: 关于struct hack, 优雅的FreeBSD">&laquo; 关于struct hack, 优雅的FreeBSD</a>
-      
-      
-        <a class="basic-alignment right" href="/blog/2014/05/20/test/" title="Next Post: test">test &raquo;</a>
-      
-    </p>
-  </footer>
+	
+</div>
 </article>
 
-  <section>
-    <h1>Comments</h1>
+	<div class="share">
+	<div class="addthis_toolbox addthis_default_style ">
+		
+		
+		
+		
+	</div>
+	
+</div>
+
+
+
+<section id="comment">
+    <h2 class="title">Comments</h2>
     <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
 </div>
-  </section>
-
-<!--
-
--->
+</section>
 </div>
-<!--
+	<footer id="footer" class="inner">Copyright &copy; 2014
 
-<aside class="sidebar">
-  
-    <section>
-  <h1>About laoar</h1>
-  <p>A little something about me.</p>
-</section>
-<section>
-  <h1>Recent Posts</h1>
-  <ul id="recent_posts">
-    
-      <li class="post">
-        <a href="/blog/2014/05/25/hello-github/">Hello Github</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blogs/501">性能优化：一些很有意思的尝试</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/05/20/test/">Test</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blogs/482">从linux内核里来学习性能优化，和一个例子</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blogs/466">关于struct Hack, 优雅的FreeBSD</a>
-      </li>
-    
-  </ul>
-</section>
-
-
-
-
-
-  
-</aside>
-
--->
-
-    </div>
-  </div>
-  <footer role="contentinfo"><p>
-  Copyright &copy; 2014 - Yafang Shao -
-  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
-</p>
+    Yafang Shao
 
 </footer>
-  
+	<script src="/javascripts/slash.js"></script>
+<script src="/javascripts/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+	$('.fancybox').fancybox();
+})(jQuery);
+</script> <!-- Delete or comment this line to disable Fancybox -->
+
 
 <script type="text/javascript">
       var disqus_shortname = 'laoar';
@@ -269,16 +181,10 @@ int free_inittext(unsigned long start, unsigned long end);<br />
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      dsq.src = '//go.disqus.com/' + disqus_script;
       (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
     }());
 </script>
-
-
-
-
-
-
 
 
 

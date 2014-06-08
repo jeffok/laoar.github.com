@@ -1,0 +1,866 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>The Complaint of laoar</title>
+	<meta name="author" content="Yafang Shao">
+
+	
+	<meta name="description" content="如果你google一下“linux list”，你会得到一堆各种各样对linux doubly-linked list的分析，以及各种各样对于这些分析的拷贝。所以当我打算写这个话题时，看到这个结果就放弃了，不想继续趟这躺浑水了，至少不想跟这些习惯于拷贝粘贴的家伙为伍。但是某一天， &hellip;">
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="/atom.xml" rel="alternate" title="The Complaint of laoar" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/favicon.png" rel="shortcut icon">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	<script async="true" src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+	
+</head>
+
+
+<body>
+	<header id="header" class="inner"><h1><a href="/">The Complaint of laoar</a></h1>
+<nav id="main-nav"><ul class="main">
+	<li><a href="/">Blog</a></li>
+	<li><a href="/blog/archives">Archives</a></li>
+	<li><a href="/aboutme">About laoar</a></li>
+</ul>
+</nav>
+<nav id="mobile-nav">
+	<div class="alignleft menu">
+		<a class="button">Menu</a>
+		<div class="container"><ul class="main">
+	<li><a href="/">Blog</a></li>
+	<li><a href="/blog/archives">Archives</a></li>
+	<li><a href="/aboutme">About laoar</a></li>
+</ul>
+</div>
+	</div>
+	<div class="alignright search">
+		<a class="button"></a>
+		<div class="container">
+			<form action="https://www.google.com/search" method="get">
+				<input type="text" name="q" results="0">
+				<input type="hidden" name="q" value="site:laoar.github.io">
+			</form>
+		</div>
+	</div>
+</nav>
+<nav id="sub-nav" class="alignright">
+	<div class="social">
+		
+		
+		
+		
+    
+		
+		
+		
+		
+		
+		<a class="rss" href="/atom.xml" title="RSS">RSS</a>
+		
+    
+	</div>
+	<form class="search" action="https://www.google.com/search" method="get">
+		<input class="alignright" type="text" name="q" results="0">
+		<input type="hidden" name="q" value="site:laoar.github.io">
+	</form>
+</nav>
+
+</header>
+	
+		
+	
+	<div id="content" class="inner">
+
+
+   <article class="post">
+	<h2 class="title">
+		
+		<a href="/blogs/367">
+		
+			三言两语聊Kernel：linux Kernel和bsd Kernel实现doubly-linked List的差异</a>
+	</h2>
+	<div class="entry-content">
+		<p><span style="line-height: 1.5;">    如果你google一下“linux list”，你会得到一堆各种各样对linux doubly-linked list的分析，以及各种各样对于这些分析的拷贝。所以当我打算写这个话题时，看到这个结果就放弃了，不想继续趟这躺浑水了，至少不想跟这些习惯于拷贝粘贴的家伙为伍。但是某一天，我实现的queue出现了一个问题，于是我就开始认认真真的研究起来双向链表在linux和bsd系统上实现的差异。然后我就打算尝试从一个不同的角度来探讨这个话题。</span></p>
+<p><span style="line-height: 1.5;">    First thing first，实现的目的是为了应用，所以我打算从应用的角度慢慢写。很多分析linux list的文章呜哩哇啦一顿乱写，看的我们也是一头雾水莫名奇妙,这是大多数技术博客的惯病，我尽量避免步他们的后尘。为了写这篇blog，我先写了两个用例，一个是双向链表在linux系统上的应用，一个是在bsd系统上的应用，代码放在了我的github上：</span><a style="line-height: 1.5;" title="list paradigm" href="https://github.com/laoar/list" target="_blank"><span>list paradigm</span> </a><span style="line-height: 1.5;">（P.S. : paradigm这个单词是公司里的英语老师Michael教的，所以在这里忍不住想用一下）。再插播一句，有一次在英语课上Michael问我，“what&#8217;s PS”? 我支支吾吾了半天说“paste”， 顿时惹来Michael的一顿shame on me，“oh my god, it’s post script!” 于是我也学会了shame on you， 用老祖宗的话说就是“鄙视你”。</span></p>
+<p><span style="line-height: 1.5;">    先简单解释下我写的这两个C文件。</span></p>
+<p><strong>1. linux_list.c</strong></p>
+<p><span style="line-height: 1.5;">    在linux系统上，它的/usr/include目录就是我们编译C代码的头文件所在路径的其中一个。这个目录里有一个特殊的子目录，叫做/usr/inlude/linux,  之所以叫linux这个名字，是因为它是从linux kernel里面导出来的头文件，而不是从glibc库里面导出来的头文件。按理说，linux kernel导出来的头文件是给kernel module用的，所以一般都放在kernel module的编译路径里，现在既然在/usr/include/目录里也放了一份，那目的很明显了，用户态程序想用就用吧。但是坑爹的是，linux kernel头文件不是你想用就能用，因为linux kernel是GPL协议，而Glibc是LGPL协议，也就是说如果你include了linux kernel头文件，那么你的代码也必须是GPL的，你只有copyleft，没有copyright，你的代码就别指望着卖钱了，乖乖开源吧。 而如果你是include的glibc的头文件，那么没关系，你无需开源，你具有你写的代码的copyright。 需要声明的是，我不是一个开源的反对者，相反我认为开源挺有好处的，把代码提交给社区，总有热心人会帮你挑错或者帮你改进代码，这不挺好嘛。但是，我也不是一个GPL的提倡者，GPL这个东西，多少感觉有点社会主义大锅饭或者共产主义的味道，大锅饭的后果是某些人钻空子不劳而获，而另外一些人会丧失劳动的积极性进而生产力得不到很好的发展。 Anyway，个人见解，不喜就喷。</span></p>
+<p><span style="line-height: 1.5;">    To be continue，继续按理说，既然放在了/usr/include/ 这个目录下，那就是告诉应用程序开发者们想用就用吧，大不了开源。然而事情没有想象中的那么简单，就比如这个蛋疼的/usr/include/linux/list.h这个头文件，它竟然很操蛋的说“＃ifdef __KERNEL__”, 就是说，你是内核模块才能接着用后面这段代码。于是我被逼无奈在自己的C代码里面定义了这个宏，当然这是非常规手法，莫学，我只是为了写它的使用示例才这么干的。</span></p>
+<p><span style="line-height: 1.5;">    至于gcc的－D选项，想必大家都明白，它是为了方便选择性编译用的。</span></p>
+<p><strong>2. bsd_list.c</strong></p>
+<p><span style="line-height: 1.5;">    好了，终于轮到新欢bsd了，linux已成了旧爱，所以我才敢在这里喷GPL，正所谓“mountain is high， empire is far”。</span></p>
+<p><span style="line-height: 1.5;">    BSD的设计就很优雅，包括它的应用程序编译环境，不像linux那样一锅乱炖。 <span class="caps">BSD</span> kernel导出来的头文件是放在了 /usr/include/sys这个目录下，与linux list.h相对应的文件是queue.h,这个文件则是想用就能用，而且BSD协议也不要求你必须开源，所以尽管放心大胆的使用“＃include &lt;sys/queue.h&gt;”就好了。 另外，牛逼哄哄的Mac也是使用了很多BSD的组件，我的这个C文件就是在Mac上编译并执行的。当然，对于Mac而言，它有自己的sysroot路径，所以事实上queue.h是在/$%^&amp;<strong>!@###/sys/queue.h这个地方，$%^&amp;</strong>!@###这个鬼东西就是Mac的编译环境路径的名字，不必care。</span></p>
+<p><span style="line-height: 1.5;">    说了那么多，还没有说到正题，好了，让我们言归正传。</span></p>
+<p><span style="line-height: 1.5;">    我们知道，在网络系统上，不过就是收包和发包，所以Network里面对链表的使用主要就是添加和删除，很少涉及查找某一个元素或者把一个元素插入到中间某一个位置。对于添加和删除，无非就是，从头还是从尾添加，从头还是从为删除，或者说，先进先出，还是先进后出，也就是队列和栈。</span></p>
+<p><span style="line-height: 1.5;">    Linux在这方面设计的比较精巧，而且是一招鲜吃遍天。它的具体实现思想是，我先指定一个全局变量header，你可以选择往这个header的prev方向插也可以选择往这个header的next方向插，嗯，想必你已经明白了，它实现的是一个双向循环链表。对于栈而言就是，每来一个新元素，我就插入到header的next位置，遍历的时候我也往next方向遍历，那么first元素就是最新插入的元素。对于队列而言是，每来一个新元素，我就插入到header的prev位置，遍历的时候仍然是往next方向遍历，但这个时候first元素显然是最老插入的元素。是不是又是前又是后插来插去的把你插糊涂了？这怨不得我，谁让您的思想太邪恶了哪。 于是linux就靠struct list_head这个东西几乎搞定了所有涉及到链表的操作，这也是为什么我说它一招鲜吃遍天的原因。</span></p>
+<p><span style="line-height: 1.5;">    <span class="caps">BSD</span> kernel则是实现了list的family， 比如SLIST／LIST／TAILQ等，在这里我说一下有代表性的TAILQ。我们知道BSD就是network的祖师爷，network协议的第一次编码实现就是在BSD系统上。 所以BSD链表的实现也带有明显的网络应用场景痕迹，就像queue.h里面解释的，“因为我们总是会从前往后查找（收包嘛自然是先来的先走了），所以我们双向链表的prev域并不是指向前一个元素，而是指向前一个元素的next域，而前一个元素的next域是指向我这个元素自身”，这样设计的好处从TAIQ_LAST()这个函数的实现里就可以一窥端倪。 BSD并没有像linux那样靠循环链表的表头header就可以想怎么玩就怎么玩，bsd不是一个循环链表。但是我又想实现从头从尾插从头从尾删怎么办，所以它得记录这个链表的first和last元素，这样就可以想从前就从前想从后就从后的插入和删除了。</span></p>
+<p><span style="line-height: 1.5;">    说一下TAILQ_LAST()这个函数。TAILQ_LAST()的一个技巧就是，指针就是指针，它不过就是4字节(32bit <span class="caps">CPU</span>)或者8字节(64bit <span class="caps">CPU</span>)而已，和名字无关。 比如我有下面两个结构体：</span></p>
+<p><span style="line-height: 1.5;">        struct XX{<br />
+</span>            struct XX <strong>first；<br />
+<span style="line-height: 1.5;">            struct XX *</strong>last;<br />
+</span><span style="line-height: 1.5;">        } header;</span></p>
+<p>与<br />
+<p style="padding-left: 30px;"><span style="line-height: 1.5;">struct  YY{</span><br />
+<span style="line-height: 1.5;">    struct YY <strong>next;</span><br />
+<span style="line-height: 1.5;">    struct YY *</strong>prev;</span><br />
+<span style="line-height: 1.5;">} type;</span></p><br />
+如果我知道了type的next域的地址，我想要获取type的prev元素里面的内容怎么办？ 最直接点的实现就是next域的地址加4再访问就好了，但是这样不优雅，太过于丑陋，作为优雅的BSD，自然要使用其他方法，这也是为什么我说container_of太过于简单粗暴的原因。BSD的实现是，我使用header和type具有相同的内存layout来做文章， 因为next域指向的元素类型跟type一样，那么我把type类型强制转换为header类型，访问header的last域就可以了。说的有点绕，请看代码实现，一看就明白。</p>
+<p>&nbsp;</p>
+<p><span style="line-height: 1.5;">    总结一下，linux kernel双向链表的基本结构体是，</span></p>
+<p><span style="line-height: 1.5;">            struct type {<br />
+</span><span style="line-height: 1.5;">                struct type *next;<br />
+</span><span style="line-height: 1.5;">                struct type *prev;<br />
+</span><span style="line-height: 1.5;">            };</span></p>
+<p><span class="caps">BSD</span> kernel双向链表的基本结构体是，</p>
+<p><span style="line-height: 1.5;">            struct type {<br />
+</span><span style="line-height: 1.5;">                struct type <strong>next;<br />
+</span><span style="line-height: 1.5;">                struct type *</strong>prev;<br />
+</span><span style="line-height: 1.5;">            };<br />
+BSD的实现由应用场景来决定的，Linux Kernel则纯粹是为了一药治百病。 </span></p>
+<p>&nbsp;</p>
+<p><span style="line-height: 1.5;">    现在已经很晚了，有点疲累，所以匆匆写完，也没有到处找链接给索引。所以只是作为一个入门参考，具体细节您还得自己慢慢分析。另外再说一句，BSD的TAIQ确实设计的很巧妙，不像Linux Kernel的list简单粗暴的用0指针来实现container_of(). 具体细节您得看代码，如有不明白，尽管google，有很多好事者写了这方面的解析，当然大多数不过C+V而已。</span></p>
+<p><span style="line-height: 1.5;">    Damn it，从12点10分开始写，已经写到1:30了，得睡觉了。</span></p>
+<p><span style="line-height: 1.5;">    明天见：）</span></p>
+		
+		
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-11-23T00:00:00+08:00" pubdate data-updated="true">Nov 23<span>rd</span>, 2013</time></div>
+	<div class="tags">
+
+</div>
+	
+</div>
+</article> &#8211;>
+
+
+   <article class="post">
+	<h2 class="title">
+		
+		<a href="/blogs/361">
+		
+			三言两语聊Kernel：atomic</a>
+	</h2>
+	<div class="entry-content">
+		<p>atomic的意思是原子，那么原子操作该怎么来理解？</p>
+<p><a href="http://www.kerneltravel.net/downloads/UnderstandLinuxKernel2nd.pdf">《Understading the Linux Kernel(2nd Section)》</a>的解释是，“操作是单个指令执行，中间不能中断，且避免其他CPU访问同一存储单元”。其实这样说的很不是清楚，会让人费解。我对于原子操作的理解是这样的，说白了，原子操作的目的是，我在对某个地址操作的过程中，这个地址空间里面的数据不会被其他的东西给修改。我们知道，对于CPU而言，它的最小执行单元就是一条指令，指令在流水线（取指／译码／执行等）线执行的过程是不会被打断的，而在两条指令间是可以被打断的，即，程序员的意思是让CPU执行完指令A就去执行指令B，但是CPU在执行完指令A后就可能会被其他东西打断而没有去执行指令B，比如被中断打断；除了被打断，还有可能会被别的CPU给改写数据。原子操作要做的事就是，如何保证在在这些情况下依然可以实现我们前面说的那个目的。</p>
+<p>先从atomic的数据结构来说起。看下<a href="http://lxr.oss.org.cn/source/include/linux/types.h?a=mips#L177">linux内核对于atomic type的定义</a>：<br />
+<p style="padding-left: 60px;">typedef struct {int <a href="http://lxr.oss.org.cn/ident?a=mips;i=counter">counter</a>; } <a href="http://lxr.oss.org.cn/ident?a=mips;i=atomic_t">atomic_t</a>;<br />
+typedef struct {long <a href="http://lxr.oss.org.cn/ident?a=mips;i=counter">counter</a>; } <a href="http://lxr.oss.org.cn/ident?a=mips;i=atomic64_t">atomic64_t</a>;</p><br />
+看到这个定义，想必你的第一感一定是，为什么要定义成结构体，而不是直接定义成：<br />
+<p style="padding-left: 60px;">typedef int atomic_t: ?</p><br />
+这样定义有什么好处吗，我可以定义成int吗？</p>
+<p>我们再来看下freebsd对于atomic_t的定义，很遗憾的是，<a href="https://github.com/freebsd/freebsd/blob/master/sys/mips/include/atomic.h">较新的freebsd源码已经看不到atomic_t的定义了，原子操作都是直接使用volatile uin32_t。 </a> 。对于较老版本的freebsd，它是这样定义atomic_t的：<br />
+<p style="padding-left: 60px;">typedef volatile int aotmic32_t.<br />
+typedef volatile long long atomic64_t;</p><br />
+ All right, freebsd和linux确实看起来是两个世界，两帮天才各实现自己的东西，都觉得自己的实现是好的。</p>
+<p>我举freebsd对于atomic_t的定义，是为了说明，直接使用typedef int atomic_t不是不可以，一样可以实现要做的事，从语言技巧的角度来看，定义成struct跟不定义成struct没有什么区别。那，为什么linux要定义成一个结构体哪？</p>
+<p>再来看下<a href="http://lxr.oss.org.cn/source/Documentation/atomic_ops.txt">linux kernel atomic的maintainer对此的解释</a>：</p>
+<p><em>&#8220;The atomic_t type should be defined as a signed integer. Also, it should be made opaque such that any kind of cast to a normal C integer type will fail.  &#8221;</em></p>
+<p>他说的倒是很严重的样子，“any kind of cast to a normal C int type will fail”，其实就是说，你丫别随便操作atomic_t这个类型，又是类型转换又是直接操作counter，出了事别怪我丫没有提醒你，你要使用atomic_t 这样类型，就必须得通过我给你提供的一系列atomic interface，我之所以费那么大劲用个结构体来把它给封装起来就是为了防止你乱用。 所以，这句话完全等价于:&#8220;hey, you guy, it is my territery&#8221;. 可以看出，定义成struct代表了该<span style="color: #0000ff;">作者的设计理念，即：一起操作都要通过接口，别走捷径</span>。所以内核开发者切记直接使用atomic_data_p-&gt;counter，这是没有理解作者的设计意图，应该要atomic_read(atomic_data_p)这样来用。</p>
+<p>解释完了struct，再来看下volatile。</p>
+<p>想必大家都知道，volatile是告诉编译器的指令，让编译器编译的时候别做任何优化，就按照程序员的意图来，不要为了适应机器而改变什么。 该maintainer接下来又解释了为什么没有volatile：</p>
+<p><em>Historically, counter has been declared volatile.  This is now discouraged. See Documentation/volatile-considered-harmful.txt for the complete rationale.</em></p>
+<p>之所以去掉volatile, Jonathan Corbet先生的解释是,没有必要用volatile,因为它对性能的损害太大了,在必要的地方用barrier()就可以了.  David S. Miller相信了Corbet的话, 正所谓艺高人胆大,于是三下五除二的把atomic.h里面的volatile都给去掉了,然后在必要的地方加了barrier. 不过freebsd guys没有听信Corbet这一套,而依旧很稳妥的在所有的地方都加着volatile.</p>
+<p>在这里我解释下volatile和barrier的区别, volatile是用来限制编译器的,它告诉编译器别自作聪明的调整代码或加或减代码来谋取性能,barrier则是限制cpu的,它告诉cpu要按照二进制的指令顺序去执行不要去搞一些乱序来谋求性能. 二者的杀伤力自然不一样, volatile显然更威猛一些.  当然barrier也细分了一些小弟来干不同的事,毕竟它依然对性能有很大的伤害,比如有些是防止指令乱序的,有些是防止对内存访问乱序的.</p>
+<p>说完了数据结构，接着看下具体的操作。以mips为例来说明，感觉mips设计的挺优雅的：）</p>
+<p>我们知道，一条指令是不会被打断的，自然对于一条指令就能够搞定的事情，我们是没有必要费劲去考虑它的原子性的，比如读和写，都可以用一条指令来完成，所以atomic_read和atomic_write会写成这个样子：<br />
+<p style="padding-left: 60px;">#define atomic_read(v) ((v)-&gt;counter)<br />
+#define atomic_write(v, i) ((v)-&gt;counter = i)</p><br />
+搞成这个样子，就是我前面说的，这是作者的理念：一切操作通过接口。</p>
+<p>&nbsp;</p>
+<p>MIPS是RISC架构, RISC架构都是load/store Architecture,  即它对于内存的读是通过load，写是通过strore。显然，对于这种架构，是不能够在内存地址间传递数据的，必须要通过寄存器来进行，那么指令的操作数显然不能包含两个不同的地址。比如我给某个地址里面的值加1， 那就得首先把这个地址里面的数据load到寄存器，然后给寄存器加1，再把该值store到那个内存地址。 于是问题就来了，这个add操作涉及到3条指令，在指令间就可能会被中断打断，也可能在store之前被其他的cpu给抢先一步改了这个内存里面的值。于是，就有了mips的<a href="http://en.wikipedia.org/wiki/Load-link/store-conditional">ll/sc</a>这个指令组合，ll/sc这个指令组合通过下面这段代码来保证对内存访问的原子性：<br />
+<p style="padding-left: 60px;">1:<br />
+ll rt, offset(base)<br />
+addi rt, rt, 1<br />
+sc rt, offset(base)<br />
+beqz rt, 1b</p><br />
+    首先来解释下，它是怎么处理被中断打断的情况的。</p>
+<p>mips为了处理ll/sc指令被中断打断的情况，专门搞了一个flag，叫做<a href="http://www.cs.cornell.edu/courses/cs3410/2013sp/MIPS_Vol2.pdf">LLbit</a>，这个flag对于程序员是不可见的，即程序员无法操作该flag。 当执行ll指令的时候，cpu会把LLbit给置为1,然后在执行sc指令的时候如果该bit依然为1,就认为操作的这个内存空间没有被改写，然后store新值进去，如果sc的时候发现该bit变为了0,那么就认为操作的内存空间在ll执行后sc执行前被改写了，此时sc就不往该内存空间更新新值。 中断返回时会把该bit给清零，由此来确保如果ll/sc之间被中断打断，那么就要重新ll（beqz指令就是做这个事的）。</p>
+<p>然后来看下它是怎么处理多处理同时操作同一个内存地址的情况的。</p>
+<p>为了处理这种情况，mips又专门搞了个寄存器，叫做<a href="http://www.cs.cornell.edu/courses/cs3410/2013sp/MIPS_Vol3.pdf">LLAddr</a>，它是一个协处理器的寄存器。当cpu执行ll指令的时候，会把ll的地址给保存在自己的协处理器寄存器LLAddr里面，然后cpu就会监控该地址，看是否在ll/sc之间别的处理器会写该地址，如果别的cpu写了该地址，就把LLbit给清零，于是接下来sc失败（即不往内存地址store数据，同时赋rt为0），再去重新ll（beqz跳转到前面的ll）。 Well，问题来了，假如两个cpu都执行ll/sc, 而且是操作的同一个内存地址，会出现什么情况？ 我们知道，在ll/sc之间的指令是不会去写这个内存地址的（否则，还要sc干嘛），那么总有一个cpu会首先执行到sc，第一个执行sc指令的cpu会成功的stroe进去新值，另外一个cpu发现自己LLAddr被别人改写了，于是将自己的LLbit置为0,那么sc失败，重新来过。你也许还会继续钻牛角尖，这俩CPU赶巧了，同时执行sc了，那会发生什么？很遗憾的是，mips manual里没有说这种情况，只说了这么一句话：</p>
+<p><em>“Executing LL on one processor does not cause an action that, by itself, causes an SC for the same block to fail on another processor.”</em></p>
+<p>这句话的意思就是我前面说的，两个cpu同时ll/sc一个内存地址，sc的时候会让另外一个cpu的sc失败，而自己sc成功。我找遍了各种资料，也没有见详细说明两个cpu同时ll/sc同一个内存地址时，sc指令又碰巧同时执行了，到底会发生什么。我觉得，我们可以这样想，就像世界杯踢点球一样，要是俩决赛的队伍到了最后要踢点球了，而每一个球员又碰巧都罚进了，那岂不是这俩队就一直射到世界末日？Hmm… 相信我，总有人会成为倒霉蛋的。球场上不是有裁判么，CPU也有类似的决策：总线裁决。这种情况下就要靠总线裁决。</p>
+<p>&nbsp;</p>
+<p>P.S.: 写这篇blog，花了一些精力在找各种链接上，anyway， 治学要严谨。 我之前的领域是linux kernel，从未看过freebsd，现在一对比freebsd，发现这两者的区别确实很有趣。感觉这就像为什么很多人喜欢旅游一样，虽然旅游归来又继续朝九晚五的按步就班，看似没有任何改变，但终究两个地域的对比会对你有所影响，只是没有那么明显而已，这是一个量变到质变的过程，没有人会一下子成为千万富翁的，除非你去抢银行。 所以，我们在一个地方呆久了，就应该出去走一走，看看外面是什么样子。在一个公司或者一个领域也是这样，抬起头来看看外面，否则就像世外桃源似的，乃不知有汉，无论魏晋。不过这样未尝不是件好事，北朝鲜的人民生活就很幸福，谁说不是哪。关键是，就像李国柱大牛（注：华为公司一位德高望重的前辈）说的，看你自己追求的是什么。</p>
+		
+		
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-10-16T00:00:00+08:00" pubdate data-updated="true">Oct 16<span>th</span>, 2013</time></div>
+	<div class="tags">
+
+</div>
+	
+</div>
+</article> &#8211;>
+
+
+   <article class="post">
+	<h2 class="title">
+		
+		<a href="/blogs/338">
+		
+			三言两语聊Kernel：该怎么理解Terminal</a>
+	</h2>
+	<div class="entry-content">
+		<p style="padding-left: 30px;"></p>
+<p>    对于unix系的操作系统而言，即使是看起来很酷的MacOS，都有Terminal这个东西：</p>
+<p><a href="http://www.laoar.net/wp-content/uploads/2013/09/b6a1a15ff43df3648ff3883c28a223e0.png"><img class="aligncenter size-full wp-image-339" title="b6a1a15ff43df3648ff3883c28a223e0" src="http://www.laoar.net/wp-content/uploads/2013/09/b6a1a15ff43df3648ff3883c28a223e0.png" alt="" width="172" height="147" /></a>那么Terminal到底是什么，该怎么来理解它？<br />
+<p style="padding-left: 30px;"></p><br />
+    Terminal是一种设备，它具备输入输出能力，通常我们在程序里会使用reguler files，pipe，socket来用作输入输出，但是他们远不具备terminal那么强大的输入输出能力。 Terminal设计的目的是为了让我们与电脑的交互更容易。<br />
+<p style="padding-left: 30px;"></p><br />
+    当你在Terminal里运行一个程序的时候，你可以通过Ctrl-C来给它发送一个interrrupt信号（SIGINT）；如果该程序是从文件里面读的\x03字符，显然它不会收到SIGINT信号。当你在Terminal里运行一个程序，如果它产生了一个^G字符(\x07)，那么，你就会听到一个beep声；如果该程序是从文件里面读取到的该字符，或者将该字符写入到一个文件中，显然不会产生beep声。举个例子，在终端里面运行下面这段代码，你会不停的听到beep声。Yeah,it is so easy,but so funny.And, don&#8217;t forget to ask why.<br />
+<p style="text-align: left; padding-left: 60px;"><span style="color: #808000;">#include &lt;stdio.h&gt;</span><br />
+<span style="color: #808000;">#include &lt;unistd.h&gt;</span></p><br />
+<p style="text-align: left; padding-left: 60px;"><span style="color: #808000;">int main()</span><br />
+<span style="color: #808000;">{</span><br />
+<span style="color: #808000;">    unsigned int usec = 100;</span><br />
+<span style="color: #808000;">    while (1) {</span><br />
+<span style="color: #808000;">        printf(&#8220;\x07&#8221;);</span><br />
+<span style="color: #808000;">        usleep(usec);</span><br />
+<span style="color: #808000;">    }<br />
+</span><span style="color: #808000;">    return 0;<br />
+</span><span style="color: #808000;">}</span></p><br />
+    当你在终端里执行<span style="color: #999999;">ls -G</span>(至少Mac是这样，FreeBSD也这样，SUSE也这样，例外的是Redhat，它是<span style="color: #999999;">ls &#8212;color</span>),你会看到当前目录里的文件和子目录会有颜色的显示。不过，如果该目录里的东西要被写入到一个文件中，well，你不能在一个文本文件中显示出颜色来，can U now？<br />
+<p style="padding-left: 30px;"></p><br />
+    好吧，这到底是怎么一回事，它是怎么个工作原理哪？ 当程序与一个文件交互时，最终会通过kernel driver。如果你在一个ext2分区上open/read/write，ext2 filesystem的drivder就会被调用；如果你open一个FIFO，它会使用pipe driver(Linux:fs/pipe.c;  FreeBSD:<span style="color: #ff0000;"><span class="caps">TBD</span></span>); 如果你open一个terminal设备节点，terminal设备驱动就会处理这个请求。<br />
+<p style="padding-left: 30px;"></p><br />
+    Terminal driver控制的设备稍微多一些。 ext2 driver只需要和磁盘进行通信；pipe driver则不涉及任何硬件；而terminal driver需要监控keyboard／mouse，将字符打印到屏幕上，以及将beep声发送到speaker。从这个角度来看，terminal可以认为是个抽象化的东西，它代表了人机交互所有用到的东西。当然，X系统也是运行在一个terminal上，对linux系统而言，它对应的设备是/dev/tty7, 这也是为什么使用Alt+Ctrl+F7可以切换到X系统的原因。<br />
+<p style="padding-left: 30px;"></p><br />
+    对于一个典型的PC而言，在任何时间，某一个终端会运行在前台，其他的终端则是在后台。 位于前台的终端会接收keyboard／mouse的输入，同样也会独占的访问在monitor上显示的东西。比如，当你按下某个键比如‘K’，terminal driver会将该字符显示到屏幕上，并且将它存在一个buffer里面，因此，当接下来某个进程从终端设备来读取数据的时候会接收到这个字符。 terminal也会对一些功能键作出反应，比如Ctrl-A，terminal将其显示为^A,并且在process获取它之前将其编码为\x01。当一个process往terminal上写字符时，这些字符会被显示到屏幕上;但对于一些控制序列，比如以<a href="http://www.gnu.org/software/screen/manual/html_node/Control-Sequences.html">ESC开始的control sequences</a> ，terminal不会将其显示到屏幕上，而是会作出一些特殊的行为，比如移动cursor，或者改变当前的文本颜色，等等，当然process是不能直接看到这些行为的，它是为了给你看的。另外，BEL字符会产生一个beep音，而不是通常的可视化输出。<br />
+<p style="padding-left: 30px;"></p><br />
+     Terminal也会用来控制任务，比如，Ctrl-C来打断一个process group，Ctrl-Z来挂起一个process group，对于terminal driver而言就是发动SIGINT或者SIGSTP给在前台运行的process group。 任务控制是基于这个原理：运行在一个控制终端（/dev/tty）上的process通常是受该控制终端控制的。例如，terminal driver会纪录它控制了哪些session以及哪个process group在前台。/dev/tty是指向控制终端的一种特殊设备，具体是指向哪个设备可以通过它提供的ioctl接口来获取。<br />
+<p style="padding-left: 30px;"></p><br />
+    所有前面说到的这些很cool的功能都是在terminal driver里面来实现的，可以概括为下图所示：</p>
+<p><a href="http://www.laoar.net/wp-content/uploads/2013/09/1e5e32cb531e354b6f897853e0c49280.png"><img class="aligncenter size-full wp-image-340" title="1e5e32cb531e354b6f897853e0c49280" src="http://www.laoar.net/wp-content/uploads/2013/09/1e5e32cb531e354b6f897853e0c49280.png" alt="" width="732" height="576" /></a><br />
+<p style="padding-left: 30px;"></p><br />
+    与Terminal相关容易把人搞糊涂的一个概念是shell。shell是一个应用程序，它用来提示你输入，并且执行你的命令。shell是不感知到字符显示以及处理按键事件的，这是terminal要为它处理好的，因此terminal是对shell的一个封装，给它提供了一个人机交互的桥梁。 通常我们使用较多的shell是bash。 对应到上图，“foregroud process group”基本上都会有一个shell进程，它要么在读写字符，要么在等待它的子进程（这个子进程在读或者写字符）退出。 这个前台进程组的&quot;stdin&quot;会得到控制终端发送给它的字符，这些字符可能是你输入的，也可能是程序产生的。 这个前台进程组的“stdout”是控制终端输入以显示到屏幕上的ASCII码流。<br />
+<p style="padding-left: 30px;"></p><br />
+    还有个东西叫做console(/dev/console), console是terminal的一种类型。 对于我们而言，console比较直观的一个理解是，它是系统日志输出的地方，那么从这个角度看，console可以认为是用来管理系统的。</p>
+<p><strong><span style="color: #ff0000;"> P.S.：</span></strong></p>
+<p><strong><span style="color: #ff0000;">个人见解，如果觉得写的有不对的地方，请直接喷：）</span></strong></p>
+<p>&nbsp;</p>
+<p>ref：</p>
+<p><sup class="footnote" id="fnr1"><a href="#fn1">1</a></sup> <a href="http://www.linusakesson.net/programming/tty/index.php">The <span class="caps">TTY</span> demystified </a></p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+		
+		
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-28T00:00:00+08:00" pubdate data-updated="true">Sep 28<span>th</span>, 2013</time></div>
+	<div class="tags">
+
+</div>
+	
+</div>
+</article> &#8211;>
+
+
+   <article class="post">
+	<h2 class="title">
+		
+		<a href="/blogs/325">
+		
+			三言两语聊Kernel：从Linux到FreeBSD</a>
+	</h2>
+	<div class="entry-content">
+		<p><em><strong><span style="color: #0000ff;">今晚恰好是中国好声音那英组的决赛，看完比赛后就一直听姚贝娜的《Dear Friend》，经过了无数个单曲循环后写完了这篇日志。姚贝娜唱的太好听了。</span></strong></em></p>
+<p>总的来说，FreeBSD Kernel比Linux Kernel要简洁的多。我感觉可能是以下两个原因：1）linux考虑的场景多，所实现的功能也更多一些，所以linux比freebsd在编译时的配置要灵活。2）FreeBSD是个中央集权式的组织结构，linux则是民主式组织结构，所以freebsd的很多改进都是有组织有计划，代码看起来就很清晰，而linux是自底向上的改进，代码看起来就散乱些。</p>
+<p>下面来看下linux kernel 和freebsd kernel在代码上的主要差异：<br />
+<h2><strong>1. 编译</strong></h2><br />
+Linux和FreeBSD都是使用Makefile来管理整个工程的。 二者在编译上最大的差异是configuration的不同。</p>
+<p>Linux为了灵活配置，在内核编译配置上使用了Kconfig机制，使用该机制能够很方便的选择编译哪些功能。Kconfig也是使用Makefile来控制的，使用make menuconfig这个命令。</p>
+<p>FreeBSD则是使用了一个专门的工具config来配置需要编译的内核代码。<br />
+<h2><strong>2. 内核启动</strong></h2><br />
+bootstrap之后是OS的启动，这对于所有的操作系统都是一致的。</p>
+<p>二者在启动过程主要是如下的不同。</p>
+<p><em>1）</em>linux内核使用了镜像压缩机制，在从bootloarder跳转到内核后先执行的是一个压缩的镜像，然后进行自解压。FreeBSD则没有这个压缩机制。</p>
+<p><em>2）</em>linux模块的初始化是分层级进行，每个优先级都对应于一个section。linux首先初始化高优先级的initcall，再去初始化低优先级的initcall，在某个优先级内，比如A模块和B模块都属于优先级1,那么A模块和B模块的初始化顺序则是由链接过程决定的，哪个模块先被链接到section的前面，自然要先执行哪个模块。 FreeBSD的模块初始化是使用的SYSINIT，SYSINIT会在编译时首先定义好各个模块的初始化顺序，然后内核就按照这个顺序来初始化各个模块。</p>
+<p><em>3）</em>swapper／init／idle线程</p>
+<p>不同在于SMP系统。linux内核的每个CPU都有自己的swapper线程（0号线程），init线程（1号线程）则只有主核有，对于linux而言，swapper线程就是idle线程，即在CPU空闲的时候会去唤醒idle线程。 FreeBSD的内核swapper线程和idle线程是不同的线程，只有主核有swapper线程（0核线程）和init线程（1号线程），每个核都有自己的idle线程，在CPU空闲的时候会唤醒该idle线程。<br />
+<h2><strong>3.  Task Management 和 Scheduling Algorithm</strong></h2></p>
+
+		<ol>
+			<li>1）主要数据结构<br />
+Linux kernel使用task_struct这个结构体(include/linux/sched.h)来描述进程, 使用thread_info结构体（arch/arm/include/asm/thread_info.h）来描述线程状态信息,thread_info是和architecture强相关的，所以定义在了arch目录下。调度是以task_struct为基本单位来进行的，每个线程／进程都有自己的task_struct,线程和进程的区别主要在于，进程有自己独立地址空间，而线程则是共享进程的地址空间。</li>
+		</ol><p>FreeBSD使用proc这个结构体（sys/sys/proc.h）来描述进程,使用thread结构体（sys/sys/proc.h）来描述线程信息，FreeBSD的调度单位是thread，对于单线程的进程而言，它有一个proc结构体和一个thread结构体，对于多线程的进程而言，则是每个线程都有自己的thread结构体，多线程共用一个proc结构体。 线程和进程的主要区别也是线程没有自己的独立地址空间。</p>
+
+		<ol>
+			<li>2）调度机制<br />
+Linux的进程分为实时进程和普通进程两种，实时进程有FIFO和RR两种调度策略， 普通进程则是CFS调度算法。 每个CPU都维护着自己的运行队列／等待队列链表。</li>
+		</ol><p>FreeBSD则是将进程分为以下几种调度类型：ITHD／KERN／REALTIME／TIMESHARE／IDLE，从左往右优先级递减。其中，ITHD是针对中断下半部的线程（FreeBSD用线程来处理中断，这是和linux的一个很大的区别），所以优先级最高；接着是内核线程；然后是实时用户态线程；接着是分时线程；CPU空闲的时候再唤醒idle线程。FreeBSD有三种调度算法：实时调度，针对实时进程；分时调度，针对普通进程；ULE调度算法，针对SMP系统的负载均衡。 每个CPU都维护着自己的idle队列／curren队列／next队列这三个链表。<br />
+<h2><strong>4. Memory Management</strong></h2></p>
+
+		<ol>
+			<li>1）主要数据结构<br />
+Linux kernel使用mm_struct这个结构体（include/linux/mm_types.h）来描述进程的地址空间。</li>
+		</ol><p>FreeBSD使用vmspace这个结构体（sys/vm/vm_map.h）来描述进程的地址空间。</p>
+
+		<ol>
+			<li>2)  内存管理策略<br />
+二者并无明显的差异。都是分页机制＋访问权限控制。<br />
+<h2><strong>5. Filesystem</strong></h2><br />
+都是使用的VFS机制。差异在于具体文件系统上。</li>
+		</ol><p>linux kernel支持磁盘文件系统（EXT系列），块设备文件系统（yaffs2／jffs2）, 网络文件系统（NFS），虚拟文件系统（pseudo filesystem，例如procfs／devfs） 。</p>
+<p>FreeBSD在具体实现上跟linux略有不同，FreeBSD的具体存储机制是Filestore，filestore有三种管理方式：1）针对块设备：FFS， 2）针对内存：MFS， 3）日志文件系统。FreeBSD也支持NFS。FreeBSD也支持虚拟文件系统，略有不同的是，FreeBSD的procfs是指process filesystem，就类似于内核提供给用户态一个sysctl接口来查看进程信息。<br />
+<h2><strong>6.  Interrupt</strong></h2><br />
+FreeBSD的中断下半部对应于一个内核线程，是由内核线程来处理中断服务程序。Linux的中断下半部则没有所谓的线程，直接由中断向量表进入中断中断服务程序。<br />
+<h2><strong>7. Sync Mechanism</strong></h2><br />
+二者的同步机制基本一样，都是spinlock／mutex／semaphore这些机制以及衍生。<br />
+<h2><strong>8. Debug </strong></h2></p>
+
+		<ol>
+			<li>1）用户态<br />
+linux和FreeBSD都支持GDB，GDB的实现在两个OS上也是一致的，都是通过ptrace系统调用。</li>
+		</ol><p>linux有个很强大的工具strace来跟踪系统调用，FreeBSD上没有该利器，不过FreeBSD可以使用ktrace＋kdump来实现strace的功能。</p>
+
+		<ol>
+			<li>2）内核态调试<br />
+linux的kgdb可以分析crash dump，也可以对内核进行live debug。</li>
+		</ol><p>FreeBSD则是使用kgdb来分析crash dump，然后使用ddb工具来进行 live debug。</p>
+
+		<ol>
+			<li>3）其他杂项调试工具<br />
+大同小异，半斤八两。</li>
+		</ol><p>&nbsp;</p>
+<p>P.S.:对FreeBSD代码看的还不多，很多地方也许写的不对。后续会继续完善。</p>
+<p><span style="color: #ff0000;"><strong> TBD</strong></span></p>
+<p>&nbsp;</p>
+<p>ref：</p>
+<p><a title="linux kernel" href="http://http://www.amazon.cn/Understanding-the-Linux-Kernel-Bovet-Daniel-P/dp/0596005652/ref=sr_1_1?ie=UTF8&amp;qid=1379698958&amp;sr=8-1&amp;keywords=understanding+linux+kernel" target="_blank"><sup class="footnote" id="fnr1"><a href="#fn1">1</a></sup> Understanding the Linux Kernel</a></p>
+<p><a title="FreeBSD Kernel" href="http://www.amazon.cn/FreeBSD%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0-%E9%BA%A6%E5%8D%A1%E6%80%9D%E5%85%8B/dp/B0012X9LD6/ref=sr_1_1?ie=UTF8&amp;qid=1379699151&amp;sr=8-1&amp;keywords=freebsd" target="_blank"><sup class="footnote" id="fnr2"><a href="#fn2">2</a></sup>The Design and Implementation of the FreeBSD Operation System</a></p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+		
+		
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-21T00:00:00+08:00" pubdate data-updated="true">Sep 21<span>st</span>, 2013</time></div>
+	<div class="tags">
+
+</div>
+	
+</div>
+</article> &#8211;>
+
+
+   <article class="post">
+	<h2 class="title">
+		
+		<a href="/blogs/316">
+		
+			在高铁上聊Kernel：what Is the Fucking ABI(程序二进制接口)?</a>
+	</h2>
+	<div class="entry-content">
+		<p>P.S.:在高铁上写完的这篇文章。</p>
+<p>在定义ABI之前，先看下API，对于API我们更熟悉一些。 二者的对比会帮助我们来理解ABI。</p>
+<p>API是Application Programming Interface的缩写，它的意思是程序编程接口。 一个API是不同代码片段的连接纽带。它定义了一个函数的参数，函数的返回值，以及一些属性比如继承是否被允许。 因此API是用来约束编译器的：一个API是给编译器的一些指令，它规定了源代码可以做以及不可以做哪些事。在说到API的时候，也会涉及到函数的条件，行为以及出错环境。从这个角度看， 一个API也可以看作是被人使用：一个API是给程序员的一些指令，它规定了函数需要什么以及会做什么。</p>
+<p>ABI是Application Binary Interface的缩写，它的意思是程序二进制接口。 一个ABI是不同二进制片段的连接纽带。 它定义了函数被调用的规则：参数在调用者和被调用者之间如何传递，返回值怎么提供给调用者，库函数怎么被应用，以及程序怎么被加载到内存。 因此ABI是用来约束链接器的：一个ABI是无关的代码如何在一起工作的规则。 一个ABI也是不同进程如何在一个系统中共存的规则。 举例来说，在Linux系统中，一个ABI可能定义信号如何被执行，进程如何调用syscall，使用大端还是小端，以及栈如何增长。从这个角度看，一个API是用来约束在一个特定架构上操作系统的一系列规则，</p>
+<p>举个例子，在ARM 32bit架构上，对于如下代码片段而言：<br />
+<span style="color: #993300;">    void foo_a(void)</span><br />
+<span style="color: #993300;">    {</span><br />
+<span style="color: #993300;">        int a<sup class="footnote" id="fnr10"><a href="#fn10">10</a></sup>;</span><br />
+<span style="color: #993300;">        int val;</span><br />
+<span style="color: #993300;">        val = foo_b(a<sup class="footnote" id="fnr0"><a href="#fn0">0</a></sup>, a<sup class="footnote" id="fnr1"><a href="#fn1">1</a></sup>, a<sup class="footnote" id="fnr2"><a href="#fn2">2</a></sup>, a<sup class="footnote" id="fnr3"><a href="#fn3">3</a></sup>, a<sup class="footnote" id="fnr4"><a href="#fn4">4</a></sup>, a<sup class="footnote" id="fnr5"><a href="#fn5">5</a></sup>, a<sup class="footnote" id="fnr6"><a href="#fn6">6</a></sup>, a<sup class="footnote" id="fnr7"><a href="#fn7">7</a></sup>, a<sup class="footnote" id="fnr8"><a href="#fn8">8</a></sup>, a<sup class="footnote" id="fnr9"><a href="#fn9">9</a></sup>);</span><br />
+<span style="color: #993300;">    }</span><br />
+那么，参数a<sup class="footnote" id="fnr0"><a href="#fn0">0</a></sup>~a<sup class="footnote" id="fnr3"><a href="#fn3">3</a></sup>会被加载到r0～r3这四个寄存器中，参数a<sup class="footnote" id="fnr4"><a href="#fn4">4</a></sup>~a<sup class="footnote" id="fnr9"><a href="#fn9">9</a></sup>则会压入栈中，且压栈方向是从右至左，即a<sup class="footnote" id="fnr9"><a href="#fn9">9</a></sup>先入栈，a<sup class="footnote" id="fnr4"><a href="#fn4">4</a></sup>最后入栈。foo_b的返回值则会放在r0寄存器中。这就是ABI所约束的规则。</p>
+<p>一个ABI是被kernel／toolchain／架构这三驾马车共同定义的。这三者每一个都必须遵守它。一般，架构规划好标准的ABI，然后操作系统或多或少的采用这些标准，这些细节都会在架构手册里面文档化。</p>
+<p>Ref:</p>
+<p><sup class="footnote" id="fnr1"><a href="#fn1">1</a></sup> <a title="3 Volume Set of Intel® 64 and IA-32 Architectures Software Developer’s Manuals" href="http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html ">3 Volume Set of Intel® 64 and IA-32 Architectures Software Developer’s Manuals</a></p>
+<p><sup class="footnote" id="fnr2"><a href="#fn2">2</a></sup> <a title="Application Binary Interface for   the ARM Architecture" href="http://infocenter.arm.com/help/topic/com.arm.doc.ihi0036b/IHI0036B_bsabi.pdf">Application Binary Interface for the ARM Architecture</a></p>
+		
+		
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-02T00:00:00+08:00" pubdate data-updated="true">Sep 2<span>nd</span>, 2013</time></div>
+	<div class="tags">
+
+</div>
+	
+</div>
+</article> &#8211;>
+
+
+   <article class="post">
+	<h2 class="title">
+		
+		<a href="/blogs/299">
+		
+			三言两语聊Kernel：Busy Waiting or Sleeping？</a>
+	</h2>
+	<div class="entry-content">
+		<p style="padding-left: 30px;"></p>
+<p>     在某些情况下，我们需要将当前线程的执行挂起，直至某一事件发生。这个事件可能是一个有争抢的资源变为可用，时间的流逝，或者锁的释放。这个等待可以通过两种基本的方式来实现：Busy Waiting 和Sleeping。<br />
+<p style="padding-left: 30px;"></p><br />
+    系统通过在循环里面旋转并且不停的去检查问题事件是否发生来实现Busy Waiting。   比如，如果我们想要等待5s，可以这样来实现：<br />
+<p style="padding-left: 30px;"><span style="color: #993300;">const int until = get_time() + 5;</span><br />
+<span style="color: #993300;">while(until &gt; get_time())</span><br />
+<span style="color: #993300;">;</span></p><br />
+这样做的好处是，它的实现较简单，并且如果不等太久它在性能上会表现很好，因为避免了切换到其他线程的开销。坏处也很明显：把CPU cycle浪费在执行无任何价值的东西上。<br />
+<p style="padding-left: 30px;"></p><br />
+    Busy Waiting相对于Sleeping比较容易理解。Sleeping通过更复杂的方式来实现：首先构造一个需要等待的线程的链表，叫作等待队列；接着把自己加入到等待队列中，控制权交给内核；然后当问题事件发生时让内核唤醒该链表里的一个（些）进程去执行。举例来说，你可能需要在某一个mutex变得可用时让内核唤醒你，于是把控制权交给内核，让内核去执行除你之外的进程，在该mutex变得可用时内核再去唤醒你。如下：<br />
+<p style="padding-left: 30px;"><span style="color: #993300;">mutex_lock(&amp;m_lock);</span><br />
+<span style="color: #993300;">    list_add_tail(current, &amp;m_lock-&gt;wait_list);</span><br />
+<span style="color: #993300;">    schedule();</span></p><br />
+<p style="padding-left: 30px;"><span style="color: #993300;">mutex_unlock(&amp;m_lock);</span><br />
+<span style="color: #993300;">    wake_up_process(m_lock.wait_list.next-&gt;task);</span></p><br />
+     Sleeping相对于Busy Waiting的好处是，内核可以在等待期间去执行有意义的事情。坏处则是它的开销：维护一个链表，让你自己去睡眠，上下文切换到一个新的进程（再加上切换回你自己）。如果等待的时间较短，显然使用Busy Waiting更合理。</p>
+		
+		
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-08-31T00:00:00+08:00" pubdate data-updated="true">Aug 31<span>st</span>, 2013</time></div>
+	<div class="tags">
+
+</div>
+	
+</div>
+</article> &#8211;>
+
+
+   <article class="post">
+	<h2 class="title">
+		
+		<a href="/blogs/289">
+		
+			三言两语聊Kernel：do{…}while(0)</a>
+	</h2>
+	<div class="entry-content">
+		<p>在内核代码里我们会看到很多do{…}while(0)来定义的宏，比如(摘自include/asm-generic/barrier.h)：<br />
+<img src="/images/289.jpg"><br />
+linux kernel里这么定义自然有其特殊的目的。</p>
+<p>在C语言里，使用do/while(0)模式来定义的宏在任何情况下都有同样的行为，而且在C语言里面，只有do/while(0)模式来定义的宏才会在任何情况下(比如，在没有“ }”的if语句中)都有同样的行为.</p>
+<p>举一些例子。</p>
+<p><span style="line-height: 1.5;">     <span style="color: #993300;">＃define foo(x)  a(x); b(x)</span></span></p>
+<p>对于 <span style="color: #993300;">foo(test);<br />
+</span>会被展开为： <span style="color: #993300;">a(test); b(test);</span></p>
+<p>&nbsp;</p>
+<p>如果是这样的话，这看起来很正确，没有任何错误，是你原本想要得到的结果。</p>
+<p>但如果这样用：<br />
+<span style="color: #993300;">     if (cond)<br />
+</span><span style="color: #993300;">         foo(test);<br />
+</span>    它就会被展开为：<br />
+<span style="color: #993300;">    if (cond)</span><br />
+<span style="color: #993300;">        a(test); b(test);<br />
+</span>    它的行为就变成了：<br />
+<span style="color: #993300;">    if (cond)          </span><br />
+<span style="color: #993300;">        a(test); </span><br />
+<span style="color: #993300;">     b(test);<br />
+</span>    这并不是你原本想要的。</p>
+<p>然后，我们重新定义该宏，使用do/while(0)来封装：<br />
+<span style="color: #993300;"> ＃define foo(x) do{a(x); b(x)}while(0)</span></p>
+<p>这样定义的宏和前面定义的宏具有同样的作用，只不过，do确保了它的整个逻辑都在大括号里面执行，while(0)确保它只执行一次。所以它跟没有do/while(0) 的宏具有同样的效果。那么，他们有什么不同吗？让我们再来看前面那个例子：<br />
+<span style="color: #993300;">    if (cond)          </span><br />
+<span style="color: #993300;">        foo(test);<br />
+</span>    现在它就变成了：<br />
+<span style="color: #993300;">    if(cond)</span><br />
+<span style="color: #993300;">        do{a(test); b(test)}while(0);<br />
+</span>    实际上就是：<br />
+<span style="color: #993300;">    if(cond){</span><br />
+<span style="color: #993300;">        a(test);</span><br />
+<span style="color: #993300;">        b(test);</span><br />
+<span style="color: #993300;">    }</span></p>
+<p>你可能会疑问，为什么不直接使用“{}”来定义该宏？让我们来看下面这种情况：<br />
+<span style="color: #993300;">#define foo(x) {a(x); b(x);}</span><br />
+那么：<br />
+<span style="color: #993300;">    if(cond)</span><br />
+<span style="color: #993300;">        foo(test);</span><br />
+<span style="color: #993300;">    else</span><br />
+<span style="color: #993300;">        bin(test);</span><br />
+就变成了：<br />
+<span style="color: #993300;">    if(cond){</span><br />
+<span style="color: #993300;">        a(test);</span><br />
+<span style="color: #993300;">        b(test);</span><br />
+<span style="color: #993300;">    };</span><br />
+<span style="color: #993300;">    else</span><br />
+<span style="color: #993300;">        bin(test);<br />
+</span>    显然这是一个语法错误，因为else前面没有if。</p>
+<p>使用这种方式来定义宏，还有个好处是，在&quot;{&#8230;}&quot;里面可以定义自己的局部变量，而不被外面的变量所干扰。</p>
+<p>在linux内核代码里，很多宏都是使用do/while(0)来封装的，目的就是为了让它在任何情况下都具有同样的行为。在我们自己的代码里，也要养成这种好习惯。</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+		
+		
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-08-28T00:00:00+08:00" pubdate data-updated="true">Aug 28<span>th</span>, 2013</time></div>
+	<div class="tags">
+
+</div>
+	
+</div>
+</article> &#8211;>
+
+
+   <article class="post">
+	<h2 class="title">
+		
+		<a href="/blogs/269">
+		
+			三言两语聊kernel：调度入门</a>
+	</h2>
+	<div class="entry-content">
+		<p>前言</p>
+<p>前面说了内存管理入门， 内存管理是理解linux内核的基础， 如果不了解内存管理，就无法深入了解内核，理解了内存管理，再学习内核的其他部分就会相对很容易。</p>
+<p>这次我要说的是调度这部分， 调度在嵌入式系统中也是一个很重要的方面，众所周知，嵌入式系统对实时性要求较高， 实时性本身就是一个调度问题。</p>
+<p>&nbsp;</p>
+<p><strong>一 进程调度的目的</strong></p>
+<p>linux进程调度是为了支持多进程，如果只是单一进程，显然是不需要调度的。 在对多进程的支持过程中， 如何合理的分配系统资源是进程调度要解决的问题，主要包括cpu该选择哪一个进程执行以及让该进程一次执行多长时间，另外一个就是smp系统的负载均衡， 即如何提高多核系统的并行执行性能。</p>
+<p>进程调度是针对task_running状态的进程进行调度， 如果进程不处于task_running状态，进程调度跟它就是没有关系的。 于是就引入了进程状态这个概念。</p>
+<p><strong>二 进程状态</strong></p>
+<p>进程状态分为task_running状态／睡眠状态／task_stop状态／僵死状态。</p>
+<p>task_running状态就是可以被调度的状态，内核在调度点都是选择运行队列上的一个进程来执行。</p>
+<p>睡眠状态分为两种：不可中断状态（R状态）和可中断状态（S状态），一般是进程在运行状态想获得某一个资源但是暂时又得不到，那么该进程就会进入睡眠状态，在条件成立的时候再唤醒该进程，唤醒的方式一般都是通过wake_up系列函数来唤醒。 对于S状态的进程，它还可以被信号给唤醒。</p>
+<p>task_stop状态是指正在运行的状态收到了sig_stop等一些信号而进入暂停状态， 这可以通过sig_continue信号来将其唤醒。</p>
+<p>僵死状态： 当进程已经停止运行，但是其父进程还没有读取该子进程的exit状态时，它的task_struct就会驻留在内存中形成了僵死进程。僵死进程的解决方法是：一是让父进程来waitpid来接管sigchld信号，二是 结束它的父进程，让init进程来处理。 产生的原因：如果父进程fork子进程时没有处理sigchld这个信号， 就会形成僵死进程,有时候可能网络原因等也会产生僵死进程。</p>
+<p><strong>三 进程调度点</strong></p>
+<p>进程有用户态和内核态这两个状态， 即它有两个栈空间，分别时用户栈空间和内核栈空间。 在内核态下和用户态下都可以发生调度，内核态的调度发生在从中断上下文返回到内核态之前（即进程被中断打断了，中断处理完要返回的时候）， 用户态的调度发生在从内核态返回到用户态的时候（即从系统调用返回的时候。）。  内核态的调度需要打开内核抢占，如果不支持内核抢占，在内核态是不会发生调度的。</p>
+<p>ok， 接下来要搞清这个问题。假如我一个进程正在处于用户态，突然来了个中断，会发生什么？ 这个时候，cpu会从特权级3进入特权级0, 进程会由用户态切换到内核态（即从用户态的栈切换到内核态的栈），用户态堆栈指针会压入内核堆栈，中断执行完，首先返回到内核态，然后在从内核态返回到用户态的时候会恢复用户态堆栈。</p>
+<p><strong>四 进程的调度策略</strong></p>
+<p>进程按照其优先级分为实时进程和普通进程。</p>
+<p>实时进程的优先级较高， 实时进程又有两种调度策略：一个时FIFO，另一个是RR。对于FIFO进程而言，只有它执行完，才会选择其他进程执行（没有流控的情况下），而对于RR进程， 则是时间片轮转策略。</p>
+<p><strong>五 抢占</strong></p>
+<p>linux内核抢占需要在menuconfig里面打开config_preempt选项。</p>
+<p>用户抢占则是天生就可以的， 如果不可以， 那怎么支持多进程涅：）</p>
+<p><strong>六 从用户态进入内核态的情况</strong></p>
+<p>1. 系统调用</p>
+<p>2. 异常指令（其实系统调用也是一个异常指令）</p>
+<p>3. 中断</p>
+		
+		
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-29T00:00:00+08:00" pubdate data-updated="true">Jul 29<span>th</span>, 2013</time></div>
+	<div class="tags">
+
+</div>
+	
+</div>
+</article> &#8211;>
+
+
+   <article class="post">
+	<h2 class="title">
+		
+		<a href="/blogs/266">
+		
+			三言两语聊kernel：内存管理入门</a>
+	</h2>
+	<div class="entry-content">
+		<p style="text-align: left;">前言</p>
+<p style="text-align: left;">最近稍有闲暇将自己的一些所学做了整理， 只是浅显的说个大概，没有往细了说，观题目就可知，仅作入门：）</p>
+<p><strong>1. 内存管理的目的</strong></p>
+<p>由于计算机系统所含的实际物理内存大小是有限的， 所以CPU中通常都提供了内存管理机制来对系统中的内存进行有效的管理。 再intel CPU中， 提供了两种内存管理机制： 分段机制 和 分页机制。</p>
+<p>分页管理系统是可以选择的， 它有menuconfig的配置来决定是否需要分页。</p>
+<p>对于linux内核而言，它并没有使用intel CPU的分段机制， 而只是采用了它的分页机制。</p>
+<p>内存管理的一个目的是地址变换，另外一个目的是寻址保护。</p>
+<p><strong>2. 分页机制主要明白以下概念：</strong></p>
+<p>虚拟地址，物理地址， 页，page 结构体。</p>
+<p>对于进程而言， 它看到的都是虚拟地址空间， 在32bit CPU上，它的地址空间是4G；</p>
+<p>对于CPU而言，它访问的是具体的物理内存，即物理地址空间。</p>
+<p>如果由进程的虚拟机制空间来转换为CPU的物理地址空间，就有了MMU这个单元，它的作用是将虚拟地址空间映射为物理地址空间。映射方式就是采用的分页机制，首先将实际物理内存按照4K大小为单位来将物理内存划分为一个个物理页框，这些物理页框通过page结构体来索引， 所有的物理page都是通过一个字节数组mem_map[]来进行检索，该数组的每一个元素代表一个物理page的状态。 mem_map[]对于numa和uma，sparse memory和flat memroy这些内存管理模型上具有不同的实现。 numa是基于节点的， sparse memory是基于section的。</p>
+<p>在地址变换的过程中，首先由虚拟地址的前12bit得出起PGD，结合PGD的内容和CP15寄存器计算出其PMD的基址，虚拟地址的中间8bit为其偏移，然后通过PMD里面的内容计算出PTE的基址（即物理页框的地址），虚拟地址的最后12bit是PTE的偏移，这个地址就是该虚拟地址对应的物理内存的地址。</p>
+<p><strong>3. 虚拟地址空间的划分</strong></p>
+<p>进程的地址空间分为内核空间和用户空间两部分。 这两部分的比例可以通过menuconfig来进行配置， 一般都是配置为1：3,即用户空间占3G， 内核空间占1G。</p>
+<p>用户空间是0～3G这部分地址， 内核空间是3G～4G这部分地址。 对于用户空间而言，每个进程都有自己的页表，而内核空间则只有一份页表（中断／内核线程这些只运行在内核空间的都是没有mm_struct的）。</p>
+<p>内核空间是如下划分：</p>
+<p>内核空间起始于PAGE_OFFSET（即3G）， 在开始的区域是nomal memory区域，这部分区域包括内核镜像／mem_map[]数组，normal memory区域是线性映射， 它映射到物理内存的起始部分。</p>
+<p>然后从high–memory这个地方开始就是所谓的高端内存， 在高端内存和normal memory之间有一个4K的保护页，它的主要作用是起到保护作用。</p>
+<p><strong>4. 高端内存</strong></p>
+<p>高端内存主要是为了解决线性地址不够用的问题。 高端内存有三种映射方式： 固定映射／永久映射／临时映射以及非连续物理地址映射。</p>
+<p>非连续物理地址映射即vmalloc区域，它从VMALLOC_START到VMALLOC_END 这个区域，它的意思是线性地址是连续的，但是映射的物理地址未必是连续的，这部分空间是通过vmalloc（）来申请。</p>
+<p>再往后是永久映射，就是所谓的pmap区域，它通过pmap（）来申请， 通过punmap（）来释放。</p>
+<p>再往后是固定映射区， 它从fixed_addr_start开始，到fixed_addr_top结束，固定映射一般都是在编译阶段就确定好一些外设的映射关系，在系统启动阶段建立好它的映射关系后便不会在改变， 它的目的主要是解决一些外设在boot阶段就需要建立好映射的情况，一般都是用一个数学公式来表示它的映射。 都有哪些设备会用到固定映射？？ 例如中断控制器就是采用固定映射，中断入口地址就是在编译阶段确定的，对于arm而言是0xffff0000。</p>
+<p>在固定映射区的后面有一个4K的保护页面    。</p>
+<p>不同的映射方式之间都会有一个空隙来起到保护作用。</p>
+<p><strong>5. 写时拷贝机制</strong></p>
+<p>写时拷贝机制的目的， 一是为了节约物理内存，二是为了加快创建进程的速度。</p>
+<p>在使用fork（）生成新的进程时，新进程与原进程会共享同一内存区，这部分内存区是只读的， 当其中一个进程进行写操作时，系统才会为其另外分配内存页面。 这就是copy－on－write的概念。</p>
+<p>当进程A使用系统调用fork来创建一个子进程B时， 由于子进程B实际上是父进程A的一个拷贝，因此会拥有与父进程相同的物理页面。也即为了达到节约物理内存和快速创建的目的，fork（）函数会让子进程B以只读方式共享父进程A的物理页面，同时父进程A对这些物理页面的访问权限也设置为只读（这是通过copy_page_tables()来实现的）。 这样以来，当父进程A或者子进程B，其中任何一方对这些共享页面执行写操作的时候， 都会产生page－fault，然后cpu会执行异常处理函数do_wp_page()来试图解决这个异常。</p>
+<p>首先，会对这个物理页面取消共享， 然后为写进程复制一新的物理页面， 是父进程和子进程各自拥有一块内容相同的物理页面，这时才真正的进行了复制操作（当然是只复制这一个物理页面。），然后，将要执行写操作的这个物理页面置为可写的。 最后，从异常处理函数返回，cpu会重新执行刚才导致异常的写入操作指令，使进程能够执行下去。</p>
+<p><strong>6. 伙伴分配算法</strong></p>
+<p>这个没有深入研究过， 也没有在实际工作中遇到这方面的问题， 所以只知道一个大概。</p>
+<p>&nbsp;</p>
+		
+		
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-07-29T00:00:00+08:00" pubdate data-updated="true">Jul 29<span>th</span>, 2013</time></div>
+	<div class="tags">
+
+</div>
+	
+</div>
+</article> &#8211;>
+
+
+   <article class="post">
+	<h2 class="title">
+		
+		<a href="/blogs/250">
+		
+			三言两语聊kernel：线程栈</a>
+	</h2>
+	<div class="entry-content">
+		<p>Oops! MacOS不支持proc文件系统，这或许是BSD系统最值得吐槽的地方吧。无奈只好到linux机器上写了这篇文章。</p>
+<p>下面是一个比较简单的多线程程序。程序如下，<br />
+<img src="/images/250.jpg"><br />
+上图是我的测试程序，我创建了3个线程。程序运行以后，我们可以通过/ proc/<span class="caps">PID</span>/task来看该程序有多少线程在运行：<br />
+<img src="/images/250-2.jpg"><br />
+然后我们来看一下进程的地址空间。 /proc/<span class="caps">PID</span>/maps就是进程的地址空间。如下所示：<br />
+<img src="/images/250-3.jpg"><br />
+可以看出，进程的地址空间从低到高依次是：进程代码段(标志含有x)、只读数据段、可读写数据段、堆、栈（包括动态库的栈空间）。<br />
+<div><br />
+<div>    线程83438的栈：0xb7570000 &#8211; 0xb6d70000的值恰好是8M，线程栈默认大小是8M。0xb6d70000 &#8211; 0xb6d6f000的值是1K，这1K是保护页。</div><br />
+<div>    为什么这三个线程的栈都是8M？可以从ulimit命令来得出，这是进程的资源限制：</div><br />
+<img src="/images/250-4.jpg"><br />
+<div>    使用ulimit <del>a命令可以看出，进程资源限制中栈大小的限制是8194K，即8M。</div><br />
+<div>     那么，这个8M大小是不是可以更改的？以及后面会什么会有一个4K大小的保护页？这可以从glibc代码里面来获取答案：</div><br />
+<div><br />
+<div></div><br />
+<div>       <strong><span style="color: #808000;">  1. </span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">__pthread_create_2_1</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">        /<strong><a><span style="color: #808000;">这里分配线程栈</span></a></strong>/</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">        ALLOCATE_STACK (iattr, &amp;pd); </span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">2. </span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">allocate_stack就是具体的分配线程栈的函数：</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">allocate_stack</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">     <a><span style="color: #808000;">/<strong>如果没有设置线程栈大小，就使用默认值</span></a></strong>/</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">     size = attr</del>&gt;stacksize ?: __default_stacksize;     </span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">     &#8230;</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">      /* Try to get a stack from the cache.  <strong>/</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">      pd = get_cached_stack (&amp;size, &amp;mem);</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">     /</strong>如果没有从cache申请到，就要mmap申请一块内存*/</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">      if (pd == <span class="caps">NULL</span>){</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">           /<strong>MAP_PRIVATE | MAP_ANONYMOUS：私有匿名映射</strong>/</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">          mmap (<span class="caps">NULL</span>, size, prot,  </span></strong></div><br />
+<p style="padding-left: 120px;"><strong><span style="color: #808000;">MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);   </span></strong></p></p>
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">      }</span></strong></div>
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">     /*</span></strong></div>
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">        接着设置一个保护区，该区域的页表属性是PROT_NONE,</span></strong></div>
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">        即Page can not be accessed</span></strong></div>
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">     */</span></strong></div>
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">      mprotect (guard, guardsize, PROT_NONE) </span></strong></div>
+<div style="padding-left: 30px;"><strong><span style="color: #808000;"> </span></strong></div>
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">       对于设置为PROT_NONE的页，是不能访问的，那么访问到这个保护区时就出现错误，linux是靠这种机制来实现栈溢出保护的。</span></strong></div>
+<div style="padding-left: 30px;"></div>
+<div><span style="color: #000000;">    下面我们来调整线程栈：</span></div>
+<div><span style="color: #000000;">   <strong> 1. 设置pthread_attr属性</strong></span></div>
+</div>
+<p><img src="/images/250-5.jpg"><br />
+<div></div><br />
+<img src="/images/250-6.jpg"><br />
+<div><br />
+<div>可以看到此时的线程栈大小是： 0xb758f000 &#8211; 0xb756f000 = 128K.</div></p>
+</div>
+<div>    <strong>2.通过ulimit来统一设置当前shell下将要执行的程序的线程栈 </strong></div>
+<div>        ulimit -s  128</div>
+<div>
+<div>    要注意的是， ulimit -s是针对shell的设置， 即只对当前shell fork的进程有效。如果在另外一个shell上起进程，则是没有效果的。参见 man手册：“Control the resources available to a process started by the shell, on systems that allow such control.”</div>
+</div>
+<div></div>
+</div>
+		
+		
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-05-18T00:00:00+08:00" pubdate data-updated="true">May 18<span>th</span>, 2013</time></div>
+	<div class="tags">
+
+</div>
+	
+</div>
+</article> &#8211;>
+
+<nav id="pagenavi">
+    
+        <a href="/" class="prev">Prev</a>
+    
+    
+        <a href="/blog/page/3/" class="next">Next</a>
+    
+    <div class="center"><a href="/blog/archives">Blog Archives</a></div>
+</nav>
+
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2014
+
+    Yafang Shao
+
+</footer>
+	<script src="/javascripts/slash.js"></script>
+<script src="/javascripts/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+	$('.fancybox').fancybox();
+})(jQuery);
+</script> <!-- Delete or comment this line to disable Fancybox -->
+
+
+<script type="text/javascript">
+      var disqus_shortname = 'laoar';
+      
+        
+        var disqus_script = 'count.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//go.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+</body>
+</html>

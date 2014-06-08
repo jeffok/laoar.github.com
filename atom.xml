@@ -4,7 +4,7 @@
   <title><![CDATA[The Complaint of laoar]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2014-06-06T23:25:11+08:00</updated>
+  <updated>2014-06-08T14:54:52+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -14,7 +14,7 @@
 
   
   <entry>
-    <title type="html"><![CDATA[Hello Github]]></title>
+    <title type="html"><![CDATA[hello github]]></title>
     <link href="http://laoar.github.io/blog/2014/05/25/hello-github/"/>
     <updated>2014-05-25T00:27:48+08:00</updated>
     <id>http://laoar.github.io/blog/2014/05/25/hello-github</id>
@@ -55,7 +55,7 @@ vim -d iamge1.sym image2.sym<br />
   </entry>
   
   <entry>
-    <title type="html"><![CDATA[Test]]></title>
+    <title type="html"><![CDATA[test]]></title>
     <link href="http://laoar.github.io/blog/2014/05/20/test/"/>
     <updated>2014-05-20T22:38:39+08:00</updated>
     <id>http://laoar.github.io/blog/2014/05/20/test</id>
@@ -109,7 +109,7 @@ int free_inittext(unsigned long start, unsigned long end);<br />
   </entry>
   
   <entry>
-    <title type="html"><![CDATA[关于struct Hack, 优雅的FreeBSD]]></title>
+    <title type="html"><![CDATA[关于struct hack, 优雅的FreeBSD]]></title>
     <link href="http://laoar.github.io/blogs/466"/>
     <updated>2014-03-20T00:00:00+08:00</updated>
     <id>http://laoar.github.io/blogs/466</id>
@@ -407,7 +407,7 @@ perror(&#8220;malloc&#8221;);  // 原谅我没有缩进<br />
   </entry>
   
   <entry>
-    <title type="html"><![CDATA[三言两语聊Kernel：linux Kernel和bsd Kernel实现doubly-linked List的差异]]></title>
+    <title type="html"><![CDATA[三言两语聊Kernel：linux kernel和bsd kernel实现doubly-linked list的差异]]></title>
     <link href="http://laoar.github.io/blogs/367"/>
     <updated>2013-11-23T00:00:00+08:00</updated>
     <id>http://laoar.github.io/blogs/367</id>
@@ -455,7 +455,7 @@ BSD的实现由应用场景来决定的，Linux Kernel则纯粹是为了一药�
   </entry>
   
   <entry>
-    <title type="html"><![CDATA[三言两语聊Kernel：atomic]]></title>
+    <title type="html"><![CDATA[三言两语聊Kernel：atomic ]]></title>
     <link href="http://laoar.github.io/blogs/361"/>
     <updated>2013-10-16T00:00:00+08:00</updated>
     <id>http://laoar.github.io/blogs/361</id>
@@ -625,7 +625,7 @@ linux的kgdb可以分析crash dump，也可以对内核进行live debug。</li>
   </entry>
   
   <entry>
-    <title type="html"><![CDATA[在高铁上聊Kernel：what Is the Fucking ABI(程序二进制接口)?]]></title>
+    <title type="html"><![CDATA[在高铁上聊Kernel：what is the fucking ABI(程序二进制接口)?]]></title>
     <link href="http://laoar.github.io/blogs/316"/>
     <updated>2013-09-02T00:00:00+08:00</updated>
     <id>http://laoar.github.io/blogs/316</id>

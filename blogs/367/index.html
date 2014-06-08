@@ -1,105 +1,83 @@
 
-<!DOCTYPE html>
-<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
-<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
-<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<!DOCTYPE HTML>
+<html>
 <head>
-  <meta charset="utf-8">
-  <title>三言两语聊Kernel：linux Kernel和bsd Kernel实现doubly-linked List的差异 - The Complaint of laoar</title>
-  <meta name="author" content="Yafang Shao">
+	<meta charset="utf-8">
+	<title>三言两语聊Kernel：linux kernel和bsd kernel实现doubly-linked list的差异 - The Complaint of laoar</title>
+	<meta name="author" content="Yafang Shao">
 
-  
-  <meta name="description" content="如果你google一下“linux list”，你会得到一堆各种各样对linux doubly-linked list的分析，以及各种各样对于这些分析的拷贝。所以当我打算写这个话题时，看到这个结果就放弃了，不想继续趟这躺浑水了，至少不想跟这些习惯于拷贝粘贴的家伙为伍。但是某一天， &hellip;">
-  
+	
+	<meta name="description" content="如果你google一下“linux list”，你会得到一堆各种各样对linux doubly-linked list的分析，以及各种各样对于这些分析的拷贝。所以当我打算写这个话题时，看到这个结果就放弃了，不想继续趟这躺浑水了，至少不想跟这些习惯于拷贝粘贴的家伙为伍。但是某一天， &hellip;">
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
-  <!-- http://t.co/dKP3o1e -->
-  <meta name="HandheldFriendly" content="True">
-  <meta name="MobileOptimized" content="320">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  
-  <link rel="canonical" href="http://laoar.github.io/blogs/367">
-  <link href="/favicon.png" rel="icon">
-  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
-  <link href="/stylesheets/data-table.css" media="screen, projection" rel="stylesheet" type="text/css" />
-  <link href="/atom.xml" rel="alternate" title="The Complaint of laoar" type="application/atom+xml">
-  <script src="/javascripts/modernizr-2.0.js"></script>
-  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
-  <script src="/javascripts/octopress.js" type="text/javascript"></script>
-  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
-<link href="//fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
-<link href="//fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
-
-  
-
+	<link href="/atom.xml" rel="alternate" title="The Complaint of laoar" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/favicon.png" rel="shortcut icon">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	<script async="true" src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+	
 </head>
 
-<!--
-<body   >
--->
-<body class="no-sidebar">
-  <header role="banner"><hgroup>
-  <h1><a href="/">The Complaint of laoar</a></h1>
-  
-    <h2>我不为什么 我就是觉得好玩</h2>
-  
-</hgroup>
+
+<body>
+	<header id="header" class="inner"><h1><a href="/">The Complaint of laoar</a></h1>
+<nav id="main-nav"><ul class="main">
+	<li><a href="/">Blog</a></li>
+	<li><a href="/blog/archives">Archives</a></li>
+	<li><a href="/aboutme">About laoar</a></li>
+</ul>
+</nav>
+<nav id="mobile-nav">
+	<div class="alignleft menu">
+		<a class="button">Menu</a>
+		<div class="container"><ul class="main">
+	<li><a href="/">Blog</a></li>
+	<li><a href="/blog/archives">Archives</a></li>
+	<li><a href="/aboutme">About laoar</a></li>
+</ul>
+</div>
+	</div>
+	<div class="alignright search">
+		<a class="button"></a>
+		<div class="container">
+			<form action="https://www.google.com/search" method="get">
+				<input type="text" name="q" results="0">
+				<input type="hidden" name="q" value="site:laoar.github.io">
+			</form>
+		</div>
+	</div>
+</nav>
+<nav id="sub-nav" class="alignright">
+	<div class="social">
+		
+		
+		
+		
+    
+		
+		
+		
+		
+		
+		<a class="rss" href="/atom.xml" title="RSS">RSS</a>
+		
+    
+	</div>
+	<form class="search" action="https://www.google.com/search" method="get">
+		<input class="alignright" type="text" name="q" results="0">
+		<input type="hidden" name="q" value="site:laoar.github.io">
+	</form>
+</nav>
 
 </header>
-  <nav role="navigation"><ul class="subscription" data-subscription="rss">
-  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
-  
-</ul>
-  
-<form action="https://www.google.com/search" method="get">
-  <fieldset role="search">
-    <input type="hidden" name="q" value="site:laoar.github.io" />
-    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
-  </fieldset>
-</form>
-  
-<ul class="main-navigation">
-  <li><a href="/">Blog</a></li>
-<!--  
-  <li><a href="/blog/archives">Archives</a></li>
--->  
-  <li><a href="/aboutme">About laoar</a></li>
-</ul>
-
-</nav>
-  <div id="main">
-    <div id="content">
-      <div>
-<article class="hentry" role="article">
-  
-  <header>
-    
-      <h1 class="entry-title">三言两语聊Kernel：linux Kernel和bsd Kernel实现doubly-linked List的差异</h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-11-23T00:00:00+08:00" pubdate data-updated="true">Nov 23<span>rd</span>, 2013</time>
-        
-        
-      </p>
-    
-  </header>
-
-
-<div class="entry-content"><p><span style="line-height: 1.5;">    如果你google一下“linux list”，你会得到一堆各种各样对linux doubly-linked list的分析，以及各种各样对于这些分析的拷贝。所以当我打算写这个话题时，看到这个结果就放弃了，不想继续趟这躺浑水了，至少不想跟这些习惯于拷贝粘贴的家伙为伍。但是某一天，我实现的queue出现了一个问题，于是我就开始认认真真的研究起来双向链表在linux和bsd系统上实现的差异。然后我就打算尝试从一个不同的角度来探讨这个话题。</span></p>
+	
+		
+	
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">三言两语聊Kernel：linux Kernel和bsd Kernel实现doubly-linked List的差异</h2>
+	<div class="entry-content"><p><span style="line-height: 1.5;">    如果你google一下“linux list”，你会得到一堆各种各样对linux doubly-linked list的分析，以及各种各样对于这些分析的拷贝。所以当我打算写这个话题时，看到这个结果就放弃了，不想继续趟这躺浑水了，至少不想跟这些习惯于拷贝粘贴的家伙为伍。但是某一天，我实现的queue出现了一个问题，于是我就开始认认真真的研究起来双向链表在linux和bsd系统上实现的差异。然后我就打算尝试从一个不同的角度来探讨这个话题。</span></p>
 <p><span style="line-height: 1.5;">    First thing first，实现的目的是为了应用，所以我打算从应用的角度慢慢写。很多分析linux list的文章呜哩哇啦一顿乱写，看的我们也是一头雾水莫名奇妙,这是大多数技术博客的惯病，我尽量避免步他们的后尘。为了写这篇blog，我先写了两个用例，一个是双向链表在linux系统上的应用，一个是在bsd系统上的应用，代码放在了我的github上：</span><a style="line-height: 1.5;" title="list paradigm" href="https://github.com/laoar/list" target="_blank"><span>list paradigm</span> </a><span style="line-height: 1.5;">（P.S. : paradigm这个单词是公司里的英语老师Michael教的，所以在这里忍不住想用一下）。再插播一句，有一次在英语课上Michael问我，“what&#8217;s PS”? 我支支吾吾了半天说“paste”， 顿时惹来Michael的一顿shame on me，“oh my god, it’s post script!” 于是我也学会了shame on you， 用老祖宗的话说就是“鄙视你”。</span></p>
 <p><span style="line-height: 1.5;">    先简单解释下我写的这两个C文件。</span></p>
 <p><strong>1. linux_list.c</strong></p>
@@ -142,14 +120,8 @@ BSD的实现由应用场景来决定的，Linux Kernel则纯粹是为了一药�
 <p><span style="line-height: 1.5;">    明天见：）</span></p></div>
 
 
-  <footer>
-    <p class="meta">
-      
-  
-
-<span class="byline author vcard">Posted by <span class="fn">Yafang Shao</span></span>
-
-      
+<div class="meta">
+	<div class="date">
 
 
 
@@ -161,105 +133,45 @@ BSD的实现由应用场景来决定的，Linux Kernel则纯粹是为了一药�
   
 
 
-<time datetime="2013-11-23T00:00:00+08:00" pubdate data-updated="true">Nov 23<span>rd</span>, 2013</time>
-      
+<time datetime="2013-11-23T00:00:00+08:00" pubdate data-updated="true">Nov 23<span>rd</span>, 2013</time></div>
+	<div class="tags">
 
-
-    </p>
-    
-      <div class="sharing">
-  
-  <span>
-  <iframe 
-    width="86" 
-    scrolling="no" 
-    height="16" 
-    frameborder="0" 
-    src=
-      "http://hits.sinajs.cn/A1/weiboshare.html?url=http://laoar.github.io/blogs/367&amp;type=6&amp;language=zh_cn" allowtransparency="true">
-  </iframe>
-  </span>
-  
-  
-  
-  
 </div>
-
-    
-    <p class="meta">
-      
-        <a class="basic-alignment left" href="/blogs/361" title="Previous Post: 三言两语聊Kernel：atomic ">&laquo; 三言两语聊Kernel：atomic </a>
-      
-      
-        <a class="basic-alignment right" href="/blogs/393" title="Next Post: 我为什么从华为离职">我为什么从华为离职 &raquo;</a>
-      
-    </p>
-  </footer>
+	
+</div>
 </article>
 
-  <section>
-    <h1>Comments</h1>
+	<div class="share">
+	<div class="addthis_toolbox addthis_default_style ">
+		
+		
+		
+		
+	</div>
+	
+</div>
+
+
+
+<section id="comment">
+    <h2 class="title">Comments</h2>
     <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
 </div>
-  </section>
-
-<!--
-
--->
+</section>
 </div>
-<!--
+	<footer id="footer" class="inner">Copyright &copy; 2014
 
-<aside class="sidebar">
-  
-    <section>
-  <h1>About laoar</h1>
-  <p>A little something about me.</p>
-</section>
-<section>
-  <h1>Recent Posts</h1>
-  <ul id="recent_posts">
-    
-      <li class="post">
-        <a href="/blog/2014/05/25/hello-github/">Hello Github</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blogs/501">性能优化：一些很有意思的尝试</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/05/20/test/">Test</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blogs/482">从linux内核里来学习性能优化，和一个例子</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blogs/466">关于struct Hack, 优雅的FreeBSD</a>
-      </li>
-    
-  </ul>
-</section>
-
-
-
-
-
-  
-</aside>
-
--->
-
-    </div>
-  </div>
-  <footer role="contentinfo"><p>
-  Copyright &copy; 2014 - Yafang Shao -
-  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
-</p>
+    Yafang Shao
 
 </footer>
-  
+	<script src="/javascripts/slash.js"></script>
+<script src="/javascripts/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+	$('.fancybox').fancybox();
+})(jQuery);
+</script> <!-- Delete or comment this line to disable Fancybox -->
+
 
 <script type="text/javascript">
       var disqus_shortname = 'laoar';
@@ -272,16 +184,10 @@ BSD的实现由应用场景来决定的，Linux Kernel则纯粹是为了一药�
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      dsq.src = '//go.disqus.com/' + disqus_script;
       (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
     }());
 </script>
-
-
-
-
-
-
 
 
 
