@@ -10,10 +10,10 @@ body{
 	font-size: 16px;
 	background: $color-background;
 	color: $color-gray01;
-	@media screen and (max-width: 1040px){
+	@media screen and (max-width: 100%){
 		margin: 0 20px;
 	}
-	@media screen and (max-width: 600px){
+	@media screen and (max-width: 50%){
 		font-size: 13px;
 	}
 }
@@ -43,7 +43,7 @@ a{
 .inner{
 	width: $max-width;
 	margin: 0 auto;
-	@media screen and (max-width: 1040px){
+	@media screen and (max-width: 100%){
 		width: 100%;
 	}
 }
