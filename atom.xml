@@ -4,7 +4,7 @@
   <title><![CDATA[The Complaint of laoar]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2014-06-10T22:58:47+08:00</updated>
+  <updated>2014-06-10T23:09:01+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -14,16 +14,16 @@
 
   
   <entry>
-    <title type="html"><![CDATA[hello github]]></title>
+    <title type="html"><![CDATA[Hello Github!]]></title>
     <link href="http://laoar.github.io/blog/2014/05/25/hello-github/"/>
-    <updated>2014-05-25T00:27:48+08:00</updated>
+    <updated>2014-05-25T21:08:29+08:00</updated>
     <id>http://laoar.github.io/blog/2014/05/25/hello-github</id>
     <content type="html"><![CDATA[<p>Hi there all:</p>
 
 <p>博客服务器由国外收费服务器迁移到github上，博客管理工具由wordpress转向octopress，这样显得Geek些。</p>
 
 <p>Thanks<br>
-<font color=blue>@laoar</font></div></p>
+<font color=blue>@laoar</font></p>
 ]]></content>
   </entry>
   
@@ -64,7 +64,7 @@ vim -d iamge1.sym image2.sym<br />
     <link href="http://laoar.github.io/blog/2014/05/20/test/"/>
     <updated>2014-05-20T22:38:39+08:00</updated>
     <id>http://laoar.github.io/blog/2014/05/20/test</id>
-    <content type="html"><![CDATA[
+    <content type="html"><![CDATA[<p>test</p>
 ]]></content>
   </entry>
   

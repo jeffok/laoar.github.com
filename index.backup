@@ -7,7 +7,7 @@
 	<meta name="author" content="Yafang Shao">
 
 	
-	<meta name="description" content="Blog Archives About laoar A little something about me. Recent Posts Hello Github 性能优化：一些很有意思的尝试 Test 从linux内核里来学习性能优化，和一个例子 关于struct Hack, &hellip;">
+	<meta name="description" content="Blog Archives About laoar A little something about me. Recent Posts Hello Github! 性能优化：一些很有意思的尝试 Test 从linux内核里来学习性能优化，和一个例子 关于struct Hack, &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -95,7 +95,7 @@
   <ul id="recent_posts">
     
       <li class="post">
-        <a href="/blog/2014/05/25/hello-github/">Hello Github</a>
+        <a href="/blog/2014/05/25/hello-github/">Hello Github!</a>
       </li>
     
       <li class="post">
