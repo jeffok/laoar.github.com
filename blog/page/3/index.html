@@ -7,18 +7,8 @@
 	<meta name="author" content="Yafang Shao">
 
 	
-	<meta name="description" content="仅统计记录在案的，不过我看过的书和电影一般都会记录在豆瓣上，听过的音乐则比较多，只统计iPod里面听的次数较多的音乐。
-&nbsp;
-一 书 书名
-豆瓣评分
-我的评分 佛祖在一号线
-8.4
-3星 linux内核编程
-无
-3星 unix环境高级编程
-9.5
-5星 1949年后的梁漱溟（港版）
-7. &hellip;">
+	<meta name="description" content="Oops! MacOS不支持proc文件系统，这或许是BSD系统最值得吐槽的地方吧。无奈只好到linux机器上写了这篇文章。
+下面是一个比较简单的多线程程序。程序如下， 上图是我的测试程序，我创建了3个线程。程序运行以后，我们可以通过/ proc/PID/task来看该程序有多少线程在运行： &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -95,6 +85,14 @@
     
     
     <section class="archives"><h1 class="year">2014</h1>
+
+<article>
+    <h4 class="title"><a href="/blog/2014/06/24/ldscript/">性能优化，要懂点编译原理</a></h4>
+</article>
+    
+
+
+
 
 <article>
     <h4 class="title"><a href="/blog/2014/05/25/hello-github/">Hello Github!</a></h4>
@@ -368,6 +366,99 @@
 &#8211;>
 <!--
 
+
+
+   <article class="post">
+	<h2 class="title">
+		
+		<a href="/blogs/250">
+		
+			三言两语聊kernel：线程栈</a>
+	</h2>
+	<div class="entry-content">
+		<p>Oops! MacOS不支持proc文件系统，这或许是BSD系统最值得吐槽的地方吧。无奈只好到linux机器上写了这篇文章。</p>
+<p>下面是一个比较简单的多线程程序。程序如下，<br />
+<img src="/images/250.jpg"><br />
+上图是我的测试程序，我创建了3个线程。程序运行以后，我们可以通过/ proc/<span class="caps">PID</span>/task来看该程序有多少线程在运行：<br />
+<img src="/images/250-2.jpg"><br />
+然后我们来看一下进程的地址空间。 /proc/<span class="caps">PID</span>/maps就是进程的地址空间。如下所示：<br />
+<img src="/images/250-3.jpg"><br />
+可以看出，进程的地址空间从低到高依次是：进程代码段(标志含有x)、只读数据段、可读写数据段、堆、栈（包括动态库的栈空间）。<br />
+<div><br />
+<div>    线程83438的栈：0xb7570000 &#8211; 0xb6d70000的值恰好是8M，线程栈默认大小是8M。0xb6d70000 &#8211; 0xb6d6f000的值是1K，这1K是保护页。</div><br />
+<div>    为什么这三个线程的栈都是8M？可以从ulimit命令来得出，这是进程的资源限制：</div><br />
+<img src="/images/250-4.jpg"><br />
+<div>    使用ulimit <del>a命令可以看出，进程资源限制中栈大小的限制是8194K，即8M。</div><br />
+<div>     那么，这个8M大小是不是可以更改的？以及后面会什么会有一个4K大小的保护页？这可以从glibc代码里面来获取答案：</div><br />
+<div><br />
+<div></div><br />
+<div>       <strong><span style="color: #808000;">  1. </span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">__pthread_create_2_1</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">        /<strong><a><span style="color: #808000;">这里分配线程栈</span></a></strong>/</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">        ALLOCATE_STACK (iattr, &amp;pd); </span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">2. </span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">allocate_stack就是具体的分配线程栈的函数：</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">allocate_stack</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">     <a><span style="color: #808000;">/<strong>如果没有设置线程栈大小，就使用默认值</span></a></strong>/</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">     size = attr</del>&gt;stacksize ?: __default_stacksize;     </span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">     &#8230;</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">      /* Try to get a stack from the cache.  <strong>/</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">      pd = get_cached_stack (&amp;size, &amp;mem);</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">     /</strong>如果没有从cache申请到，就要mmap申请一块内存*/</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">      if (pd == <span class="caps">NULL</span>){</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">           /<strong>MAP_PRIVATE | MAP_ANONYMOUS：私有匿名映射</strong>/</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">          mmap (<span class="caps">NULL</span>, size, prot,  </span></strong></div><br />
+<p style="padding-left: 120px;"><strong><span style="color: #808000;">MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);   </span></strong></p></p>
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">      }</span></strong></div>
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">     /*</span></strong></div>
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">        接着设置一个保护区，该区域的页表属性是PROT_NONE,</span></strong></div>
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">        即Page can not be accessed</span></strong></div>
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">     */</span></strong></div>
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">      mprotect (guard, guardsize, PROT_NONE) </span></strong></div>
+<div style="padding-left: 30px;"><strong><span style="color: #808000;"> </span></strong></div>
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">       对于设置为PROT_NONE的页，是不能访问的，那么访问到这个保护区时就出现错误，linux是靠这种机制来实现栈溢出保护的。</span></strong></div>
+<div style="padding-left: 30px;"></div>
+<div><span style="color: #000000;">    下面我们来调整线程栈：</span></div>
+<div><span style="color: #000000;">   <strong> 1. 设置pthread_attr属性</strong></span></div>
+</div>
+<p><img src="/images/250-5.jpg"><br />
+<div></div><br />
+<img src="/images/250-6.jpg"><br />
+<div><br />
+<div>可以看到此时的线程栈大小是： 0xb758f000 &#8211; 0xb756f000 = 128K.</div></p>
+</div>
+<div>    <strong>2.通过ulimit来统一设置当前shell下将要执行的程序的线程栈 </strong></div>
+<div>        ulimit -s  128</div>
+<div>
+<div>    要注意的是， ulimit -s是针对shell的设置， 即只对当前shell fork的进程有效。如果在另外一个shell上起进程，则是没有效果的。参见 man手册：“Control the resources available to a process started by the shell, on systems that allow such control.”</div>
+</div>
+<div></div>
+</div>
+		
+		
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-05-18T00:00:00+08:00" pubdate data-updated="true">May 18<span>th</span>, 2013</time></div>
+	<div class="tags">
+
+</div>
+	
+</div>
+</article>  
 
 
    <article class="post">
@@ -1326,64 +1417,6 @@ vfs_read/vfs_write-&gt;part_read/part_write-&gt;cfi_amdstd_read/do_write_buffer.
 
 
 <time datetime="2012-05-09T00:00:00+08:00" pubdate data-updated="true">May 9<span>th</span>, 2012</time></div>
-	<div class="tags">
-
-</div>
-	
-</div>
-</article>  
-
-
-   <article class="post">
-	<h2 class="title">
-		
-		<a href="/blogs/79">
-		
-			iPhoneOS浅浅浅浅析</a>
-	</h2>
-	<div class="entry-content">
-		<div>在hi3ms上看到李大牛写的一篇关于ios的文章，那篇文章我没有细看，整篇文章我只记住一句话：＂由于公司没有mac电脑，只能在家里分析，所以进展会很慢。＂就是因为这句话，才让我对它写的那篇文章刮目相看，这说明那篇文章是他从实践得到的，而不是复制粘贴或者简单的翻译。于是我给李大牛留了言。</div>
-<div>     我：MacOS的kernel不是开源的，又没有sysfs，也没有binutils，分析工具只能用xcode，所以大牛你介绍一下你的分析方法呗。</div>
-<div>     李大牛：kernel就对照darwin kernel，分析工具就用xcode，我没有使用gcc。</div>
-<div>     我：那，大牛你在mac下是如何浏览代码的？有没有类似SourceInsight的工具。</div>
-<div>     李大牛：用什么SourceInsight，简直弱爆了，我都是使用vim+vtags+csope。</div>
-<div>     我：（汗）…</div>
-<div>     通过与李大牛的短短几行交流，我收获到一点：可以借助分析darwin kernel来分析iPhoneOS。另外，我觉得，大牛也不过尔尔。</div>
-<div>     ok，我之前也一直打算研究一下MacOS。我的思路是这样的，首先我要整一套分析工具，包括gcc、binutils、glibc。然后借助这些工具看看能否把linux下的常用工具都给在mac下编译。最后，再分析MacOS kernel代码。</div>
-<div>     在mac下，编译工具是xcode，xcode的sdk也不是很简单，安装好xcode之后，它的目录结构大致是这样子的：</div>
-<div><a href="http://www.laoar.net/wp-content/uploads/2012/05/c89d49078ce418ab7c218b780cafdc4a2.png"><img class="alignnone size-full wp-image-83" title="c89d49078ce418ab7c218b780cafdc4a" src="http://www.laoar.net/wp-content/uploads/2012/05/c89d49078ce418ab7c218b780cafdc4a2.png" alt="" width="955" height="170" /></a></div>
-<div><!--?xml version="1.0" encoding="UTF-8" standalone="no"?-->      Xcode包括三个SDK：mac、iPhone、iPhoneSimulator。（为何没有iPad？它和iPhone是一样滴，都是iOS嘛）</div>
-<div>     对于一个编译环境而言，有三个最基本的东西：编译器、二进制分析工具、库。我在Xcode里面找到了MacOS和iPhoneOS的编译器和库，很可惜没有找到binutils。另外很遗憾的是，他们的编译器使用的是llvm-gcc，而不是gcc。需要提醒您的是，千万不要小瞧llvm-gcc，它是最大最好的开源项目，在它面前，GNU只有流汗的份。至于Apple与GNU的恩怨史，请Google之。</div>
-<div>     明白了Xcode后，我的计划是，我可以使用Xcode的库函数（都是基本的C库函数，满足C99标准，跨平台的），我要做出mac上的gcc，再做出来bintuils尤其是其中的readelf和objdump，不然实在难以进行实质性的分析。我之所以不选择llvm-gcc，是因为我不太熟悉这个工具，所以我还要借助反汇编工具objdunp来分析一下llvm-gcc和gcc编译出来的二进制文件到底有何不同。</div>
-<div>     Windows操作系统只有几千人开发，linux则有数万人做开发，但很可惜，linux远远不如windows强大。原因何在？搞linux的人不团结，你玩你的，我玩我的，版本那是玲琅满目，这就导致了大量的重复性劳动。嗯，你知道我要说什么。先google下看看有没有搞出来了Mac平台下的gcc和binutils。我在Sourceforge上找到了别人已经做出来的gcc：<a href="http://sourceforge.net/projects/hpc/files/hpc/gcc/">http://sourceforge.net/projects/hpc/files/hpc/gcc/</a> 。很可惜，没有找到binutils。那就自己来搞binutils吧。</div>
-<div>     下载下来gcc后，由于它里面只有gcc，没有头文件也没有库，所以自然是无法编译helloworld的。所以需要利用Xcode的库和头文件。做法很简单：</div>
-<div>在~/.bash_profile这个文件里添加这么一句话：alias gcc=&#8220;gcc &#8212;sysroot=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.7.sdk/&#8221;</div>
-<div>这样在使用gcc编译的时候，就会自动到sysroot指定的目录下去查找头文件和库。至于sysroot是什么，建议你gcc &#8212;help一下，如果看不懂，再google吧。</div>
-<div>     ok，这样就能使用gcc来编译了。 接下来，就是搞binutils了。</div>
-<div>     从gnu的官网上下载binutils：<a href="http://ftp.gnu.org/gnu/binutils/">http://ftp.gnu.org/gnu/binutils/</a> 。不过很可惜，到目前为止，我还没有编译成功。:-)</div>
-<div>     接下来我的思路是，1）继续尝试编译binutils 2）看看Xcode里面是否有反汇编工具，目前我最迫切需要的就是一个反汇编工具。很汗颜的是，仅仅需要一个反汇编工具，我就打算把bintuisl整个给弄到MacOS上&#8230;</div>
-<div> </div>
-<div>     说完了我之前做的一些尝试后，就开始李大牛的思路吧：对比分析darwin kernel。关于darwin kernel的一些文档在这个网址：<a href="https://developer.apple.com/library/mac/#documentation/MacOSX/Conceptual/OSX_Technology_Overview/SystemTechnology/SystemTechnology.html">https://developer.apple.com/library/mac/#documentation/MacOSX/Conceptual/OSX_Technology_Overview/SystemTechnology/SystemTechnology.html</a></div>
-<div>    敬请期待…</div>
-		
-		
-	</div>
-
-
-<div class="meta">
-	<div class="date">
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2012-05-03T00:00:00+08:00" pubdate data-updated="true">May 3<span>rd</span>, 2012</time></div>
 	<div class="tags">
 
 </div>
