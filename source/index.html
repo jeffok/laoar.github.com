@@ -2,8 +2,8 @@
 layout: default
 ---
 
-<meta content="width=device-width,user-scalable=yes" name="viewport">
 <div class="blog-index">
+<meta content="width=device-width,user-scalable=no" name="viewport">
 {% assign index = true %}
 {% for post in site.posts reverse %}
 {% capture date %}{{ post.date }}{% endcapture %}
