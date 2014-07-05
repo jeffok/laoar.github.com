@@ -4,7 +4,7 @@
   <title><![CDATA[The Complaint of laoar]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2014-07-05T11:55:20+08:00</updated>
+  <updated>2014-07-05T11:57:43+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -203,7 +203,7 @@ Gcc-Optimize-Options</a></p>
 </span><span class='line'><span class="cp">          *(.irqentry.text)                         \</span>
 </span><span class='line'><span class="cp">          VMLINUX_SYMBOL(__irqentry_text_end) = .;</span>
 </span></code></pre></td></tr></table></div></figure>
-这些宏其实就是定义了一些input section， 比如.text.hot，irqentry.text等等。</p>
+这些宏其实就是定义了一些input section， 比如.text.hot等。</p>
 
 
 <p>接着以.sched.text为例来看看到底是怎么用的。
