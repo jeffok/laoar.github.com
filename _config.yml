@@ -6,7 +6,8 @@ url: http://laoar.github.io
 title: The Complaint of laoar 
 subtitle: 我不为什么 我就是觉得好玩 
 author: Yafang Shao
-simple_search: https://www.google.com/search
+#simple_search: https://www.google.com/search
+simple_search: false 
 description:
 
 # Default date format is "ordinal" (resulting in "July 22nd 2007")
@@ -16,7 +17,7 @@ description:
 date_format: "ordinal"
 
 # RSS / Email (optional) subscription links (change if using something like Feedburner)
-subscribe_rss: /atom.xml
+#subscribe_rss: /atom.xml
 subscribe_email:
 # RSS feeds can list your email address if you like
 email: laoar.shao@gmail.com
