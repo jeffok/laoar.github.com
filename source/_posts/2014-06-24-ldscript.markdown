@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: post 
 title: "性能优化，要懂点编译原理"
 date: 2014-06-24 22:08:21 +0800
 comments: true
@@ -107,7 +107,7 @@ SECTIONS
           VMLINUX_SYMBOL(__irqentry_text_end) = .;
 
 ```
-这些宏其实就是定义了一些input section， 比如.text.hot，.sched.text，.spinlock.text，.kprobes.text，.irqentry.text等等。</p>
+这些宏其实就是定义了一些input section， 比如.text.hot，irqentry.text等等。</p>
 <p>接着以.sched.text为例来看看到底是怎么用的。
 ``` c
 #define __sched          __attribute__((__section__(".sched.text")))
