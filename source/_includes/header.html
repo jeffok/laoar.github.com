@@ -1,11 +1,11 @@
 <h1><a href="{{ root_url }}/">{{ site.title }}</a></h1>
 <nav id="main-nav">{% include navigation.html %}</nav>
-<nav id="mobile-nav">
+<nav id="mobile-nav">{% include navigation.html %} </nav>
+<!-- @yfshao
 	<div class="alignleft menu">
 		<a class="button">Menu</a>
 		<div class="container">{% include custom/navigation.html %}</div>
 	</div>
-<!--@yfshao	
 	<div class="alignright search">
 		<a class="button"></a>
 		<div class="container">
@@ -15,8 +15,8 @@
 			</form>
 		</div>
 	</div>
---!>
 </nav>
+--!>
 <!--
 <nav id="sub-nav" class="alignright">
 	<div class="social">
