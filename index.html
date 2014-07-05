@@ -558,7 +558,7 @@ Gcc-Optimize-Options</a></p>
 </span><span class='line'><span class="cp">          *(.irqentry.text)                         \</span>
 </span><span class='line'><span class="cp">          VMLINUX_SYMBOL(__irqentry_text_end) = .;</span>
 </span></code></pre></td></tr></table></div></figure>
-这些宏其实就是定义了一些input section， 比如.text.hot，.sched.text，.spinlock.text，.kprobes.text，.irqentry.text等等。</p>
+这些宏其实就是定义了一些input section， 比如.text.hot，irqentry.text等等。</p>
 
 
 <p>接着以.sched.text为例来看看到底是怎么用的。
