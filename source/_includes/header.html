@@ -3,7 +3,7 @@
 <nav id="mobile-nav">
 	<div class="alignleft menu">
 		<a class="button">Menu</a>
-		<div class="container">{% include navigation.html %}</div>
+		<div class="container">{% include custom/navigation.html %}</div>
 	</div>
 <!--@yfshao	
 	<div class="alignright search">
@@ -17,6 +17,7 @@
 	</div>
 --!>
 </nav>
+<!--
 <nav id="sub-nav" class="alignright">
 	<div class="social">
 		{% if site.facebook_user %}
@@ -58,4 +59,5 @@
 		<input type="hidden" name="q" value="site:{{ site.url | shorthand_url }}">
 	</form>
 </nav>
+--!>
 {% include custom/header.html %}
