@@ -7,7 +7,8 @@
 	<meta name="author" content="Yafang Shao">
 
 	
-	<meta name="description" content="在hi3ms上看到李大牛写的一篇关于ios的文章，那篇文章我没有细看，整篇文章我只记住一句话：＂由于公司没有mac电脑，只能在家里分析，所以进展会很慢。＂就是因为这句话，才让我对它写的那篇文章刮目相看，这说明那篇文章是他从实践得到的，而不是复制粘贴或者简单的翻译。于是我给李大牛留了言 &hellip;">
+	<meta name="description" content="说个朋友的故事。
+     在twitter刚开始运营的时候，某君就翻墙注册了帐号，然后，该君写了一系列关于twitter的文章，并预言国内很快就会出现山寨的twiter，该君甚至还分析了如果要山寨twiiter应该做哪些本土化的改变。当然，这一切分析都是在sina有所动作之前。接下来，如你所知 &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -305,14 +306,6 @@
 
 
 <article>
-    <h4 class="title"><a href="/blogs/133">我的阅读史</a></h4>
-</article>
-    
-
-
-
-
-<article>
     <h4 class="title"><a href="/blogs/119">iPhoneOS浅浅浅浅析(4):不做学术派</a></h4>
 </article>
     
@@ -363,64 +356,6 @@
 &#8211;>
 <!--
 
-
-
-   <article class="post">
-	<h2 class="title">
-		
-		<a href="/blogs/79">
-		
-			iPhoneOS浅浅浅浅析</a>
-	</h2>
-	<div class="entry-content">
-		<div>在hi3ms上看到李大牛写的一篇关于ios的文章，那篇文章我没有细看，整篇文章我只记住一句话：＂由于公司没有mac电脑，只能在家里分析，所以进展会很慢。＂就是因为这句话，才让我对它写的那篇文章刮目相看，这说明那篇文章是他从实践得到的，而不是复制粘贴或者简单的翻译。于是我给李大牛留了言。</div>
-<div>     我：MacOS的kernel不是开源的，又没有sysfs，也没有binutils，分析工具只能用xcode，所以大牛你介绍一下你的分析方法呗。</div>
-<div>     李大牛：kernel就对照darwin kernel，分析工具就用xcode，我没有使用gcc。</div>
-<div>     我：那，大牛你在mac下是如何浏览代码的？有没有类似SourceInsight的工具。</div>
-<div>     李大牛：用什么SourceInsight，简直弱爆了，我都是使用vim+vtags+csope。</div>
-<div>     我：（汗）…</div>
-<div>     通过与李大牛的短短几行交流，我收获到一点：可以借助分析darwin kernel来分析iPhoneOS。另外，我觉得，大牛也不过尔尔。</div>
-<div>     ok，我之前也一直打算研究一下MacOS。我的思路是这样的，首先我要整一套分析工具，包括gcc、binutils、glibc。然后借助这些工具看看能否把linux下的常用工具都给在mac下编译。最后，再分析MacOS kernel代码。</div>
-<div>     在mac下，编译工具是xcode，xcode的sdk也不是很简单，安装好xcode之后，它的目录结构大致是这样子的：</div>
-<div><a href="http://www.laoar.net/wp-content/uploads/2012/05/c89d49078ce418ab7c218b780cafdc4a2.png"><img class="alignnone size-full wp-image-83" title="c89d49078ce418ab7c218b780cafdc4a" src="http://www.laoar.net/wp-content/uploads/2012/05/c89d49078ce418ab7c218b780cafdc4a2.png" alt="" width="955" height="170" /></a></div>
-<div><!--?xml version="1.0" encoding="UTF-8" standalone="no"?-->      Xcode包括三个SDK：mac、iPhone、iPhoneSimulator。（为何没有iPad？它和iPhone是一样滴，都是iOS嘛）</div>
-<div>     对于一个编译环境而言，有三个最基本的东西：编译器、二进制分析工具、库。我在Xcode里面找到了MacOS和iPhoneOS的编译器和库，很可惜没有找到binutils。另外很遗憾的是，他们的编译器使用的是llvm-gcc，而不是gcc。需要提醒您的是，千万不要小瞧llvm-gcc，它是最大最好的开源项目，在它面前，GNU只有流汗的份。至于Apple与GNU的恩怨史，请Google之。</div>
-<div>     明白了Xcode后，我的计划是，我可以使用Xcode的库函数（都是基本的C库函数，满足C99标准，跨平台的），我要做出mac上的gcc，再做出来bintuils尤其是其中的readelf和objdump，不然实在难以进行实质性的分析。我之所以不选择llvm-gcc，是因为我不太熟悉这个工具，所以我还要借助反汇编工具objdunp来分析一下llvm-gcc和gcc编译出来的二进制文件到底有何不同。</div>
-<div>     Windows操作系统只有几千人开发，linux则有数万人做开发，但很可惜，linux远远不如windows强大。原因何在？搞linux的人不团结，你玩你的，我玩我的，版本那是玲琅满目，这就导致了大量的重复性劳动。嗯，你知道我要说什么。先google下看看有没有搞出来了Mac平台下的gcc和binutils。我在Sourceforge上找到了别人已经做出来的gcc：<a href="http://sourceforge.net/projects/hpc/files/hpc/gcc/">http://sourceforge.net/projects/hpc/files/hpc/gcc/</a> 。很可惜，没有找到binutils。那就自己来搞binutils吧。</div>
-<div>     下载下来gcc后，由于它里面只有gcc，没有头文件也没有库，所以自然是无法编译helloworld的。所以需要利用Xcode的库和头文件。做法很简单：</div>
-<div>在~/.bash_profile这个文件里添加这么一句话：alias gcc=&#8220;gcc &#8212;sysroot=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.7.sdk/&#8221;</div>
-<div>这样在使用gcc编译的时候，就会自动到sysroot指定的目录下去查找头文件和库。至于sysroot是什么，建议你gcc &#8212;help一下，如果看不懂，再google吧。</div>
-<div>     ok，这样就能使用gcc来编译了。 接下来，就是搞binutils了。</div>
-<div>     从gnu的官网上下载binutils：<a href="http://ftp.gnu.org/gnu/binutils/">http://ftp.gnu.org/gnu/binutils/</a> 。不过很可惜，到目前为止，我还没有编译成功。:-)</div>
-<div>     接下来我的思路是，1）继续尝试编译binutils 2）看看Xcode里面是否有反汇编工具，目前我最迫切需要的就是一个反汇编工具。很汗颜的是，仅仅需要一个反汇编工具，我就打算把bintuisl整个给弄到MacOS上&#8230;</div>
-<div> </div>
-<div>     说完了我之前做的一些尝试后，就开始李大牛的思路吧：对比分析darwin kernel。关于darwin kernel的一些文档在这个网址：<a href="https://developer.apple.com/library/mac/#documentation/MacOSX/Conceptual/OSX_Technology_Overview/SystemTechnology/SystemTechnology.html">https://developer.apple.com/library/mac/#documentation/MacOSX/Conceptual/OSX_Technology_Overview/SystemTechnology/SystemTechnology.html</a></div>
-<div>    敬请期待…</div>
-		
-		
-	</div>
-
-
-<div class="meta">
-	<div class="date">
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2012-05-03T00:00:00+08:00" pubdate data-updated="true">May 3<span>rd</span>, 2012</time></div>
-	<div class="tags">
-
-</div>
-	
-</div>
-</article>  
 
 
    <article class="post">
