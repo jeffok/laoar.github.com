@@ -4,7 +4,7 @@
   <title><![CDATA[The Complaint of laoar]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2014-07-13T10:44:43+08:00</updated>
+  <updated>2014-07-13T10:46:41+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -355,7 +355,7 @@ vim -d iamge1.sym image2.sym<br />
   </entry>
   
   <entry>
-    <title type="html"><![CDATA[从linux内核里来学习性能优化，和一个例子]]></title>
+    <title type="html"><![CDATA[性能优化，从linux内核里来学习，和一个例子]]></title>
     <link href="http://laoar.github.io/blogs/482"/>
     <updated>2014-04-29T00:00:00+08:00</updated>
     <id>http://laoar.github.io/blogs/482</id>
