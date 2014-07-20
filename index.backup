@@ -7,7 +7,7 @@
 	<meta name="author" content="Yafang Shao">
 
 	
-	<meta name="description" content="Blog Archives About laoar A little something about me. Recent Posts 性能优化，要懂点编译原理 Hello Github! 性能优化：一些很有意思的尝试 性能优化，从linux内核里来学习，和一个例子 关于struct Hack &hellip;">
+	<meta name="description" content="Blog Archives About laoar A little something about me. Recent Posts 进击的C程序员, Ruby, 豆瓣读书 性能优化，要懂点编译原理 Hello Github! 性能优化：一些很有意思的尝试 性能优化，从linux内核里来学习， &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -97,6 +97,10 @@
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/07/13/jin-ji-de-ccheng-xu-yuan/">进击的C程序员, Ruby, 豆瓣读书</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/06/24/ldscript/">性能优化，要懂点编译原理</a>
       </li>
     
@@ -110,10 +114,6 @@
     
       <li class="post">
         <a href="/blogs/482">性能优化，从linux内核里来学习，和一个例子</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blogs/466">关于struct Hack, 优雅的FreeBSD</a>
       </li>
     
   </ul>

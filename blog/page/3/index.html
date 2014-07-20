@@ -7,18 +7,8 @@
 	<meta name="author" content="Yafang Shao">
 
 	
-	<meta name="description" content="仅统计记录在案的，不过我看过的书和电影一般都会记录在豆瓣上，听过的音乐则比较多，只统计iPod里面听的次数较多的音乐。
-&nbsp;
-一 书 书名
-豆瓣评分
-我的评分 佛祖在一号线
-8.4
-3星 linux内核编程
-无
-3星 unix环境高级编程
-9.5
-5星 1949年后的梁漱溟（港版）
-7. &hellip;">
+	<meta name="description" content="Oops! MacOS不支持proc文件系统，这或许是BSD系统最值得吐槽的地方吧。无奈只好到linux机器上写了这篇文章。
+下面是一个比较简单的多线程程序。程序如下， 上图是我的测试程序，我创建了3个线程。程序运行以后，我们可以通过/ proc/PID/task来看该程序有多少线程在运行： &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -97,6 +87,14 @@
     
     
     <section class="archives"><h1 class="year">2014</h1>
+
+<article>
+    <h4 class="title"><a href="/blog/2014/07/13/jin-ji-de-ccheng-xu-yuan/">进击的C程序员, Ruby, 豆瓣读书</a></h4>
+</article>
+    
+
+
+
 
 <article>
     <h4 class="title"><a href="/blog/2014/06/24/ldscript/">性能优化，要懂点编译原理</a></h4>
@@ -353,6 +351,99 @@
 &#8211;>
 <!--
 
+
+
+   <article class="post">
+	<h2 class="title">
+		
+		<a href="/blogs/250">
+		
+			三言两语聊kernel：线程栈</a>
+	</h2>
+	<div class="entry-content">
+		<p>Oops! MacOS不支持proc文件系统，这或许是BSD系统最值得吐槽的地方吧。无奈只好到linux机器上写了这篇文章。</p>
+<p>下面是一个比较简单的多线程程序。程序如下，<br />
+<img src="/images/250.jpg"><br />
+上图是我的测试程序，我创建了3个线程。程序运行以后，我们可以通过/ proc/<span class="caps">PID</span>/task来看该程序有多少线程在运行：<br />
+<img src="/images/250-2.jpg"><br />
+然后我们来看一下进程的地址空间。 /proc/<span class="caps">PID</span>/maps就是进程的地址空间。如下所示：<br />
+<img src="/images/250-3.jpg"><br />
+可以看出，进程的地址空间从低到高依次是：进程代码段(标志含有x)、只读数据段、可读写数据段、堆、栈（包括动态库的栈空间）。<br />
+<div><br />
+<div>    线程83438的栈：0xb7570000 &#8211; 0xb6d70000的值恰好是8M，线程栈默认大小是8M。0xb6d70000 &#8211; 0xb6d6f000的值是1K，这1K是保护页。</div><br />
+<div>    为什么这三个线程的栈都是8M？可以从ulimit命令来得出，这是进程的资源限制：</div><br />
+<img src="/images/250-4.jpg"><br />
+<div>    使用ulimit <del>a命令可以看出，进程资源限制中栈大小的限制是8194K，即8M。</div><br />
+<div>     那么，这个8M大小是不是可以更改的？以及后面会什么会有一个4K大小的保护页？这可以从glibc代码里面来获取答案：</div><br />
+<div><br />
+<div></div><br />
+<div>       <strong><span style="color: #808000;">  1. </span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">__pthread_create_2_1</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">        /<strong><a><span style="color: #808000;">这里分配线程栈</span></a></strong>/</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">        ALLOCATE_STACK (iattr, &amp;pd); </span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">2. </span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">allocate_stack就是具体的分配线程栈的函数：</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">allocate_stack</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">     <a><span style="color: #808000;">/<strong>如果没有设置线程栈大小，就使用默认值</span></a></strong>/</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">     size = attr</del>&gt;stacksize ?: __default_stacksize;     </span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">     &#8230;</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">      /* Try to get a stack from the cache.  <strong>/</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">      pd = get_cached_stack (&amp;size, &amp;mem);</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">     /</strong>如果没有从cache申请到，就要mmap申请一块内存*/</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">      if (pd == <span class="caps">NULL</span>){</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">           /<strong>MAP_PRIVATE | MAP_ANONYMOUS：私有匿名映射</strong>/</span></strong></div><br />
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">          mmap (<span class="caps">NULL</span>, size, prot,  </span></strong></div><br />
+<p style="padding-left: 120px;"><strong><span style="color: #808000;">MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);   </span></strong></p></p>
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">      }</span></strong></div>
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">     /*</span></strong></div>
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">        接着设置一个保护区，该区域的页表属性是PROT_NONE,</span></strong></div>
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">        即Page can not be accessed</span></strong></div>
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">     */</span></strong></div>
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">      mprotect (guard, guardsize, PROT_NONE) </span></strong></div>
+<div style="padding-left: 30px;"><strong><span style="color: #808000;"> </span></strong></div>
+<div style="padding-left: 30px;"><strong><span style="color: #808000;">       对于设置为PROT_NONE的页，是不能访问的，那么访问到这个保护区时就出现错误，linux是靠这种机制来实现栈溢出保护的。</span></strong></div>
+<div style="padding-left: 30px;"></div>
+<div><span style="color: #000000;">    下面我们来调整线程栈：</span></div>
+<div><span style="color: #000000;">   <strong> 1. 设置pthread_attr属性</strong></span></div>
+</div>
+<p><img src="/images/250-5.jpg"><br />
+<div></div><br />
+<img src="/images/250-6.jpg"><br />
+<div><br />
+<div>可以看到此时的线程栈大小是： 0xb758f000 &#8211; 0xb756f000 = 128K.</div></p>
+</div>
+<div>    <strong>2.通过ulimit来统一设置当前shell下将要执行的程序的线程栈 </strong></div>
+<div>        ulimit -s  128</div>
+<div>
+<div>    要注意的是， ulimit -s是针对shell的设置， 即只对当前shell fork的进程有效。如果在另外一个shell上起进程，则是没有效果的。参见 man手册：“Control the resources available to a process started by the shell, on systems that allow such control.”</div>
+</div>
+<div></div>
+</div>
+		
+		
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-05-18T00:00:00+08:00" pubdate data-updated="true">May 18<span>th</span>, 2013</time></div>
+	<div class="tags">
+
+</div>
+	
+</div>
+</article>  
 
 
    <article class="post">
@@ -1341,47 +1432,12 @@ vfs_read/vfs_write-&gt;part_read/part_write-&gt;cfi_amdstd_read/do_write_buffer.
 </div>
 </article>  
 
-
-   <article class="post">
-	<h2 class="title">
-		
-		<a href="/blogs/3">
-		
-			Hello World!</a>
-	</h2>
-	<div class="entry-content">
-		<p>This is the complaint from @laoar.</p>
-<p>多谢您的倾听。</p>
-		
-		
-	</div>
-
-
-<div class="meta">
-	<div class="date">
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2012-03-19T00:00:00+08:00" pubdate data-updated="true">Mar 19<span>th</span>, 2012</time></div>
-	<div class="tags">
-
-</div>
-	
-</div>
-</article>  
-
 <nav id="pagenavi">
     
         <a href="/blog/page/2/" class="prev">Prev</a>
     
+    
+        <a href="/blog/page/4/" class="next">Next</a>
     
     <div class="center"><a href="/blog/archives">Blog Archives</a></div>
 </nav>
