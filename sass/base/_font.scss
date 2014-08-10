@@ -1,11 +1,13 @@
-$font-default: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, sans-serif !default;
+/*$font-default: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, sans-serif !default;*/
+/*$font-default: STFangSong, Helvetica, Arial, Vernada, Tahoma, STXihei, "Microsoft YaHei", "Songti SC", SimSun, Heiti, sans-serif !default;*/
+$font-default: Georgia, "Times New Roman", "Microsoft YaHei","微软雅黑", STFangSong, Helvetica, Arial, Vernada, Tahoma, STXihei,"Songti SC", SimSun, Heiti, sans-serif !default;
 $font-mono: Menlo, Monaco, "Andale Mono", "lucida console", "Courier New", monospace !default;
 
 $font-icon: FontAwesome;
 $font-icon-path: "/font/fontawesome-webfont";
 
 @font-face {
-	font-family: 'FontAwesome';
+	/*font-family: 'FontAwesome';*/
 	src: url('#{$font-icon-path}.eot');
 	src: url('#{$font-icon-path}.eot?#iefix') format('embedded-opentype'),
 		url('#{$font-icon-path}.woff') format('woff'),

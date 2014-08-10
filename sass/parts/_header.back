@@ -15,7 +15,6 @@ $header-height: 30px;
 		@include transition(color 0.3s);
 		&:hover{
 			color: $color-main;
-		    background-color: #eee;
 		}
 	}
 	h1{
@@ -147,7 +146,7 @@ $header-height: 30px;
 	}
 }
 #mobile-nav{
-display: none;
+	display: none;
 	height: 37px;
 	position: relative;
 	@media screen and (max-width: 600px){
@@ -201,7 +200,7 @@ display: none;
 			z-index: 1;
 			@include border-radius(0 0 5px 5px);
 			ul{
-				list-style: circle;
+				list-style: none;
 				ul{
 					margin-left: 20px;
 				}
@@ -209,6 +208,51 @@ display: none;
 			a{
 				padding: 0 10px;
 			}
+		}
+	}
+	.search{
+		position: absolute;
+		top: 0;
+		right: 0;
+		.button{
+			background: $color-gray04;
+			width: 30px;
+			height: 30px;
+			position: absolute;
+			top: 1px;
+			right: -1px;
+			@include border-radius(0 5px 5px 0);
+			&:before{
+				content: "\f002";
+				color: #f2f2f2;
+				font: 20px $font-icon;
+				line-height: 30px;
+				position: absolute;
+				top: 0;
+				left: 7px;
+			}
+			&.on{
+				background: $color-gray03;
+				&:before{
+					content: "\f00d";
+				}
+			}
+		}
+		.container{
+			position: absolute;
+			right: 51px;
+			z-index: 1;
+		}
+		input[type="text"]{
+			background: #fff;
+			border: 1px solid $color-gray04;
+			border-right: none;
+			color: $color-gray02;
+			font: 13px $font-default;
+			height: 30px;
+			width: 100%;
+			padding: 0 10px;
+			@include border-radius(5px 0 0 5px);
 		}
 	}
 }

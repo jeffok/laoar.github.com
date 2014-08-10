@@ -10,15 +10,15 @@ layout: default
 {% unless year == this_year %}
     {% assign year = this_year %}
     {% unless forloop.first %}
+        </section>
     {% endunless %}
-	<section class="archives">
-		<h1 class="year">{{ date | date: "%Y" }}</h1>
+    <section class="archives"><h1 class="year">{{ date | date: "%Y" }}</h1>
 {% endunless %}
-		<article>
-    		<a href="{{ root_url }}{{ post.url }}">{{post.title}}</a>
-		</article>
+<article>
+    <class="title" ><a href="{{ root_url }}{{ post.url }}">{{post.title}}</a>
+</article>
     {% if forloop.last %}
-	</section>
+    </section>
     {% endif %}
 {% endfor %}
 <!--    <h4 class="title"><a href="{{ root_url }}{{ post.url }}">{{post.title}}</a></h4>

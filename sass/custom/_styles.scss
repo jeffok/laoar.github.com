@@ -1,3 +1,37 @@
 // This File is imported last, and will override other styles in the cascade
 // Add styles here to make changes without digging in too much
 
+body {
+/*    font-family: Georgia, "Times New Roman", "Microsoft YaHei","微软雅黑", STFangSong, Helvetica, Arial, Vernada, Tahoma, STXihei,"Songti SC", SimSun, Heiti, sans-serif; */
+	/*font-family: $font-default;*/
+    font-size: 17px;
+}
+
+/*
+a {
+    display: block;
+}
+
+.title {
+    cursor: pointer;
+}
+
+li.title:hover {
+    background-color: #eee;
+}
+
+.panel {
+    border-radius: 0;
+}
+
+.panel-default > .panel-heading {
+	background-image: none;
+	background-color: #fff;
+}
+
+.navbar-default {
+	background-image: none;
+	background-color: #fff;
+  box-shadow: none;
+}
+*/

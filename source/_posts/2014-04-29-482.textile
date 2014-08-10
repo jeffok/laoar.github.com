@@ -1,6 +1,6 @@
 ---
 layout: post
-title: '从linux内核里来学习性能优化，和一个例子'
+title: '性能优化，从linux内核里来学习，和一个例子'
 date: 2014-4-29
 wordpress_id: 482
 permalink: /blogs/482

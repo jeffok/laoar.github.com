@@ -119,6 +119,12 @@ task :new_post, :title do |t, args|
   end
 end
 
+desc "build the BookWall for #{source_dir}/read" 
+task :bookwall do
+#	exec "echo hello"
+	exec "ruby bookwall.rb laoar"
+end
+
 # usage rake new_page[my-new-page] or rake new_page[my-new-page.html] or rake new_page (defaults to "new-page.markdown")
 desc "Create a new page in #{source_dir}/(filename)/index.#{new_page_ext}"
 task :new_page, :filename do |t, args|
