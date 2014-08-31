@@ -7,7 +7,7 @@
 	<meta name="author" content="Yafang Shao">
 
 	
-	<meta name="description" content="我接触编程较晚，从进入大学后才开始。所以我对那些大器晚成的运动员很有好感，比如迭戈•米利托、里克尔梅、诺维茨基、纳什、刘昌赫，所谓榜样的力量。当然这不是说我不喜欢梅西、科比、李昌镐。 我工作后一直都在做底层相关开发，电子线路，总线协议，CPU设计，BIOS(Bootloader)，System( &hellip;">
+	<meta name="description" content="可能人到了三十而立的时候，就很少纯粹为了学习而学习了，因为已经没有太多的精力来浪费在那些花里胡哨的东西上。这个时候通常都是为了解决实际问题而去学习，这也像是找工作一样，刚毕业的人都是看潜力，工作几年之后就是看能不能尽快干活了。 我现在学习Ruby， &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -87,6 +87,14 @@
     
 	<section class="archives">
 		<h1 class="year">2014</h1>
+
+		<article>
+    		<a href="/blog/2014/08/31/ruby/">Ruby, 我的书有点乱</a>
+		</article>
+    
+
+
+
 
 		<article>
     		<a href="/blog/2014/07/13/jin-ji-de-ccheng-xu-yuan/">进击的C程序员, Ruby, 豆瓣读书</a>
@@ -351,6 +359,208 @@
 &#8211;>
 <!--
 
+
+
+   <article class="post">
+	<h2 class="title">
+		
+		<a href="/blog/2014/08/31/ruby/">
+		
+			Ruby, 我的书有点乱</a>
+	</h2>
+	<div class="entry-content">
+		<p>可能人到了三十而立的时候，就很少纯粹为了学习而学习了，因为已经没有太多的精力来浪费在那些花里胡哨的东西上。这个时候通常都是为了解决实际问题而去学习，这也像是找工作一样，刚毕业的人都是看潜力，工作几年之后就是看能不能尽快干活了。</p>
+
+
+<p>我现在学习Ruby，也不是为了了解这个纯粹面向对象的东西到底是什么样子的，而是为了解决我面对的一些实际问题。比如说现在遇到的问题，自从买了Kindle后，我就隔三差五的会下载一些kindle电子书，有时候也会买一些，而我呢又是比较懒散的一个人，这样就搞的我的电子书有些乱，就那样胡乱的放着。这个时候你可能会说，花一点点时间整理一下不就好了嘛。嗯，那是因为你不是程序员。对于程序员而言，他们宁愿花很多时间写个程序来搞定。</p>
+
+
+<p>因为对于程序员而言，手动操作是下三滥的勾当，它就像一个男人向别人承认自己阳痿一样难以接受。</p>
+
+
+<p>在很多情况下，明明5分钟就能用手来搞定的事情，非得花几个小时写然后再花几天调最终还可能产生意料之外的错误的程序来做。这大致就是程序员碎了一地的节操吧。</p>
+
+
+<p>我在网上下载以及从Amazon上买的电子书有以下几种情况让我心里有些许的不爽，可能是由于最近是处女座的日子，我也跟着有些强迫症起来。<br>
+1. Life of Pi(少年pi的奇幻漂流） - Austin Lee.mobi<br>
+我不喜欢名字里面有括号括起来的东西，而且这部分内容完全是重复的，我向纯粹一些，把括号里面的内容给删掉。<br>
+2. Of Mice and Men (Penguin Classics)_B00CS74W6Q.azw3<br> 
+Amazon上卖的书，书的编号（比如_B00CS74W6Q）是直接放在文件名字里面的，好在我不是处女座，所以对这个东西是可以接受的，而且觉得它挺好，可以用来区分哪些书是下载的哪些书是买的。我正好打算把下载的书和买的书给分开，所以这个东西就派上用场了。<br> 
+3. 我下载的东西都是放在默认的Download目录里面，我想把他们都整理到Documents这个目录里面。<br>
+所以我就写了个Ruby脚本来做这件事。其实，目前为止仍然困惑我的一件事情是，Ruby除了做脚本还能做什么呢？</p>
+
+
+<p></p>
+
+<p>这个<a href="https://github.com/laoar/bcleaner">Ruby脚本</a>很短小，所以就直接贴在这里了。</p>
+
+
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">if</span> <span class="no">ARGV</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span>  <span class="mi">2</span>
+</span><span class='line'>    <span class="nb">print</span> <span class="s2">&quot;usage: ./bcleaner.rb dst_path src_path</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span class='line'>    <span class="nb">exit</span> <span class="o">-</span><span class="mi">1</span>
+</span><span class='line'><span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'><span class="vg">$dst</span> <span class="o">=</span> <span class="no">ARGV</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span>
+</span><span class='line'><span class="vg">$src</span> <span class="o">=</span> <span class="no">ARGV</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">if</span> <span class="o">!</span><span class="no">Dir</span><span class="o">.</span><span class="n">exist?</span><span class="p">(</span><span class="vg">$src</span><span class="p">)</span> <span class="o">||</span> <span class="o">!</span><span class="no">Dir</span><span class="o">.</span><span class="n">exist?</span><span class="p">(</span><span class="vg">$dst</span><span class="p">)</span>
+</span><span class='line'>    <span class="nb">puts</span> <span class="s2">&quot;No such Directory&quot;</span>
+</span><span class='line'>    <span class="nb">exit</span> <span class="o">-</span><span class="mi">1</span>
+</span><span class='line'><span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">if</span> <span class="no">Dir</span><span class="o">.</span><span class="n">entries</span><span class="p">(</span><span class="vg">$src</span><span class="p">)</span> <span class="o">==</span> <span class="o">[</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="s2">&quot;..&quot;</span><span class="p">,</span> <span class="s2">&quot;.DS_Store&quot;</span><span class="o">]</span> <span class="o">||</span> <span class="no">Dir</span><span class="o">.</span><span class="n">entries</span><span class="p">(</span><span class="vg">$src</span><span class="p">)</span> <span class="o">==</span> <span class="o">[</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="s2">&quot;..&quot;</span><span class="o">]</span>
+</span><span class='line'>    <span class="nb">printf</span> <span class="s2">&quot;%s is empty!</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="vg">$src</span>
+</span><span class='line'>    <span class="nb">exit</span> <span class="o">-</span><span class="mi">1</span>
+</span><span class='line'><span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">if</span> <span class="o">!</span><span class="no">Dir</span><span class="o">.</span><span class="n">exist?</span><span class="p">(</span><span class="vg">$dst</span> <span class="o">+</span> <span class="s2">&quot;/purchased&quot;</span><span class="p">)</span>
+</span><span class='line'>    <span class="no">Dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="vg">$dst</span> <span class="o">+</span> <span class="s2">&quot;/purchased&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'><span class="no">Dir</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="vg">$src</span><span class="p">)</span>
+</span><span class='line'><span class="vg">$hit</span> <span class="o">=</span> <span class="kp">false</span>
+</span><span class='line'><span class="no">Dir</span><span class="o">.</span><span class="n">entries</span><span class="p">(</span><span class="vg">$src</span><span class="p">)</span><span class="o">.</span><span class="n">each</span><span class="p">{</span><span class="o">|</span><span class="n">x</span><span class="o">|</span>
+</span><span class='line'>    <span class="n">y</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+</span><span class='line'>    <span class="k">for</span> <span class="n">i</span> <span class="k">in</span> <span class="mi">0</span><span class="o">.</span><span class="n">.</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">length</span>
+</span><span class='line'>        <span class="k">if</span> <span class="n">x</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">!=</span> <span class="s1">&#39;(&#39;</span> <span class="o">&amp;&amp;</span>  <span class="n">x</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">!=</span> <span class="s1">&#39;（&#39;</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="vg">$hit</span>
+</span><span class='line'>            <span class="n">y</span> <span class="o">+=</span> <span class="n">x</span><span class="o">[</span><span class="n">i</span><span class="o">]</span>
+</span><span class='line'>        <span class="k">else</span>
+</span><span class='line'>            <span class="vg">$hit</span> <span class="o">=</span> <span class="kp">true</span>
+</span><span class='line'>            <span class="k">if</span> <span class="n">x</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">==</span> <span class="s1">&#39;)&#39;</span> <span class="o">||</span> <span class="n">x</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">==</span> <span class="s1">&#39;）&#39;</span> <span class="o">||</span> <span class="n">x</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">==</span> <span class="s1">&#39;_&#39;</span>
+</span><span class='line'>                <span class="vg">$hit</span> <span class="o">=</span> <span class="kp">false</span>
+</span><span class='line'>                <span class="vg">$hit</span> <span class="o">=</span> <span class="kp">false</span>
+</span><span class='line'>                <span class="k">if</span> <span class="n">x</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">==</span> <span class="s1">&#39;_&#39;</span>
+</span><span class='line'>                    <span class="n">y</span> <span class="o">+=</span> <span class="n">x</span><span class="o">[</span><span class="n">i</span><span class="o">]</span>
+</span><span class='line'>                <span class="k">end</span>
+</span><span class='line'>            <span class="k">end</span>
+</span><span class='line'>        <span class="k">end</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="s2">&quot;.azw3&quot;</span><span class="p">)</span> <span class="o">||</span> <span class="n">x</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="s2">&quot;.mobi&quot;</span><span class="p">)</span>
+</span><span class='line'>        <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">include?</span><span class="s2">&quot;_B00&quot;</span>
+</span><span class='line'>            <span class="no">File</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="vg">$dst</span> <span class="o">+</span> <span class="s2">&quot;/purchased/&quot;</span> <span class="o">+</span> <span class="n">y</span><span class="p">)</span>
+</span><span class='line'>        <span class="k">elsif</span> <span class="n">x</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span> <span class="o">!=</span> <span class="s1">&#39;.&#39;</span>
+</span><span class='line'>            <span class="no">File</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="vg">$dst</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="n">y</span><span class="p">)</span>
+</span><span class='line'>        <span class="k">end</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<p>Ruby很有特色的一个地方就包括它的字符串处理，它不用像C语言一样来考虑内存管理，程序员也不必要担心字符串占用的内存空间[1].<br>
+比如可以直接这样给一个字符串赋值:<br>
+str = “we” + “ are” + “ a&#8221; + “ whole”<br>
+str2 = 2 * str<br>
+此时str2是&#8221;we are a whole we are a whole&#8221;<br>
+妈妈说，再也不用担心用strcpy还是strncpy了&#8230;</p>
+
+
+<p>另外一个有特色的地方是Ruby对于中文字符的支持，我们知道在UTF-8编码下一个汉字是占用3个字节，这可以很容易的用C语言来验证：printf(&#8220;%d\n&#8221;, strlen(&#8220;你好&#8221;)) 显示的结果是6。但是，在Ruby里面，printf(&#8220;%d\n&#8221;, &#8220;再见&#8221;.length)的结果是2，即它显示的是字数而不是字节数，这也是Ruby对中文支持很好的地方，或许是因为松本行泓先生是日本人的缘故吧。所以对于str = &#8220;你好&#8221;而言，在Ruby里面str[0]是&#8221;你&#8221;；而在C语言里面，str[0]则只是&#8221;你&#8221;的第一个字节。</p>
+
+
+
+
+<p>看起来确实是挺酷的吧&#8230;</p>
+
+
+
+
+<p>在执行完这个程序后，这些书就按照我的预期整理好了。但是，等等，让我们打开其中的书试试看。当我打开从网上下载的书时，一点问题都没有，然而当我打开从Amazon上买的书时，结果：<br>
+<img src="/images/ruby.png">
+</p>
+
+
+<p>&hellip;&hellip;</p>
+
+<p> 哈哈哈哈哈哈&#8230;</p>
+
+
+<p> 所以说，备份很重要～</p>
+
+
+<p>[1] <a href="http://guides.ruby.tw/ruby/strings.html">guides.ruby</a><br>
+[2] 进来事情有些多，所以直到这个月最后一号才写这篇文章，写的也有些赶。</p>
+
+		
+		
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-08-31T00:26:17+08:00" pubdate data-updated="true">Aug 31<span>st</span>, 2014</time></div>
+	<div class="tags">
+
+</div>
+	
+</div>
+</article>  
 
 
    <article class="post">
@@ -1277,72 +1487,6 @@ perror(&#8220;malloc&#8221;);  // 原谅我没有缩进<br />
 
 
 <time datetime="2014-01-01T00:00:00+08:00" pubdate data-updated="true">Jan 1<span>st</span>, 2014</time></div>
-	<div class="tags">
-
-</div>
-	
-</div>
-</article>  
-
-
-   <article class="post">
-	<h2 class="title">
-		
-		<a href="/blogs/402">
-		
-			MacOS:mdworker曾让我很不爽</a>
-	</h2>
-	<div class="entry-content">
-		<p><span style="line-height: 1.5;">    一开始，我以为mdworker是“memory decompress worker”， 好吧，谁让我是linux内核出身的哪，正应了那句话，叫做“往往以自己的立场来揣测别人”。 事实上，它是“metadata server worker”。不过它让我很不爽的原因与它的名字无关，在我的Macbook刚升级到Mavericks的时候，大概是升级后还有很多善后工作要处理，它老是偷偷摸摸的运行，导致我看个优酷都卡的不行，你能体会到正到精彩处电脑却卡的连鼠标都动不了的那种心情。 需要声明的是，那段时间我在看《绝命毒师》，别想多。 </span></p>
-<p><span style="line-height: 1.5;">     然后我就有了要干掉这个mdworker的念头。作为一个内核出身的工程师，自然是不屑于打开control panal，这里勾一下那里选一下的这种毫无技术含量的做法的。I do it on my own。我打算自己写个C代码来控制它，虽然这不是个好方法，甚至都不是个正确的方法，但是至少我在思考并且知道是可行的,而且我还能搞定它。</span></p>
-<p><span style="line-height: 1.5;">    再然后我就发现我不太适合做一个freelance，我的这个想法一直拖拖拉拉都没动笔，过了段时间Maverick竟然很流畅了，mdworker也轻易不出山了，即使出山也没那么大动静了，这更让我没动力来写了。 </span></p>
-<p><span style="line-height: 1.5;">    最后，有一天我感冒了，周末躺在床上什么都不想动，于是打开了电脑就开始写这个很无聊的工具了。 </span></p>
-<p><span style="line-height: 1.5;">    我的目的是这样的：我要让这个进程的cpu占用率低于某个值，比如10%。</span></p>
-<p><span style="line-height: 1.5;">    接着我就想该怎么来实现，虽然当时我躺在床上浑身无力，可是大脑还能正常运转，下面是我的思路：</span></p>
-<p><span style="line-height: 1.5;">1） 根据mdworker这个名字来找到对应的进程<br />
-</span>      关键点：<br />
-<span style="line-height: 1.5;">      可能会有多个进程，注意是起多个进程，不是指多线程。</span></p>
-<p><span style="line-height: 1.5;"><br />
-</span>2） 我需要遍历整个进程链表来进行名字匹配，如果某个进程的名字mdworker，就认为找到了对应的进程。<br />
-<span style="line-height: 1.5;">    关键点：<br />
-</span>    bsd系统维护着两个进程链表，一个是allproc，一个是zomproc。zomproc是bsd的僵死进程链表，非僵死进程都在allproc链表里面。所谓僵死进程是指，这个进程挂掉了，但是它没有通知它的父进程，打个比方就是，你死了但是还没有去民政局里登记你的死亡，此时你就是处在僵死状态。<br />
-要明白allproc和zomproc这两个链表的特性，我们只需要知道他们使用的是什么结构体就好了。他们两个使用的都是bsd系统的通用结构体LIST_ENTRY，于是我们就可以在心里默念一下这个结构体的特点，它是一个双向非循环链表，会使用一个全局变量header来标识这个链表，这个header会指向链表的头部和尾部，在通常情况下我们都是把新元素插入到链表的头部。我们知道系统中进程的PID是按照由小到大递增的，也就是现有PID0，然后是PID1&#8230; 于是我们就知道这个allproc和zomproc链表里的元素（进程）从尾部到头部的PID是逐渐增大的，当然如果fork的进程数超过了PID MAX，那就另说了。</p>
-<p>3） 抓取到这个进程后，我们就可以使用它的pid来控制它了，如何来控制？<br />
-<span style="line-height: 1.5;">    关键点：<br />
-</span>    进程A如何来控制一个毫不相干的进程B？ 也许你一下子想不起来该怎么来实现，但是你再仔细想一想，这不就是GDB干的事嘛！gdb使用的ptrace系统调用来将目标进程变成自己的子进程，然后attach到这个子进程后就可以任意的玩这个子进程了，想必对于我们国人而言这个不太难理解，上司自然是可以控制自己的下属的，或者说，我要想让你听我的话得先把你变成我的下属。人之本性在技术层面也是被体现的淋漓尽致啊！     如果使用ptrace的话，在这里可能就有些大材小用了，我一开始设想是使用ptrace系统调用，后来发现实现起来相对复杂些。 然后我又想到，CTRL＋C不也是可以停止一个进程嘛，它使用的是信号，我可以使用signal来实现我的目的。 即，如果进程老是占用CPU，我就给它发一个stop信号来停止它，过段时间我再给它发个continue信号让它运行。当然前提是它可以接受信号。<br />
-至于说让它停止多长时间和运行多长时间则是一个小学数学问题了。 比如我想让这个进程的CPU占用率不超过10%，那么只要检测到该进程的CPU占用率超过了10%，我就强制让它睡眠。假如我以1S为一个周期，我只要让进程的工作时间不超过100ms就可以了。</p>
-<p>4） 如何计算一个进程的CPU占用率<br />
-<span style="line-height: 1.5;">    关键点：<br />
-</span><span style="line-height: 1.5;">    我的计算方式是，在时间点a我记录下进程执行了多长时间pa，然后在时间点b我再记录进程执行了多长时间pb。那么(pb-pa)/(b-a)就是这段时间进程的CPU占用率。 </span></p>
-<p>5） 我要想控制别人，得比别人拥有更大的权利<br />
-<span style="line-height: 1.5;">    关键点：<br />
-</span><span style="line-height: 1.5;">    这个进程既然是控制进程，那么它得比被控制的进程具有更高的优先级来执行，不然被控制进程都执行完了那这个控制进程也没啥用了。<br />
-</span>    首先，这个控制进程选用什么样的调度策略。Oh, come on! 当然是选用Normal了，如果选用FIFO或者RR不是会更影响整个系统的性能嘛！<br />
-接着，normal进程可以通过调整它的nice值来调整它的优先级，nice的范围是（－20，＋20），－20具有最高优先级，＋20的优先级最低。<br />
-最后，我们可以通过setpriority()这个函数来减小进程的nice值，不过，Only the super-user may lower priorities.（man手册）。也就是说，你要使用root权限。</p>
-<p><span style="line-height: 1.5;">    有了上面的思路之后，我就开始动笔写了，虽然躺在床上浑身乏力，可是手指还算灵活，敲起键盘来也还能噼里啪啦。 </span></p>
-<p><span style="line-height: 1.5;">    然后，我就在github上发现了一个类似的东西，叫做</span><a title="cpulimit" href="https://github.com/laoar/cpulimit"><span style="text-decoration: underline;">cpulimit</span></a><span style="line-height: 1.5;"> 。我看了一下它的代码，发现了很多bug，也想到了解决方案，后来看到这个项目只活跃了半年时间，而且都一年多没有commit了，就没有心思去给这个项目贡献点自己的力量了。 我的代码可以说是这个cpulimit的郭敬明版，虽然短小功能少，可是很强悍，正所谓浓缩的都是精华。 我正在着手将我的代码保存到github上时，忽然卡特打了个电话喊我一起打篮球。大概是写了点代码精神爽吧，虽然感冒没好完，我还是毫不犹豫的披挂上阵了。于是那个周日的下午，我和卡特,姚明一起在中科院电子所和其他几个人3v3了两三个小时，等到周一我起来去上班时感觉整个身子骨都散架了。 </span></p>
-<p><span style="line-height: 1.5;">    在我打算写这篇博客时，也将这个郭敬明版的cpulimit给放到了github上：</span><a title="my-task-manager" href="https://github.com/laoar/my-task-manager"><span style="text-decoration: underline;">my－task－manager</span><span style="line-height: 1.5;"> 。 </span></a></p>
-<p><span style="line-height: 1.5;">    github确实是个好东西，你想写点什么时，总能在上面找到个类似的做参考。 作为一个程序员，如果都不知道github的话，那就太过于不思进取了。</span></p>
-		
-		
-	</div>
-
-
-<div class="meta">
-	<div class="date">
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-12-15T00:00:00+08:00" pubdate data-updated="true">Dec 15<span>th</span>, 2013</time></div>
 	<div class="tags">
 
 </div>

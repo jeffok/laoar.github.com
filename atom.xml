@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2014-08-11T23:36:47+08:00</updated>
+  <updated>2014-08-31T10:57:07+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -12,6 +12,180 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Ruby, 我的书有点乱]]></title>
+    <link href="http://laoar.github.io/blog/2014/08/31/ruby/"/>
+    <updated>2014-08-31T00:26:17+08:00</updated>
+    <id>http://laoar.github.io/blog/2014/08/31/ruby</id>
+    <content type="html"><![CDATA[<p>可能人到了三十而立的时候，就很少纯粹为了学习而学习了，因为已经没有太多的精力来浪费在那些花里胡哨的东西上。这个时候通常都是为了解决实际问题而去学习，这也像是找工作一样，刚毕业的人都是看潜力，工作几年之后就是看能不能尽快干活了。</p>
+
+
+<p>我现在学习Ruby，也不是为了了解这个纯粹面向对象的东西到底是什么样子的，而是为了解决我面对的一些实际问题。比如说现在遇到的问题，自从买了Kindle后，我就隔三差五的会下载一些kindle电子书，有时候也会买一些，而我呢又是比较懒散的一个人，这样就搞的我的电子书有些乱，就那样胡乱的放着。这个时候你可能会说，花一点点时间整理一下不就好了嘛。嗯，那是因为你不是程序员。对于程序员而言，他们宁愿花很多时间写个程序来搞定。</p>
+
+
+<p>因为对于程序员而言，手动操作是下三滥的勾当，它就像一个男人向别人承认自己阳痿一样难以接受。</p>
+
+
+<p>在很多情况下，明明5分钟就能用手来搞定的事情，非得花几个小时写然后再花几天调最终还可能产生意料之外的错误的程序来做。这大致就是程序员碎了一地的节操吧。</p>
+
+
+<p>我在网上下载以及从Amazon上买的电子书有以下几种情况让我心里有些许的不爽，可能是由于最近是处女座的日子，我也跟着有些强迫症起来。<br>
+1. Life of Pi(少年pi的奇幻漂流） - Austin Lee.mobi<br>
+我不喜欢名字里面有括号括起来的东西，而且这部分内容完全是重复的，我向纯粹一些，把括号里面的内容给删掉。<br>
+2. Of Mice and Men (Penguin Classics)_B00CS74W6Q.azw3<br> 
+Amazon上卖的书，书的编号（比如_B00CS74W6Q）是直接放在文件名字里面的，好在我不是处女座，所以对这个东西是可以接受的，而且觉得它挺好，可以用来区分哪些书是下载的哪些书是买的。我正好打算把下载的书和买的书给分开，所以这个东西就派上用场了。<br> 
+3. 我下载的东西都是放在默认的Download目录里面，我想把他们都整理到Documents这个目录里面。<br>
+所以我就写了个Ruby脚本来做这件事。其实，目前为止仍然困惑我的一件事情是，Ruby除了做脚本还能做什么呢？</p>
+
+
+<p></p>
+
+<p>这个<a href="https://github.com/laoar/bcleaner">Ruby脚本</a>很短小，所以就直接贴在这里了。</p>
+
+
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">if</span> <span class="no">ARGV</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span>  <span class="mi">2</span>
+</span><span class='line'>    <span class="nb">print</span> <span class="s2">&quot;usage: ./bcleaner.rb dst_path src_path</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span class='line'>    <span class="nb">exit</span> <span class="o">-</span><span class="mi">1</span>
+</span><span class='line'><span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'><span class="vg">$dst</span> <span class="o">=</span> <span class="no">ARGV</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span>
+</span><span class='line'><span class="vg">$src</span> <span class="o">=</span> <span class="no">ARGV</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">if</span> <span class="o">!</span><span class="no">Dir</span><span class="o">.</span><span class="n">exist?</span><span class="p">(</span><span class="vg">$src</span><span class="p">)</span> <span class="o">||</span> <span class="o">!</span><span class="no">Dir</span><span class="o">.</span><span class="n">exist?</span><span class="p">(</span><span class="vg">$dst</span><span class="p">)</span>
+</span><span class='line'>    <span class="nb">puts</span> <span class="s2">&quot;No such Directory&quot;</span>
+</span><span class='line'>    <span class="nb">exit</span> <span class="o">-</span><span class="mi">1</span>
+</span><span class='line'><span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">if</span> <span class="no">Dir</span><span class="o">.</span><span class="n">entries</span><span class="p">(</span><span class="vg">$src</span><span class="p">)</span> <span class="o">==</span> <span class="o">[</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="s2">&quot;..&quot;</span><span class="p">,</span> <span class="s2">&quot;.DS_Store&quot;</span><span class="o">]</span> <span class="o">||</span> <span class="no">Dir</span><span class="o">.</span><span class="n">entries</span><span class="p">(</span><span class="vg">$src</span><span class="p">)</span> <span class="o">==</span> <span class="o">[</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="s2">&quot;..&quot;</span><span class="o">]</span>
+</span><span class='line'>    <span class="nb">printf</span> <span class="s2">&quot;%s is empty!</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="vg">$src</span>
+</span><span class='line'>    <span class="nb">exit</span> <span class="o">-</span><span class="mi">1</span>
+</span><span class='line'><span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">if</span> <span class="o">!</span><span class="no">Dir</span><span class="o">.</span><span class="n">exist?</span><span class="p">(</span><span class="vg">$dst</span> <span class="o">+</span> <span class="s2">&quot;/purchased&quot;</span><span class="p">)</span>
+</span><span class='line'>    <span class="no">Dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="vg">$dst</span> <span class="o">+</span> <span class="s2">&quot;/purchased&quot;</span><span class="p">)</span>
+</span><span class='line'><span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'><span class="no">Dir</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="vg">$src</span><span class="p">)</span>
+</span><span class='line'><span class="vg">$hit</span> <span class="o">=</span> <span class="kp">false</span>
+</span><span class='line'><span class="no">Dir</span><span class="o">.</span><span class="n">entries</span><span class="p">(</span><span class="vg">$src</span><span class="p">)</span><span class="o">.</span><span class="n">each</span><span class="p">{</span><span class="o">|</span><span class="n">x</span><span class="o">|</span>
+</span><span class='line'>    <span class="n">y</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+</span><span class='line'>    <span class="k">for</span> <span class="n">i</span> <span class="k">in</span> <span class="mi">0</span><span class="o">.</span><span class="n">.</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">length</span>
+</span><span class='line'>        <span class="k">if</span> <span class="n">x</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">!=</span> <span class="s1">&#39;(&#39;</span> <span class="o">&amp;&amp;</span>  <span class="n">x</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">!=</span> <span class="s1">&#39;（&#39;</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="vg">$hit</span>
+</span><span class='line'>            <span class="n">y</span> <span class="o">+=</span> <span class="n">x</span><span class="o">[</span><span class="n">i</span><span class="o">]</span>
+</span><span class='line'>        <span class="k">else</span>
+</span><span class='line'>            <span class="vg">$hit</span> <span class="o">=</span> <span class="kp">true</span>
+</span><span class='line'>            <span class="k">if</span> <span class="n">x</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">==</span> <span class="s1">&#39;)&#39;</span> <span class="o">||</span> <span class="n">x</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">==</span> <span class="s1">&#39;）&#39;</span> <span class="o">||</span> <span class="n">x</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">==</span> <span class="s1">&#39;_&#39;</span>
+</span><span class='line'>                <span class="vg">$hit</span> <span class="o">=</span> <span class="kp">false</span>
+</span><span class='line'>                <span class="vg">$hit</span> <span class="o">=</span> <span class="kp">false</span>
+</span><span class='line'>                <span class="k">if</span> <span class="n">x</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">==</span> <span class="s1">&#39;_&#39;</span>
+</span><span class='line'>                    <span class="n">y</span> <span class="o">+=</span> <span class="n">x</span><span class="o">[</span><span class="n">i</span><span class="o">]</span>
+</span><span class='line'>                <span class="k">end</span>
+</span><span class='line'>            <span class="k">end</span>
+</span><span class='line'>        <span class="k">end</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="s2">&quot;.azw3&quot;</span><span class="p">)</span> <span class="o">||</span> <span class="n">x</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="s2">&quot;.mobi&quot;</span><span class="p">)</span>
+</span><span class='line'>        <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">include?</span><span class="s2">&quot;_B00&quot;</span>
+</span><span class='line'>            <span class="no">File</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="vg">$dst</span> <span class="o">+</span> <span class="s2">&quot;/purchased/&quot;</span> <span class="o">+</span> <span class="n">y</span><span class="p">)</span>
+</span><span class='line'>        <span class="k">elsif</span> <span class="n">x</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span> <span class="o">!=</span> <span class="s1">&#39;.&#39;</span>
+</span><span class='line'>            <span class="no">File</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="vg">$dst</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="n">y</span><span class="p">)</span>
+</span><span class='line'>        <span class="k">end</span>
+</span><span class='line'>    <span class="k">end</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<p>Ruby很有特色的一个地方就包括它的字符串处理，它不用像C语言一样来考虑内存管理，程序员也不必要担心字符串占用的内存空间[1].<br>
+比如可以直接这样给一个字符串赋值:<br>
+str = “we” + “ are” + “ a&#8221; + “ whole”<br>
+str2 = 2 * str<br>
+此时str2是&#8221;we are a whole we are a whole&#8221;<br>
+妈妈说，再也不用担心用strcpy还是strncpy了&#8230;</p>
+
+
+<p>另外一个有特色的地方是Ruby对于中文字符的支持，我们知道在UTF-8编码下一个汉字是占用3个字节，这可以很容易的用C语言来验证：printf(&#8220;%d\n&#8221;, strlen(&#8220;你好&#8221;)) 显示的结果是6。但是，在Ruby里面，printf(&#8220;%d\n&#8221;, &#8220;再见&#8221;.length)的结果是2，即它显示的是字数而不是字节数，这也是Ruby对中文支持很好的地方，或许是因为松本行泓先生是日本人的缘故吧。所以对于str = &#8220;你好&#8221;而言，在Ruby里面str[0]是&#8221;你&#8221;；而在C语言里面，str[0]则只是&#8221;你&#8221;的第一个字节。</p>
+
+
+
+
+<p>看起来确实是挺酷的吧&#8230;</p>
+
+
+
+
+<p>在执行完这个程序后，这些书就按照我的预期整理好了。但是，等等，让我们打开其中的书试试看。当我打开从网上下载的书时，一点问题都没有，然而当我打开从Amazon上买的书时，结果：<br>
+<img src="http://laoar.github.io/images/ruby.png">
+</p>
+
+
+<p>&hellip;&hellip;</p>
+
+<p> 哈哈哈哈哈哈&#8230;</p>
+
+
+<p> 所以说，备份很重要～</p>
+
+
+<p>[1] <a href="http://guides.ruby.tw/ruby/strings.html">guides.ruby</a><br>
+[2] 进来事情有些多，所以直到这个月最后一号才写这篇文章，写的也有些赶。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[进击的C程序员, Ruby, 豆瓣读书]]></title>
@@ -1097,47 +1271,6 @@ linux kernel里这么定义自然有其特殊的目的。</p>
 <p>1. 系统调用</p>
 <p>2. 异常指令（其实系统调用也是一个异常指令）</p>
 <p>3. 中断</p>]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[三言两语聊kernel：内存管理入门]]></title>
-    <link href="http://laoar.github.io/blogs/266"/>
-    <updated>2013-07-29T00:00:00+08:00</updated>
-    <id>http://laoar.github.io/blogs/266</id>
-    <content type="html"><![CDATA[<p style="text-align: left;">前言</p>
-<p style="text-align: left;">最近稍有闲暇将自己的一些所学做了整理， 只是浅显的说个大概，没有往细了说，观题目就可知，仅作入门：）</p>
-<p><strong>1. 内存管理的目的</strong></p>
-<p>由于计算机系统所含的实际物理内存大小是有限的， 所以CPU中通常都提供了内存管理机制来对系统中的内存进行有效的管理。 再intel CPU中， 提供了两种内存管理机制： 分段机制 和 分页机制。</p>
-<p>分页管理系统是可以选择的， 它有menuconfig的配置来决定是否需要分页。</p>
-<p>对于linux内核而言，它并没有使用intel CPU的分段机制， 而只是采用了它的分页机制。</p>
-<p>内存管理的一个目的是地址变换，另外一个目的是寻址保护。</p>
-<p><strong>2. 分页机制主要明白以下概念：</strong></p>
-<p>虚拟地址，物理地址， 页，page 结构体。</p>
-<p>对于进程而言， 它看到的都是虚拟地址空间， 在32bit CPU上，它的地址空间是4G；</p>
-<p>对于CPU而言，它访问的是具体的物理内存，即物理地址空间。</p>
-<p>如果由进程的虚拟机制空间来转换为CPU的物理地址空间，就有了MMU这个单元，它的作用是将虚拟地址空间映射为物理地址空间。映射方式就是采用的分页机制，首先将实际物理内存按照4K大小为单位来将物理内存划分为一个个物理页框，这些物理页框通过page结构体来索引， 所有的物理page都是通过一个字节数组mem_map[]来进行检索，该数组的每一个元素代表一个物理page的状态。 mem_map[]对于numa和uma，sparse memory和flat memroy这些内存管理模型上具有不同的实现。 numa是基于节点的， sparse memory是基于section的。</p>
-<p>在地址变换的过程中，首先由虚拟地址的前12bit得出起PGD，结合PGD的内容和CP15寄存器计算出其PMD的基址，虚拟地址的中间8bit为其偏移，然后通过PMD里面的内容计算出PTE的基址（即物理页框的地址），虚拟地址的最后12bit是PTE的偏移，这个地址就是该虚拟地址对应的物理内存的地址。</p>
-<p><strong>3. 虚拟地址空间的划分</strong></p>
-<p>进程的地址空间分为内核空间和用户空间两部分。 这两部分的比例可以通过menuconfig来进行配置， 一般都是配置为1：3,即用户空间占3G， 内核空间占1G。</p>
-<p>用户空间是0～3G这部分地址， 内核空间是3G～4G这部分地址。 对于用户空间而言，每个进程都有自己的页表，而内核空间则只有一份页表（中断／内核线程这些只运行在内核空间的都是没有mm_struct的）。</p>
-<p>内核空间是如下划分：</p>
-<p>内核空间起始于PAGE_OFFSET（即3G）， 在开始的区域是nomal memory区域，这部分区域包括内核镜像／mem_map[]数组，normal memory区域是线性映射， 它映射到物理内存的起始部分。</p>
-<p>然后从high–memory这个地方开始就是所谓的高端内存， 在高端内存和normal memory之间有一个4K的保护页，它的主要作用是起到保护作用。</p>
-<p><strong>4. 高端内存</strong></p>
-<p>高端内存主要是为了解决线性地址不够用的问题。 高端内存有三种映射方式： 固定映射／永久映射／临时映射以及非连续物理地址映射。</p>
-<p>非连续物理地址映射即vmalloc区域，它从VMALLOC_START到VMALLOC_END 这个区域，它的意思是线性地址是连续的，但是映射的物理地址未必是连续的，这部分空间是通过vmalloc（）来申请。</p>
-<p>再往后是永久映射，就是所谓的pmap区域，它通过pmap（）来申请， 通过punmap（）来释放。</p>
-<p>再往后是固定映射区， 它从fixed_addr_start开始，到fixed_addr_top结束，固定映射一般都是在编译阶段就确定好一些外设的映射关系，在系统启动阶段建立好它的映射关系后便不会在改变， 它的目的主要是解决一些外设在boot阶段就需要建立好映射的情况，一般都是用一个数学公式来表示它的映射。 都有哪些设备会用到固定映射？？ 例如中断控制器就是采用固定映射，中断入口地址就是在编译阶段确定的，对于arm而言是0xffff0000。</p>
-<p>在固定映射区的后面有一个4K的保护页面    。</p>
-<p>不同的映射方式之间都会有一个空隙来起到保护作用。</p>
-<p><strong>5. 写时拷贝机制</strong></p>
-<p>写时拷贝机制的目的， 一是为了节约物理内存，二是为了加快创建进程的速度。</p>
-<p>在使用fork（）生成新的进程时，新进程与原进程会共享同一内存区，这部分内存区是只读的， 当其中一个进程进行写操作时，系统才会为其另外分配内存页面。 这就是copy－on－write的概念。</p>
-<p>当进程A使用系统调用fork来创建一个子进程B时， 由于子进程B实际上是父进程A的一个拷贝，因此会拥有与父进程相同的物理页面。也即为了达到节约物理内存和快速创建的目的，fork（）函数会让子进程B以只读方式共享父进程A的物理页面，同时父进程A对这些物理页面的访问权限也设置为只读（这是通过copy_page_tables()来实现的）。 这样以来，当父进程A或者子进程B，其中任何一方对这些共享页面执行写操作的时候， 都会产生page－fault，然后cpu会执行异常处理函数do_wp_page()来试图解决这个异常。</p>
-<p>首先，会对这个物理页面取消共享， 然后为写进程复制一新的物理页面， 是父进程和子进程各自拥有一块内容相同的物理页面，这时才真正的进行了复制操作（当然是只复制这一个物理页面。），然后，将要执行写操作的这个物理页面置为可写的。 最后，从异常处理函数返回，cpu会重新执行刚才导致异常的写入操作指令，使进程能够执行下去。</p>
-<p><strong>6. 伙伴分配算法</strong></p>
-<p>这个没有深入研究过， 也没有在实际工作中遇到这方面的问题， 所以只知道一个大概。</p>
-<p>&nbsp;</p>]]></content>
   </entry>
   
 </feed>
