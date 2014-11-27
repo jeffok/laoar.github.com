@@ -1,4 +1,3 @@
-#!/usr/bin/ruby
 
 # usage : ./bookwall username
 #http://www.douban.com/people/username/
