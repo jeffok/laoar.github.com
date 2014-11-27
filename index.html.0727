@@ -7,7 +7,7 @@
 	<meta name="author" content="Yafang Shao">
 
 	
-	<meta name="description" content="2014 Ruby, 我的书有点乱 进击的C程序员, Ruby, 豆瓣读书 性能优化，要懂点编译原理 Hello Github! 性能优化：一些很有意思的尝试 性能优化，从linux内核里来学习，和一个例子 关于struct hack, 优雅的FreeBSD 性能优化,关于Profiling &hellip;">
+	<meta name="description" content="2014 loop unrolling : may or may not make the program run faster Ruby, 我的书有点乱 进击的C程序员, Ruby, 豆瓣读书 性能优化，要懂点编译原理 Hello Github! 性能优化：一些很有意思的尝试 性能优化， &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -86,6 +86,14 @@
     
     
     <section class="archives"><h1 class="year">2014</h1>
+
+<article>
+    <class="title" ><a href="/blog/2014/11/26/loop-unrolling/">loop unrolling : may or may not make the program run faster</a>
+</article>
+    
+
+
+
 
 <article>
     <class="title" ><a href="/blog/2014/08/31/ruby/">Ruby, 我的书有点乱</a>

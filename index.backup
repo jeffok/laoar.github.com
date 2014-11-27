@@ -7,7 +7,7 @@
 	<meta name="author" content="Yafang Shao">
 
 	
-	<meta name="description" content=" Blog Archives About laoar A little something about me. Recent Posts Ruby, 我的书有点乱 进击的C程序员, Ruby, 豆瓣读书 性能优化，要懂点编译原理 Hello Github! 性能优化：一些很有意思的尝试 ">
+	<meta name="description" content="Blog Archives About laoar A little something about me. Recent Posts Loop Unrolling : May or May Not Make the Program Run Faster Ruby, 我的书有点乱 进击的C程序员 &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -97,6 +97,10 @@
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/11/26/loop-unrolling/">Loop Unrolling : May or May Not Make the Program Run Faster</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/08/31/ruby/">Ruby, 我的书有点乱</a>
       </li>
     
@@ -110,10 +114,6 @@
     
       <li class="post">
         <a href="/blog/2014/05/25/hello-github/">Hello Github!</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blogs/501">性能优化：一些很有意思的尝试</a>
       </li>
     
   </ul>
