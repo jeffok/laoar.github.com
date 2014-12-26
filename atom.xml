@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2014-11-27T23:48:24+08:00</updated>
+  <updated>2014-12-27T06:34:01+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -12,6 +12,507 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[My Reading in 2014]]></title>
+    <link href="http://laoar.github.io/blog/2014/12/27/reading-2014/"/>
+    <updated>2014-12-27T06:32:01+08:00</updated>
+    <id>http://laoar.github.io/blog/2014/12/27/reading-2014</id>
+    <content type="html"><![CDATA[<p>This article was automatically generated via <a href="https://github.com/laoar/booklist">Booklist</a>, which is wrote in Ruby by @laoar. It&#8217;s open to everyone. Feel free to use it.</p>
+
+
+<p>Below are the books @laoar have read in 2014. There&rsquo;re totally 23 books, that&rsquo;s approximately 1.92 books per month, not a bad number. Pls. keep proceeding.<br><br></p>
+
+<h3>1.   Ruby元编程</h3>
+
+
+<center><img src="http://img5.douban.com/mpic/s7014167.jpg"></center>
+
+
+<p><strong>rating: </strong>★★★★☆</p>
+
+
+<p><strong>comment:</strong><br>
+读完了ruby的这部分，以后再读rails这部分。</p>
+
+
+<p><font color=red>[Hey slacker, can&#8217;t U read it seriously and give more comment?]</font></p>
+
+
+<br>
+
+
+
+
+<h3>2.   C程序性能优化</h3>
+
+
+<center><img src="http://img3.douban.com/mpic/s24611330.jpg"></center>
+
+
+<p><strong>rating: </strong>★★★★☆</p>
+
+
+<p><strong>comment:</strong><br>
+日本技术人员在一些领域上总是会钻研的很深，他们写的书总有一些参考价值。这本书对我对性能优化的理解很有帮助，虽然大部分内容都无用，然后有那么几句话切实的帮到了我就够了，一本好书！</p>
+
+
+<p><font color=green>[Good job!]</font></p>
+
+
+<br>
+
+
+
+
+<h3>3.   Zero to One</h3>
+
+
+<center><img src="http://img5.douban.com/mpic/s27463048.jpg"></center>
+
+
+<p><strong>rating: </strong>★★★★☆</p>
+
+
+<p><strong>comment:</strong><br>
+The author Peter Thiel is  a legendary person. This book descripts his experice on the companies which he has found or invested.</p>
+
+
+<p><font color=green>[Good job!]</font></p>
+
+
+<br>
+
+
+
+
+<h3>4.   图解网络硬件</h3>
+
+
+<center><img src="http://img3.douban.com/mpic/s27316002.jpg"></center>
+
+
+<p><strong>rating: </strong>★★★★☆</p>
+
+
+<p><strong>comment:</strong><br>
+讲的很全面，很好的入门读物。</p>
+
+
+<p><font color=red>[Hey slacker, can&#8217;t U read it seriously and give more comment?]</font></p>
+
+
+<br>
+
+
+
+
+<h3>5.   自由之魂</h3>
+
+
+<center><img src="http://img5.douban.com/mpic/s27086436.jpg"></center>
+
+
+<p><strong>rating: </strong>★★★☆☆</p>
+
+
+<p><strong>comment:</strong><br>
+可是都去了台湾。</p>
+
+
+<p><font color=red>[Hey slacker, can&#8217;t U read it seriously and give more comment?]</font></p>
+
+
+<br>
+
+
+
+
+<h3>6.   Of Mice and Men</h3>
+
+
+<center><img src="http://img3.douban.com/mpic/s4734995.jpg"></center>
+
+
+<p><strong>rating: </strong>★★★★★</p>
+
+
+<p><strong>comment:</strong><br>
+Reads like ancient English, i.e. ya, ta, wun&#8217;t. Not sure whether it is because of printing or not, but this is the first kindle book I purchased on amazon.com, which took me around 8$. The two men were both dependent on each other and had a common dream, going through so many difficuties, however the dream was broken at last. Sorrowful ending.</p>
+
+
+<p>[hmm&#8230;]</p>
+
+
+<br>
+
+
+
+
+<h3>7.   HTML 5 与 CSS 3 权威指南</h3>
+
+
+<center><img src="http://img5.douban.com/mpic/s4696737.jpg"></center>
+
+
+<p><strong>rating: </strong>★★★☆☆</p>
+
+
+<p><strong>comment:</strong><br>
+对于不了解html和css的，不适合读这本书。像一本手册，不适合系统学习。作者费这么多心思来搜集网上的资料，大致也能了解html5/css3能够做什么。</p>
+
+
+<p><font color=green>[Good job!]</font></p>
+
+
+<br>
+
+
+
+
+<h3>8.   A Tale of Two Cities</h3>
+
+
+<center><img src="http://img5.douban.com/mpic/s2789809.jpg"></center>
+
+
+<p><strong>rating: </strong>★★★★★</p>
+
+
+<p><strong>comment:</strong><br>
+Charles Dickens&#8217; words are so beautiful.</p>
+
+
+<p><font color=red>[Hey slacker, can&#8217;t U read it seriously and give more comment?]</font></p>
+
+
+<br>
+
+
+
+
+<h3>9.   Hard Choices</h3>
+
+
+<center><img src="http://img5.douban.com/mpic/s27312699.jpg"></center>
+
+
+<p><strong>rating: </strong>★★★☆☆</p>
+
+
+<p><strong>comment:</strong><br>
+Chapters related to China  are as follows, chap. 4, 5 and 25.  Nevertheless, it can broaden our view.</p>
+
+
+<p><font color=green>[Good job!]</font></p>
+
+
+<br>
+
+
+
+
+<h3>10.   图解HTTP</h3>
+
+
+<center><img src="http://img3.douban.com/mpic/s27283822.jpg"></center>
+
+
+<p><strong>rating: </strong>★★★☆☆</p>
+
+
+<p><strong>comment:</strong><br>
+http快速入门，看完之后能够让你对http了解一个大概，不深入，入门。对于没有网络基础的人而言很适用。</p>
+
+
+<p><font color=red>[Hey slacker, can&#8217;t U read it seriously and give more comment?]</font></p>
+
+
+<br>
+
+
+
+
+<h3>11.   松本行弘的程序世界</h3>
+
+
+<center><img src="http://img5.douban.com/mpic/s11290956.jpg"></center>
+
+
+<p><strong>rating: </strong>★★★★★</p>
+
+
+<p><strong>comment:</strong><br>
+ruby版《深入理解计算机系统》。侧重理论讲解，离实际应用还很远。</p>
+
+
+<p><font color=red>[Hey slacker, can&#8217;t U read it seriously and give more comment?]</font></p>
+
+
+<br>
+
+
+
+
+<h3>12.   The Old Man and the Sea</h3>
+
+
+<center><img src="http://img3.douban.com/mpic/s9068443.jpg"></center>
+
+
+<p><strong>rating: </strong>★☆☆☆☆</p>
+
+
+<p><strong>comment:</strong><br>
+Looks wierd that it won for Hemingway both Pulitzer and Nobel Prize. It descibes a old fisherman&#8217;s three days&#8217; struggling on the sea just because of a big fish which in his mind represents pride, hornor, faith, goal or something.   This kind of book, per my understanding, only deserves one star. That&#8217;s all.</p>
+
+
+<p>[hmm&#8230;]</p>
+
+
+<br>
+
+
+
+
+<h3>13.   The Shortest History of Europe</h3>
+
+
+<center><img src="http://img3.douban.com/mpic/s4489600.jpg"></center>
+
+
+<p><strong>rating: </strong>★★★★☆</p>
+
+
+<p><strong>comment:</strong><br>
+It&#8217;s a special perspective that interpreting the history not by timeline, but by the religion, goverment and language.  It mentioned China as well, with the purpose to explain why Europe was the first to industrialise.</p>
+
+
+<p>[hmm&#8230;]</p>
+
+
+<br>
+
+
+
+
+<h3>14.   The Fault in Our Stars</h3>
+
+
+<center><img src="http://img3.douban.com/mpic/s10394551.jpg"></center>
+
+
+<p><strong>rating: </strong>★★★☆☆</p>
+
+
+<p><strong>comment:</strong><br>
+Very sad love story of young adult. It&#8217;s NOTHING but a commercial book, which only aims to sell more copies.  I would recommend it for none.</p>
+
+
+<p><font color=green>[Good job!]</font></p>
+
+
+<br>
+
+
+
+
+<h3>15.   Programming Ruby</h3>
+
+
+<center><img src="http://img3.douban.com/mpic/s4244255.jpg"></center>
+
+
+<p><strong>rating: </strong>★★★☆☆</p>
+
+
+<p><strong>comment:</strong><br>
+The introduction to Ruby. NO rails, and metaprogramming.</p>
+
+
+<p><font color=red>[Hey slacker, can&#8217;t U read it seriously and give more comment?]</font></p>
+
+
+<br>
+
+
+
+
+<h3>16.   The Crowd</h3>
+
+
+<center><img src="http://img3.douban.com/mpic/s3363313.jpg"></center>
+
+
+<p><strong>rating: </strong>★★★☆☆</p>
+
+
+<p><strong>comment:</strong><br>
+Full of rumor stories, lack of agumentation. It can&#8217;t convinced me withouth enough evidence, but inerest me beause of his point of view. Compared to novel, this kind of book is very hard to read in English.</p>
+
+
+<p>[hmm&#8230;]</p>
+
+
+<br>
+
+
+
+
+<h3>17.   Animal Farm</h3>
+
+
+<center><img src="http://img5.douban.com/mpic/s11909707.jpg"></center>
+
+
+<p><strong>rating: </strong>★★★★★</p>
+
+
+<p><strong>comment:</strong><br>
+Orwell is good at using very simple story to explain the truth.Took me few days finish it.Pretty easy reading.It&#8217;s an allegory of the Russian Revolution.The farmer(Nicholas II),Major(Lenin/Marx),Snowball(Leon Trosky)，Napoleon(Stalin),Boxer(the peasants),dogs(The Party).Regarding China, it&#8217;s same.Framer(蒋？)，Major(李大钊/陈独秀),Snowball(刘)，Naploeon(哼～).</p>
+
+
+<p>[hmm&#8230;]</p>
+
+
+<br>
+
+
+
+
+<h3>18.   Atlas Shrugged</h3>
+
+
+<center><img src="http://img5.douban.com/mpic/s1448069.jpg"></center>
+
+
+<p><strong>rating: </strong>★★★★☆</p>
+
+
+<p><strong>comment:</strong><br>
+花了差不多三个月读完了这本英文皇皇巨著。 I will never live for the sake of another man, nor ask another man to live for min. 安兰德在这本书里宣扬的是自私经济学，反对所谓共产主义。书名来自于Fransisco和Realdan的对话，Atalas holds the world on his shoulders, with his blood running, yet still making greate effort to hold the world aloft.  He need a shrug to relex himself.    很好奇Golt的理想国最后会是什么结局？可惜安兰德没有写。</p>
+
+
+<p>[hmm&#8230;]</p>
+
+
+<br>
+
+
+
+
+<h3>19.   代码的未来</h3>
+
+
+<center><img src="http://img5.douban.com/mpic/s26393136.jpg"></center>
+
+
+<p><strong>rating: </strong>★★★★★</p>
+
+
+<p><strong>comment:</strong><br>
+不愧为大师，能够用很通俗的语言把很高深的技术描述的很清楚。 而且把各种技术关联在一起，正应了那句话，技术总是相同的，牛人的牛逼之处就在于能够触类旁通。总之，这本书给我的帮助很大。</p>
+
+
+<p><font color=green>[Good job!]</font></p>
+
+
+<br>
+
+
+
+
+<h3>20.   黑客与画家</h3>
+
+
+<center><img src="http://img3.douban.com/mpic/s4669554.jpg"></center>
+
+
+<p><strong>rating: </strong>★★★☆☆</p>
+
+
+<p><strong>comment:</strong><br>
+如果不是那几篇谈论编程语言的文章，我真想给它2星。许多文章是又丑又长，一个观点反反复复变换着各个法儿的说，味同嚼蜡。另外，关于未来的编程语言，我还是觉得松本行弘在《代码的未来》里说的更好。</p>
+
+
+<p><font color=green>[Good job!]</font></p>
+
+
+<br>
+
+
+
+
+<h3>21.   台湾念真情</h3>
+
+
+<center><img src="http://img5.douban.com/mpic/s11150599.jpg"></center>
+
+
+<p><strong>rating: </strong>★★★★☆</p>
+
+
+<p><strong>comment:</strong><br>
+乡土民情。台湾人的文字很优雅。</p>
+
+
+<p><font color=red>[Hey slacker, can&#8217;t U read it seriously and give more comment?]</font></p>
+
+
+<br>
+
+
+
+
+<h3>22.   图解TCP/IP : 第5版</h3>
+
+
+<center><img src="http://img5.douban.com/mpic/s26676928.jpg"></center>
+
+
+<p><strong>rating: </strong>★★★☆☆</p>
+
+
+<p><strong>comment:</strong><br>
+TCP/IP快速入门，以及索引。 译者的计算机背景似乎不是很强，比如第24页，“最典型的时大实体和小实体”，有点莫名其妙，实则应该是“大端和小端”。</p>
+
+
+<p><font color=green>[Good job!]</font></p>
+
+
+<br>
+
+
+
+
+<h3>23.   父与子全集</h3>
+
+
+<center><img src="http://img5.douban.com/mpic/s1094608.jpg"></center>
+
+
+<p><strong>rating: </strong>★★★★★</p>
+
+
+<p><strong>comment:</strong><br>
+温馨</p>
+
+
+<p><font color=red>[Hey slacker, can&#8217;t U read it seriously and give more comment?]</font></p>
+
+
+<br>
+
+
+
+
+<h2>Statistics</h2>
+
+
+<br><img src="http://laoar.github.io/images/human_lang.png"><img src="http://laoar.github.io/images/details_month.png">
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[loop unrolling : may or may not make the program run faster]]></title>
@@ -2041,66 +2542,6 @@ linux的kgdb可以分析crash dump，也可以对内核进行live debug。</li>
 <p style="padding-left: 30px;"><span style="color: #993300;">mutex_unlock(&amp;m_lock);</span><br />
 <span style="color: #993300;">    wake_up_process(m_lock.wait_list.next-&gt;task);</span></p><br />
      Sleeping相对于Busy Waiting的好处是，内核可以在等待期间去执行有意义的事情。坏处则是它的开销：维护一个链表，让你自己去睡眠，上下文切换到一个新的进程（再加上切换回你自己）。如果等待的时间较短，显然使用Busy Waiting更合理。</p>]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[三言两语聊Kernel：do{…}while(0)]]></title>
-    <link href="http://laoar.github.io/blogs/289"/>
-    <updated>2013-08-28T00:00:00+08:00</updated>
-    <id>http://laoar.github.io/blogs/289</id>
-    <content type="html"><![CDATA[<p>在内核代码里我们会看到很多do{…}while(0)来定义的宏，比如(摘自include/asm-generic/barrier.h)：<br />
-<img src="http://laoar.github.io/images/289.jpg"><br />
-linux kernel里这么定义自然有其特殊的目的。</p>
-<p>在C语言里，使用do/while(0)模式来定义的宏在任何情况下都有同样的行为，而且在C语言里面，只有do/while(0)模式来定义的宏才会在任何情况下(比如，在没有“ }”的if语句中)都有同样的行为.</p>
-<p>举一些例子。</p>
-<p><span style="line-height: 1.5;">     <span style="color: #993300;">＃define foo(x)  a(x); b(x)</span></span></p>
-<p>对于 <span style="color: #993300;">foo(test);<br />
-</span>会被展开为： <span style="color: #993300;">a(test); b(test);</span></p>
-<p>&nbsp;</p>
-<p>如果是这样的话，这看起来很正确，没有任何错误，是你原本想要得到的结果。</p>
-<p>但如果这样用：<br />
-<span style="color: #993300;">     if (cond)<br />
-</span><span style="color: #993300;">         foo(test);<br />
-</span>    它就会被展开为：<br />
-<span style="color: #993300;">    if (cond)</span><br />
-<span style="color: #993300;">        a(test); b(test);<br />
-</span>    它的行为就变成了：<br />
-<span style="color: #993300;">    if (cond)          </span><br />
-<span style="color: #993300;">        a(test); </span><br />
-<span style="color: #993300;">     b(test);<br />
-</span>    这并不是你原本想要的。</p>
-<p>然后，我们重新定义该宏，使用do/while(0)来封装：<br />
-<span style="color: #993300;"> ＃define foo(x) do{a(x); b(x)}while(0)</span></p>
-<p>这样定义的宏和前面定义的宏具有同样的作用，只不过，do确保了它的整个逻辑都在大括号里面执行，while(0)确保它只执行一次。所以它跟没有do/while(0) 的宏具有同样的效果。那么，他们有什么不同吗？让我们再来看前面那个例子：<br />
-<span style="color: #993300;">    if (cond)          </span><br />
-<span style="color: #993300;">        foo(test);<br />
-</span>    现在它就变成了：<br />
-<span style="color: #993300;">    if(cond)</span><br />
-<span style="color: #993300;">        do{a(test); b(test)}while(0);<br />
-</span>    实际上就是：<br />
-<span style="color: #993300;">    if(cond){</span><br />
-<span style="color: #993300;">        a(test);</span><br />
-<span style="color: #993300;">        b(test);</span><br />
-<span style="color: #993300;">    }</span></p>
-<p>你可能会疑问，为什么不直接使用“{}”来定义该宏？让我们来看下面这种情况：<br />
-<span style="color: #993300;">#define foo(x) {a(x); b(x);}</span><br />
-那么：<br />
-<span style="color: #993300;">    if(cond)</span><br />
-<span style="color: #993300;">        foo(test);</span><br />
-<span style="color: #993300;">    else</span><br />
-<span style="color: #993300;">        bin(test);</span><br />
-就变成了：<br />
-<span style="color: #993300;">    if(cond){</span><br />
-<span style="color: #993300;">        a(test);</span><br />
-<span style="color: #993300;">        b(test);</span><br />
-<span style="color: #993300;">    };</span><br />
-<span style="color: #993300;">    else</span><br />
-<span style="color: #993300;">        bin(test);<br />
-</span>    显然这是一个语法错误，因为else前面没有if。</p>
-<p>使用这种方式来定义宏，还有个好处是，在&quot;{&#8230;}&quot;里面可以定义自己的局部变量，而不被外面的变量所干扰。</p>
-<p>在linux内核代码里，很多宏都是使用do/while(0)来封装的，目的就是为了让它在任何情况下都具有同样的行为。在我们自己的代码里，也要养成这种好习惯。</p>
-<p>&nbsp;</p>
-<p>&nbsp;</p>]]></content>
   </entry>
   
 </feed>

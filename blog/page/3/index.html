@@ -7,9 +7,8 @@
 	<meta name="author" content="Yafang Shao">
 
 	
-	<meta name="description" content="前言
-前面说了内存管理入门， 内存管理是理解linux内核的基础， 如果不了解内存管理，就无法深入了解内核，理解了内存管理，再学习内核的其他部分就会相对很容易。
-这次我要说的是调度这部分， 调度在嵌入式系统中也是一个很重要的方面，众所周知，嵌入式系统对实时性要求较高， 实时性本身就是一个调度问题 &hellip;">
+	<meta name="description" content="在内核代码里我们会看到很多do{…}while(0)来定义的宏，比如(摘自include/asm-generic/barrier.h)： linux kernel里这么定义自然有其特殊的目的。
+在C语言里，使用do/while(0)模式来定义的宏在任何情况下都有同样的行为，而且在C语言里面， &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -89,6 +88,14 @@
     
 	<section class="archives">
 		<h1 class="year">2014</h1>
+
+		<article>
+    		<a href="/blog/2014/12/27/reading-2014/">My Reading in 2014</a>
+		</article>
+    
+
+
+
 
 		<article>
     		<a href="/blog/2014/11/26/loop-unrolling/">loop unrolling : may or may not make the program run faster</a>
@@ -369,6 +376,94 @@
 &#8211;>
 <!--
 
+
+
+   <article class="post">
+	<h2 class="title">
+		
+		<a href="/blogs/289">
+		
+			三言两语聊Kernel：do{…}while(0)</a>
+	</h2>
+	<div class="entry-content">
+		<p>在内核代码里我们会看到很多do{…}while(0)来定义的宏，比如(摘自include/asm-generic/barrier.h)：<br />
+<img src="/images/289.jpg"><br />
+linux kernel里这么定义自然有其特殊的目的。</p>
+<p>在C语言里，使用do/while(0)模式来定义的宏在任何情况下都有同样的行为，而且在C语言里面，只有do/while(0)模式来定义的宏才会在任何情况下(比如，在没有“ }”的if语句中)都有同样的行为.</p>
+<p>举一些例子。</p>
+<p><span style="line-height: 1.5;">     <span style="color: #993300;">＃define foo(x)  a(x); b(x)</span></span></p>
+<p>对于 <span style="color: #993300;">foo(test);<br />
+</span>会被展开为： <span style="color: #993300;">a(test); b(test);</span></p>
+<p>&nbsp;</p>
+<p>如果是这样的话，这看起来很正确，没有任何错误，是你原本想要得到的结果。</p>
+<p>但如果这样用：<br />
+<span style="color: #993300;">     if (cond)<br />
+</span><span style="color: #993300;">         foo(test);<br />
+</span>    它就会被展开为：<br />
+<span style="color: #993300;">    if (cond)</span><br />
+<span style="color: #993300;">        a(test); b(test);<br />
+</span>    它的行为就变成了：<br />
+<span style="color: #993300;">    if (cond)          </span><br />
+<span style="color: #993300;">        a(test); </span><br />
+<span style="color: #993300;">     b(test);<br />
+</span>    这并不是你原本想要的。</p>
+<p>然后，我们重新定义该宏，使用do/while(0)来封装：<br />
+<span style="color: #993300;"> ＃define foo(x) do{a(x); b(x)}while(0)</span></p>
+<p>这样定义的宏和前面定义的宏具有同样的作用，只不过，do确保了它的整个逻辑都在大括号里面执行，while(0)确保它只执行一次。所以它跟没有do/while(0) 的宏具有同样的效果。那么，他们有什么不同吗？让我们再来看前面那个例子：<br />
+<span style="color: #993300;">    if (cond)          </span><br />
+<span style="color: #993300;">        foo(test);<br />
+</span>    现在它就变成了：<br />
+<span style="color: #993300;">    if(cond)</span><br />
+<span style="color: #993300;">        do{a(test); b(test)}while(0);<br />
+</span>    实际上就是：<br />
+<span style="color: #993300;">    if(cond){</span><br />
+<span style="color: #993300;">        a(test);</span><br />
+<span style="color: #993300;">        b(test);</span><br />
+<span style="color: #993300;">    }</span></p>
+<p>你可能会疑问，为什么不直接使用“{}”来定义该宏？让我们来看下面这种情况：<br />
+<span style="color: #993300;">#define foo(x) {a(x); b(x);}</span><br />
+那么：<br />
+<span style="color: #993300;">    if(cond)</span><br />
+<span style="color: #993300;">        foo(test);</span><br />
+<span style="color: #993300;">    else</span><br />
+<span style="color: #993300;">        bin(test);</span><br />
+就变成了：<br />
+<span style="color: #993300;">    if(cond){</span><br />
+<span style="color: #993300;">        a(test);</span><br />
+<span style="color: #993300;">        b(test);</span><br />
+<span style="color: #993300;">    };</span><br />
+<span style="color: #993300;">    else</span><br />
+<span style="color: #993300;">        bin(test);<br />
+</span>    显然这是一个语法错误，因为else前面没有if。</p>
+<p>使用这种方式来定义宏，还有个好处是，在&quot;{&#8230;}&quot;里面可以定义自己的局部变量，而不被外面的变量所干扰。</p>
+<p>在linux内核代码里，很多宏都是使用do/while(0)来封装的，目的就是为了让它在任何情况下都具有同样的行为。在我们自己的代码里，也要养成这种好习惯。</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+		
+		
+	</div>
+
+
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-08-28T00:00:00+08:00" pubdate data-updated="true">Aug 28<span>th</span>, 2013</time></div>
+	<div class="tags">
+
+</div>
+	
+</div>
+</article>  
 
 
    <article class="post">
@@ -1399,73 +1494,6 @@ vfs_read/vfs_write-&gt;part_read/part_write-&gt;cfi_amdstd_read/do_write_buffer.
 
 
 <time datetime="2012-05-13T00:00:00+08:00" pubdate data-updated="true">May 13<span>th</span>, 2012</time></div>
-	<div class="tags">
-
-</div>
-	
-</div>
-</article>  
-
-
-   <article class="post">
-	<h2 class="title">
-		
-		<a href="/blogs/91">
-		
-			iPhoneOS浅浅浅浅析（2）</a>
-	</h2>
-	<div class="entry-content">
-		<div>继续（1）的计划，我在MacOS上需要一个反汇编工具。我想比较一下gcc和llvm-gcc编译出来的东西到底有何不同。于是我进行了如下的尝试：</div>
-<div>1）Port binutils to MacOS</div>
-<div>     很不幸的是，由于我对xcode这个工具还不是很熟悉，而我又是借助xcode来编译的，所以在我configure的时候就失败了。然后我一点点的尝试修改binutils的源码，可是越改错误越多。当然，错误的原因肯定不是因为binutils，很可能是因为我没有使用好xcode。</div>
-<div>2）单独编译objdump如何？</div>
-<div>     我简单看了下objdump的源码，就一个源文件objdump.c, 看样子不是很复杂，这个源文件的代码行是3600行。但是由于用到了binutils的一些公共数据结构，比如bfd，所以肯定是不能单独编译的，需要和其他源文件一起编译才可以，如果将objdump.c所需要的头文件源文件给剥离出来制作一个Makefile，最终编译生成一个objdump，简单的分析一下它的工作量，objdump.c包含的头文件如下：</div>
-<div><a href="http://www.laoar.net/wp-content/uploads/2012/05/includd2.png"><img class="alignnone size-full wp-image-105" title="includd" src="http://www.laoar.net/wp-content/uploads/2012/05/includd2.png" alt="" width="334" height="580" /></a></div>
-<div><img src="file:///Users/apple/Library/Application%20Support/Evernote/data/101370/content/p34/94a31eed30c08bdae9d9f757b533bd4d.png" alt="" name="en-media:image/png:94a31eed30c08bdae9d9f757b533bd4d:none:none" /></div>
-<div>     如果要剥离objdump，肯定是行得通的，但是工作量应该会很大。</div>
-<div>3）xcode有木有？</div>
-<div>     答案是：NO。 至少我没有找到。 xcode太过封闭了，似乎只能编译cococa框架的程序，如果编译一个简单的helloworld都不知道该怎么搞。VC也没有这么变态啊。</div>
-<div> </div>
-<div>于是这件事就被搁置了，再加上平实工作忙，周末又没有时间研究，所以一直脱啊脱啊脱。后来，我发现gdb也是可以反汇编可执行文件的！</div>
-<div>ok。那就借助gdb来搞吧。下面是一些很粗略的分析。只是比较gcc和llvm-gcc的反汇编代码到底有和不同。至于二者孰优孰劣，在以后会继续研究的。</div>
-<div> </div>
-<div>对于一个简单的helloworld程序，</div>
-<div>gcc编译生成的a.out的反汇编代码如下:</div>
-<div><a href="http://www.laoar.net/wp-content/uploads/2012/05/23.png"><img class="alignnone size-full wp-image-107" title="2" src="http://www.laoar.net/wp-content/uploads/2012/05/23.png" alt="" width="833" height="416" /></a></div>
-<div>llvm-gcc编译生成的a.out的反汇编代码如下：</div>
-<div><a href="http://www.laoar.net/wp-content/uploads/2012/05/5.png"><img class="alignnone size-full wp-image-110" title="5" src="http://www.laoar.net/wp-content/uploads/2012/05/5.png" alt="" width="837" height="592" /></a></div>
-<div>     可以发现，gcc编译的可执行文件的main函数部分有7条指令，而llvm-gcc编译出来的可执行文件的main函数部分有13条指令。两个最大的区别是对return 0;这条语句的处理不同。函数的返回值都是放在eax(或ax)这个寄存器中。gcc只是简单的mov 0 to eax就搞定了这件事。而llvm-gcc则处理的很复杂：先是将0放入rbp-8这个位置，再将rbp-8里面的值（即0）放入ecx，然后将ecx的值放入rbp-4，接着将eax的值放入放入rbp-0xc，最后将rbp-4的值放入eax，其效果也是将0放入eax。</div>
-<div>     mov rsp to rbp的作用是，在函数开始执行的时候，将函数的栈底和栈顶赋值为相同。llvm-gcc多了条指令，将rsp指针减去0x10，即空出16个字节，空出这些字节的作用就是前面所属的针对mov 0 to eax的一系列操作。至于为什么将return 0 处理的这么复杂， 其作用到底何在，现在还没有搞的很明白，隐约的觉得是为了保护eax寄存器中原来的值（原来的值不就是传递给该函数的参数嘛，有必要保护嘛？）</div>
-<div> </div>
-<div>再来看一组涉及到计算的对比：</div>
-<div>gcc:</div>
-<div><a href="http://www.laoar.net/wp-content/uploads/2012/05/3.jpg"><img class="alignnone size-full wp-image-100" title="3" src="http://www.laoar.net/wp-content/uploads/2012/05/3.jpg" alt="" width="600" height="661" /></a></div>
-<div><img src="file:///Users/apple/Library/Application%20Support/Evernote/data/101370/content/p34/b5835493cc65c9133d286a249a18a492.jpeg" alt="" name="en-media:image/jpeg:b5835493cc65c9133d286a249a18a492:none:none" /></div>
-<div>llvm-gcc:</div>
-<div><img src="file:///Users/apple/Library/Application%20Support/Evernote/data/101370/content/p34/52d274c41d5bd723f463772aabf35a87.png" alt="" name="en-media:image/png:52d274c41d5bd723f463772aabf35a87:none:none" /></div>
-<div> <a href="http://www.laoar.net/wp-content/uploads/2012/05/42.png"><img class="alignnone size-full wp-image-99" title="4" src="http://www.laoar.net/wp-content/uploads/2012/05/42.png" alt="" width="616" height="682" /></a></div>
-<div>     llvm-gcc同样比gcc要执行更多的指令，还有一个区别是，在计算过程中llvm-gcc值用到了eax这一个寄存器，而gcc用到了eax， edx两个寄存器。</div>
-<div> </div>
-<div>     更多深入的分析，稍后继续&#8230;</div>
-		
-		
-	</div>
-
-
-<div class="meta">
-	<div class="date">
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2012-05-09T00:00:00+08:00" pubdate data-updated="true">May 9<span>th</span>, 2012</time></div>
 	<div class="tags">
 
 </div>
