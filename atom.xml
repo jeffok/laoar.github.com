@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2015-01-04T20:22:20+08:00</updated>
+  <updated>2015-01-04T22:18:46+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -12,6 +12,30 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[The Fight In Rank 4d]]></title>
+    <link href="http://laoar.github.io/blog/2015/01/04/the-fight-in-rank-4d/"/>
+    <updated>2015-01-04T00:00:00+08:00</updated>
+    <id>http://laoar.github.io/blog/2015/01/04/the-fight-in-rank-4d</id>
+    <content type="html"><![CDATA[<!DOCTYPE HTML>
+<html>
+	<head>
+		<!--mkdir 3rd-party/ under octopress/source/ first, then we put wgo library under the 3rd-party directy, so we can get the file in wgo/ with '/3rd-party/wgo/file', and create our own html files in octopress. -->
+    	<script type="text/javascript" src="http://laoar.github.io/3rd-party/wgo/wgo.min.js"></script>
+    	<script type="text/javascript" src="http://laoar.github.io/3rd-party/wgo/wgo.player.min.js"></script>
+    	<link type="text/css" href="http://laoar.github.io/3rd-party/wgo/wgo.player.css" rel="stylesheet" />
+	</head>
+	<body>
+		<h2><center>四段的对杀</center></h2>
+		<h2><center>The Fight in Rank-4D</center></h2>
+		<br>
+		<h4><center>In memory of the progress with my friend wood.</center></h4>		
+        <div data-wgo="/3rd-party/wgo/game.sgf" style="width: 700px"></div>
+	</body>
+</html>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[My Reading in 2014]]></title>
@@ -2519,29 +2543,6 @@ linux的kgdb可以分析crash dump，也可以对内核进行live debug。</li>
 <p>Ref:</p>
 <p><sup class="footnote" id="fnr1"><a href="#fn1">1</a></sup> <a title="3 Volume Set of Intel® 64 and IA-32 Architectures Software Developer’s Manuals" href="http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html ">3 Volume Set of Intel® 64 and IA-32 Architectures Software Developer’s Manuals</a></p>
 <p><sup class="footnote" id="fnr2"><a href="#fn2">2</a></sup> <a title="Application Binary Interface for   the ARM Architecture" href="http://infocenter.arm.com/help/topic/com.arm.doc.ihi0036b/IHI0036B_bsabi.pdf">Application Binary Interface for the ARM Architecture</a></p>]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[三言两语聊Kernel：Busy Waiting or Sleeping？]]></title>
-    <link href="http://laoar.github.io/blogs/299"/>
-    <updated>2013-08-31T00:00:00+08:00</updated>
-    <id>http://laoar.github.io/blogs/299</id>
-    <content type="html"><![CDATA[<p style="padding-left: 30px;"></p>
-<p>     在某些情况下，我们需要将当前线程的执行挂起，直至某一事件发生。这个事件可能是一个有争抢的资源变为可用，时间的流逝，或者锁的释放。这个等待可以通过两种基本的方式来实现：Busy Waiting 和Sleeping。<br />
-<p style="padding-left: 30px;"></p><br />
-    系统通过在循环里面旋转并且不停的去检查问题事件是否发生来实现Busy Waiting。   比如，如果我们想要等待5s，可以这样来实现：<br />
-<p style="padding-left: 30px;"><span style="color: #993300;">const int until = get_time() + 5;</span><br />
-<span style="color: #993300;">while(until &gt; get_time())</span><br />
-<span style="color: #993300;">;</span></p><br />
-这样做的好处是，它的实现较简单，并且如果不等太久它在性能上会表现很好，因为避免了切换到其他线程的开销。坏处也很明显：把CPU cycle浪费在执行无任何价值的东西上。<br />
-<p style="padding-left: 30px;"></p><br />
-    Busy Waiting相对于Sleeping比较容易理解。Sleeping通过更复杂的方式来实现：首先构造一个需要等待的线程的链表，叫作等待队列；接着把自己加入到等待队列中，控制权交给内核；然后当问题事件发生时让内核唤醒该链表里的一个（些）进程去执行。举例来说，你可能需要在某一个mutex变得可用时让内核唤醒你，于是把控制权交给内核，让内核去执行除你之外的进程，在该mutex变得可用时内核再去唤醒你。如下：<br />
-<p style="padding-left: 30px;"><span style="color: #993300;">mutex_lock(&amp;m_lock);</span><br />
-<span style="color: #993300;">    list_add_tail(current, &amp;m_lock-&gt;wait_list);</span><br />
-<span style="color: #993300;">    schedule();</span></p><br />
-<p style="padding-left: 30px;"><span style="color: #993300;">mutex_unlock(&amp;m_lock);</span><br />
-<span style="color: #993300;">    wake_up_process(m_lock.wait_list.next-&gt;task);</span></p><br />
-     Sleeping相对于Busy Waiting的好处是，内核可以在等待期间去执行有意义的事情。坏处则是它的开销：维护一个链表，让你自己去睡眠，上下文切换到一个新的进程（再加上切换回你自己）。如果等待的时间较短，显然使用Busy Waiting更合理。</p>]]></content>
   </entry>
   
 </feed>
