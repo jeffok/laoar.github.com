@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2015-02-28T23:12:21+08:00</updated>
+  <updated>2015-03-31T22:21:49+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -12,6 +12,265 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[编译器输出函数的算法对性能的影响]]></title>
+    <link href="http://laoar.github.io/blog/2015/03/31/algorithm/"/>
+    <updated>2015-03-31T21:31:53+08:00</updated>
+    <id>http://laoar.github.io/blog/2015/03/31/algorithm</id>
+    <content type="html"><![CDATA[<p>对于这个问题的研究也是缘于我们firewall的UDP吞吐量的波动。</p>
+
+
+<p>在之前讨论过通过Makefile，链接脚本和gcc的attribute属性来控制编译器输出函数的顺序。然而在做了这些工作后，依然存在无关代码commit后引起性能波动的诡异现象，在对比了不同版本的二进制文件后发现有些commit会引起函数顺序的重排，这些重排就容易造成性能的波动。于是我就开始了做这个方面的研究，来分析编译器是如何调整函数顺序的以及能否进行优化。</p>
+
+
+<p>首先，要明白一个概念：call-graph。</p>
+
+
+<h3>一 什么是call-graph</h3>
+
+
+<p>call graph是用来表示函数调用关系的一个有向图。</p>
+
+
+<p>我们可以通过gprof来获取一个函数的call graph，gprof是在函数运行过程中来获取函数调用关系（所以不会被执行到的函数就不会出现在call graph中）。</p>
+
+
+<p>如下是一个简单的示例：<br></p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="kt">void</span> <span class="nf">foo</span><span class="p">()</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="c1">//...</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="kt">void</span> <span class="nf">bar</span><span class="p">()</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="c1">// ...</span>
+</span><span class='line'>    <span class="n">foo</span><span class="p">();</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="kt">void</span> <span class="nf">func</span><span class="p">()</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="c1">// ...</span>
+</span><span class='line'>    <span class="n">foo</span><span class="p">();</span>
+</span><span class='line'>    <span class="n">bar</span><span class="p">();</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>那么对应的call graph就是<br>
+<img src="http://laoar.github.io/images/algo.png"><br>
+在call-graph里，函数称为节点（node），比如func/foo/bar就是节点；一个调用称为边（edge），比如func指向foo的那个边。这跟图论是一致的。<br></p>
+
+<h3>二 top level function</h3>
+
+
+<p>还需要明白一个概念：top level function。</p>
+
+
+<p>接着前面的示例代码片段，我们加上main函数组成一个完整的程序。</p>
+
+
+<p></p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="kt">void</span> <span class="nf">run</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">p</span><span class="p">)</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="o">*</span><span class="n">p</span><span class="p">();</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="n">run</span><span class="p">(</span><span class="n">func</span><span class="p">);</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>此时func()这个函数就是一个top level函数，即没有函数直接来调用的函数。<br></p>
+
+<p>对于这一类的函数，由于没有函数来直接调用它，因而在函数的入口处就没有必要保存寄存器信息。 我们可以使用__toplevel这个属性来显示的告诉编译器这是一个top level function。</p>
+
+
+<center>void func() __toplevel; </center>
+
+
+<h3>三 编译器输出函数的顺序是怎么样的</h3>
+
+
+<p>我们来看下gcc的源码</p>
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">compile</span>
+</span><span class='line'>     <span class="p">...</span>
+</span><span class='line'>     <span class="n">output_asm_statements</span> <span class="p">();</span>
+</span><span class='line'>     <span class="n">expand_all_functions</span> <span class="p">();</span>
+</span><span class='line'>     <span class="n">varpool_output_variables</span> <span class="p">();</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>一些解释：<br>
+1. asmstatements function<br>
+   这是Basic Asm (Assembler Instructions Without Operands),比如：<br>
+      #define DebugBreak() asm(&#8220;int $3&#8221;) 
+</p>
+
+
+<p>2. Varpool variables<br>
+     这个是所有的静态变量
+</p>
+
+
+<p>3. expand_all_functions 是输出函数的主体，这个是我们接下来要关注的。</p>
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">expand_all_functions</span>
+</span><span class='line'>     <span class="p">...</span>
+</span><span class='line'>     <span class="k">struct</span> <span class="n">cgraph_node</span> <span class="o">**</span><span class="n">order</span> <span class="o">=</span> <span class="n">XCNEWVEC</span> <span class="p">(</span><span class="k">struct</span> <span class="n">cgraph_node</span> <span class="o">*</span><span class="p">,</span> <span class="n">cgraph_n_nodes</span><span class="p">);</span>     <span class="c1">// 首先申请一块内存用来存储call graph里面所有的节点信息</span>
+</span><span class='line'>     <span class="p">...</span>
+</span><span class='line'>     <span class="n">ipa_reverse_postorder</span> <span class="p">(</span><span class="n">order</span><span class="p">);</span> <span class="c1">// 以reverse post-ordering的方式来遍历整个call graph，并将遍历结果存储在order里面</span>
+</span><span class='line'>     <span class="p">...</span>
+</span><span class='line'>     <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="n">new_order_pos</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span><span class="o">--</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// 从最后一个元素往前依次输出所有的函数。 </span>
+</span><span class='line'>          <span class="p">...</span>
+</span><span class='line'>          <span class="n">expand_function</span> <span class="p">(</span><span class="n">node</span><span class="p">);</span>
+</span><span class='line'>          <span class="p">...</span>
+</span><span class='line'>     <span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>也就是以revserse preodering方式来深度优先遍历call-graph，然后以这个顺序的逆序输出，即以bottom-up的方式来输出call-graph里面的node。<br></p>
+
+<h3>四 编译器以这个顺序来输出函数的目的是什么</h3>
+
+
+<p>编译器没有按照函数在文件里面的先后顺序输出，而是基于call graph输出。这样做是因为，子程序和他们的调用者在时间上可能相互接近，因此应当在放置时使得他们在空间上互不冲突，所以将子程序放在他们的调用者附近以减少页交换，并且使得频繁使用的和有关联的子程序在icache中以相互之间冲突较小的方式放置。 </p>
+
+
+<p>还要注意，它是以bottom-up的顺序输出，而不是按照top-down的顺序输出，这也说明，这样做优化的目的没有考虑函数的先后顺序，为什么不按照函数的调用顺序来输出呢？比如a调用b，那么就把b放在a的后面，这样在执行a的时候就把b给预取到内存不是很好么。事实上，预取是以cache line为单位的，一个cache line的大小是128字节或者64字节或者32字节，而函数的大小远不止这么大，函数调用时会有地址跳转，因而按照调用顺序来放置意义不是太大。
+</p>
+
+
+<p>以bottom-up的方式来遍历call-graph也是基于一次遍历的考虑，这样可以在遍历call-graph的每一个节点时就可以采用合理的策略来分配寄存器。比如，在main函数里面使用的寄存器，只有在保存后才可以被它的子程序使用；相反，所有leaf functoin可以使用相同的寄存器，因为这些leaf function不会同时执行（单线程情况）。以bottom-up方式输出，那么在函数调用时，callee使用的寄存器是已知的因为callee已经被处理过了，通过避免重复使用这些寄存器就可以避免save/restore。</p>
+
+
+<p>科普一些基本知识。
+在有函数调用时，编译器将寄存器分为三类：<br>
+1> callee-saved registers.<br>
+这些寄存器要求在函数调用时，由被调用者来保存<br>
+2> caller-saved registers.<br>
+这些寄存器要求在函数调用时，由调用者来保存<br>
+3> 4个参数传递寄存器<br>
+在函数调用时用来传递参数<br>
+比如对于MIPS而言，s0~s7是callee-saved, t0~t9是caller-saved，a0~a3是传递参数的寄存器.</p>
+
+<h3>五 这种输出顺序是否可以控制</h3>
+
+
+<p>通过源码我们可以发现在compile()这个函数里，有个flag可以决定是以自然顺序输出函数还是以优化顺序输出函数。
+</p>
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">compile</span>
+</span><span class='line'>  <span class="nf">if</span> <span class="p">(</span><span class="o">!</span><span class="n">flag_toplevel_reorder</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">output_in_order</span> <span class="p">();</span>    <span class="c1">// 这里以函数在文件中出现的顺序输出。</span>
+</span><span class='line'>  <span class="k">else</span>
+</span><span class='line'>    <span class="p">{</span>
+</span><span class='line'>      <span class="n">output_asm_statements</span> <span class="p">();</span>
+</span><span class='line'>      <span class="n">expand_all_functions</span> <span class="p">();</span>
+</span><span class='line'>      <span class="n">varpool_output_variables</span> <span class="p">();</span>
+</span><span class='line'>    <span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>这个flag就是通过-fno-toplevel-reorder 来控制的。这个选项是在gcc-4.1加入的，这个选项加入的目的是为了支持以前存在的依赖特定顺序的代码（参见gcc-4.1的release note）。<br></p>
+
+<h3>六 使用-fno-toplevel-reorder的坏处</h3>
+
+
+<p>使用这个选项后，gcc将按照函数在文件中出现的顺序输出，这可能会降低程序的性能，但是如果我们使用了attribute 来将热点函数给放到了一起，那么gcc的reorder对性能的影响就不是太大了，甚至gcc的reorder可能会降低程序的性能（这也说明gcc在这方面的优化做的还有待改进）。</p>
+
+
+<p>使用这个选项后一个比较明显的坏处是，那些未被使用的static变量将仍然存在于最终生成的程序中，而如果不使用这个选项这些冗余的static变量会自动的被编译器给删除。</p>
+
+
+<p>那些在程序中没有调用的函数，在call-graph中称为不可达的节点，他们跟这个选项无关，不论这个选项使用与否都会被删除。</p>
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">finalize_compilation_unit</span>
+</span><span class='line'>      <span class="p">...</span>
+</span><span class='line'>     <span class="cm">/* Gimplify and lower all functions, compute reachability and</span>
+</span><span class='line'><span class="cm">          remove unreachable nodes.  */</span>
+</span><span class='line'>       <span class="n">analyze_functions</span> <span class="p">();</span>     <span class="c1">// 在这里会分析这些call graph里面的所有节点，从而将不可达节点删除</span>
+</span><span class='line'>       <span class="p">...</span>
+</span><span class='line'>       <span class="n">compile</span><span class="p">();</span>
+</span><span class='line'>       <span class="p">...</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>七 未完待续</h3>
+
+
+<p>对于编译器分配寄存器这一块，我的研究还不够深入，有些地方也不能很清楚的解释细节，这有些惭愧。</p>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[《Linux内核网络栈源代码情景分析》读后感]]></title>
@@ -2472,80 +2731,6 @@ beqz rt, 1b</p><br />
 <p>&nbsp;</p>
 <p>ref：</p>
 <p><sup class="footnote" id="fnr1"><a href="#fn1">1</a></sup> <a href="http://www.linusakesson.net/programming/tty/index.php">The <span class="caps">TTY</span> demystified </a></p>
-<p>&nbsp;</p>
-<p>&nbsp;</p>]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[三言两语聊Kernel：从Linux到FreeBSD]]></title>
-    <link href="http://laoar.github.io/blogs/325"/>
-    <updated>2013-09-21T00:00:00+08:00</updated>
-    <id>http://laoar.github.io/blogs/325</id>
-    <content type="html"><![CDATA[<p><em><strong><span style="color: #0000ff;">今晚恰好是中国好声音那英组的决赛，看完比赛后就一直听姚贝娜的《Dear Friend》，经过了无数个单曲循环后写完了这篇日志。姚贝娜唱的太好听了。</span></strong></em></p>
-<p>总的来说，FreeBSD Kernel比Linux Kernel要简洁的多。我感觉可能是以下两个原因：1）linux考虑的场景多，所实现的功能也更多一些，所以linux比freebsd在编译时的配置要灵活。2）FreeBSD是个中央集权式的组织结构，linux则是民主式组织结构，所以freebsd的很多改进都是有组织有计划，代码看起来就很清晰，而linux是自底向上的改进，代码看起来就散乱些。</p>
-<p>下面来看下linux kernel 和freebsd kernel在代码上的主要差异：<br />
-<h2><strong>1. 编译</strong></h2><br />
-Linux和FreeBSD都是使用Makefile来管理整个工程的。 二者在编译上最大的差异是configuration的不同。</p>
-<p>Linux为了灵活配置，在内核编译配置上使用了Kconfig机制，使用该机制能够很方便的选择编译哪些功能。Kconfig也是使用Makefile来控制的，使用make menuconfig这个命令。</p>
-<p>FreeBSD则是使用了一个专门的工具config来配置需要编译的内核代码。<br />
-<h2><strong>2. 内核启动</strong></h2><br />
-bootstrap之后是OS的启动，这对于所有的操作系统都是一致的。</p>
-<p>二者在启动过程主要是如下的不同。</p>
-<p><em>1）</em>linux内核使用了镜像压缩机制，在从bootloarder跳转到内核后先执行的是一个压缩的镜像，然后进行自解压。FreeBSD则没有这个压缩机制。</p>
-<p><em>2）</em>linux模块的初始化是分层级进行，每个优先级都对应于一个section。linux首先初始化高优先级的initcall，再去初始化低优先级的initcall，在某个优先级内，比如A模块和B模块都属于优先级1,那么A模块和B模块的初始化顺序则是由链接过程决定的，哪个模块先被链接到section的前面，自然要先执行哪个模块。 FreeBSD的模块初始化是使用的SYSINIT，SYSINIT会在编译时首先定义好各个模块的初始化顺序，然后内核就按照这个顺序来初始化各个模块。</p>
-<p><em>3）</em>swapper／init／idle线程</p>
-<p>不同在于SMP系统。linux内核的每个CPU都有自己的swapper线程（0号线程），init线程（1号线程）则只有主核有，对于linux而言，swapper线程就是idle线程，即在CPU空闲的时候会去唤醒idle线程。 FreeBSD的内核swapper线程和idle线程是不同的线程，只有主核有swapper线程（0核线程）和init线程（1号线程），每个核都有自己的idle线程，在CPU空闲的时候会唤醒该idle线程。<br />
-<h2><strong>3.  Task Management 和 Scheduling Algorithm</strong></h2></p>
-
-		<ol>
-			<li>1）主要数据结构<br />
-Linux kernel使用task_struct这个结构体(include/linux/sched.h)来描述进程, 使用thread_info结构体（arch/arm/include/asm/thread_info.h）来描述线程状态信息,thread_info是和architecture强相关的，所以定义在了arch目录下。调度是以task_struct为基本单位来进行的，每个线程／进程都有自己的task_struct,线程和进程的区别主要在于，进程有自己独立地址空间，而线程则是共享进程的地址空间。</li>
-		</ol><p>FreeBSD使用proc这个结构体（sys/sys/proc.h）来描述进程,使用thread结构体（sys/sys/proc.h）来描述线程信息，FreeBSD的调度单位是thread，对于单线程的进程而言，它有一个proc结构体和一个thread结构体，对于多线程的进程而言，则是每个线程都有自己的thread结构体，多线程共用一个proc结构体。 线程和进程的主要区别也是线程没有自己的独立地址空间。</p>
-
-		<ol>
-			<li>2）调度机制<br />
-Linux的进程分为实时进程和普通进程两种，实时进程有FIFO和RR两种调度策略， 普通进程则是CFS调度算法。 每个CPU都维护着自己的运行队列／等待队列链表。</li>
-		</ol><p>FreeBSD则是将进程分为以下几种调度类型：ITHD／KERN／REALTIME／TIMESHARE／IDLE，从左往右优先级递减。其中，ITHD是针对中断下半部的线程（FreeBSD用线程来处理中断，这是和linux的一个很大的区别），所以优先级最高；接着是内核线程；然后是实时用户态线程；接着是分时线程；CPU空闲的时候再唤醒idle线程。FreeBSD有三种调度算法：实时调度，针对实时进程；分时调度，针对普通进程；ULE调度算法，针对SMP系统的负载均衡。 每个CPU都维护着自己的idle队列／curren队列／next队列这三个链表。<br />
-<h2><strong>4. Memory Management</strong></h2></p>
-
-		<ol>
-			<li>1）主要数据结构<br />
-Linux kernel使用mm_struct这个结构体（include/linux/mm_types.h）来描述进程的地址空间。</li>
-		</ol><p>FreeBSD使用vmspace这个结构体（sys/vm/vm_map.h）来描述进程的地址空间。</p>
-
-		<ol>
-			<li>2)  内存管理策略<br />
-二者并无明显的差异。都是分页机制＋访问权限控制。<br />
-<h2><strong>5. Filesystem</strong></h2><br />
-都是使用的VFS机制。差异在于具体文件系统上。</li>
-		</ol><p>linux kernel支持磁盘文件系统（EXT系列），块设备文件系统（yaffs2／jffs2）, 网络文件系统（NFS），虚拟文件系统（pseudo filesystem，例如procfs／devfs） 。</p>
-<p>FreeBSD在具体实现上跟linux略有不同，FreeBSD的具体存储机制是Filestore，filestore有三种管理方式：1）针对块设备：FFS， 2）针对内存：MFS， 3）日志文件系统。FreeBSD也支持NFS。FreeBSD也支持虚拟文件系统，略有不同的是，FreeBSD的procfs是指process filesystem，就类似于内核提供给用户态一个sysctl接口来查看进程信息。<br />
-<h2><strong>6.  Interrupt</strong></h2><br />
-FreeBSD的中断下半部对应于一个内核线程，是由内核线程来处理中断服务程序。Linux的中断下半部则没有所谓的线程，直接由中断向量表进入中断中断服务程序。<br />
-<h2><strong>7. Sync Mechanism</strong></h2><br />
-二者的同步机制基本一样，都是spinlock／mutex／semaphore这些机制以及衍生。<br />
-<h2><strong>8. Debug </strong></h2></p>
-
-		<ol>
-			<li>1）用户态<br />
-linux和FreeBSD都支持GDB，GDB的实现在两个OS上也是一致的，都是通过ptrace系统调用。</li>
-		</ol><p>linux有个很强大的工具strace来跟踪系统调用，FreeBSD上没有该利器，不过FreeBSD可以使用ktrace＋kdump来实现strace的功能。</p>
-
-		<ol>
-			<li>2）内核态调试<br />
-linux的kgdb可以分析crash dump，也可以对内核进行live debug。</li>
-		</ol><p>FreeBSD则是使用kgdb来分析crash dump，然后使用ddb工具来进行 live debug。</p>
-
-		<ol>
-			<li>3）其他杂项调试工具<br />
-大同小异，半斤八两。</li>
-		</ol><p>&nbsp;</p>
-<p>P.S.:对FreeBSD代码看的还不多，很多地方也许写的不对。后续会继续完善。</p>
-<p><span style="color: #ff0000;"><strong> TBD</strong></span></p>
-<p>&nbsp;</p>
-<p>ref：</p>
-<p><a title="linux kernel" href="http://http://www.amazon.cn/Understanding-the-Linux-Kernel-Bovet-Daniel-P/dp/0596005652/ref=sr_1_1?ie=UTF8&amp;qid=1379698958&amp;sr=8-1&amp;keywords=understanding+linux+kernel" target="_blank"><sup class="footnote" id="fnr1"><a href="#fn1">1</a></sup> Understanding the Linux Kernel</a></p>
-<p><a title="FreeBSD Kernel" href="http://www.amazon.cn/FreeBSD%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0-%E9%BA%A6%E5%8D%A1%E6%80%9D%E5%85%8B/dp/B0012X9LD6/ref=sr_1_1?ie=UTF8&amp;qid=1379699151&amp;sr=8-1&amp;keywords=freebsd" target="_blank"><sup class="footnote" id="fnr2"><a href="#fn2">2</a></sup>The Design and Implementation of the FreeBSD Operation System</a></p>
 <p>&nbsp;</p>
 <p>&nbsp;</p>]]></content>
   </entry>
