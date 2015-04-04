@@ -1,0 +1,169 @@
+--- index.1.html	2015-01-03 22:57:23.000000000 +0800
++++ index.2.html	2015-01-03 22:57:49.000000000 +0800
+@@ -7,7 +7,7 @@
+ 	<meta name="author" content="Yafang Shao">
+ 
+ 	
+-	<meta name="description" content="This article was automatically generated via Booklist, which is wrote in Ruby by @laoar. It&#8217;s open to everyone. Feel free to use it. Below are &hellip;">
++	<meta name="description" content=" <!-- One Man&#39;s Yammer &#8211;> 四段的对杀 The Fight in Rank-4D In memory of the progress with my friend wood. ">
+ 	
+ 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+ 
+@@ -86,6 +86,20 @@
+     
+     
+ 	<section class="archives">
++		<h1 class="year">2015</h1>
++
++		<article>
++    		<a href="/blog/2015/01/02/the-fight-in-rank4d/">The Fight In Rank4d</a>
++		</article>
++    
++
++
++
++
++    
++    
++    
++	<section class="archives">
+ 		<h1 class="year">2014</h1>
+ 
+ 		<article>
+@@ -380,6 +394,63 @@
+    <article class="post">
+ 	<h2 class="title">
+ 		
++		<a href="/blog/2015/01/02/the-fight-in-rank4d/">
++		
++			The Fight in Rank4d</a>
++	</h2>
++	<div class="entry-content">
++		<!DOCTYPE HTML>
++	<!--
++    	<link href="" rel="alternate" title="One Man's Yammer" type="application/atom+xml"> 
++    	<link rel="canonical" href="">
++    	<link href="/favicon.png" rel="shortcut icon"> 
++    	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
++		<header id="header" class="inner" ><h1><a href="/">One Man&#39;s Yammer</a></h1></header>
++    &#8211;>
++    <body>
++		<h2><center>四段的对杀</center></h2>
++		<h2><center>The Fight in Rank-4D</center></h2>
++		<br>
++		<h4><center>In memory of the progress with my friend wood.</center></h4>		
++		<!--mkdir 3rd-party/ under octopress/source/ first, then we put wgo library under the 3rd-party directy, so we can get the file in wgo/ with '/3rd-party/wgo/file', and create our own html files in octopress. -->
++    	<script type="text/javascript" src="/3rd-party/wgo/wgo.min.js"></script>
++    	<script type="text/javascript" src="/3rd-party/wgo/wgo.player.min.js"></script>
++    	<link type="text/css" href="/3rd-party/wgo/wgo.player.css" rel="stylesheet" />
++		<!--also put the GiBo in /3rd-party/wgo/ directory-->
++        <div data-wgo="/3rd-party/wgo/game.sgf" style="width: 700px">
++        </div>
++    </body>
++
++		
++		
++	</div>
++
++
++<div class="meta">
++	<div class="date">
++
++
++
++
++
++
++
++
++  
++
++
++<time datetime="2015-01-02T00:00:00+08:00" pubdate data-updated="true"></time></div>
++	<div class="tags">
++
++</div>
++	
++</div>
++</article>  
++
++
++   <article class="post">
++	<h2 class="title">
++		
+ 		<a href="/blog/2014/12/27/reading-2014/">
+ 		
+ 			My Reading in 2014</a>
+@@ -2641,72 +2712,6 @@
+ </div>
+ </article>  
+ 
+-
+-   <article class="post">
+-	<h2 class="title">
+-		
+-		<a href="/blogs/455">
+-		
+-			性能优化,关于Profiling</a>
+-	</h2>
+-	<div class="entry-content">
+-		<p style="padding-left: 30px;"></p>
+-<p>    对于大型软件系统而言，可维护性是很重要的一个方面，否则到了最后没人能够搞懂全部的代码那就是一个灾难了。这方面的例子可谓比比皆是，比如华为VRP平台的Linux内核，因为模块间耦合太严重很难升级Linux内核版本，搞到最后实在搞不下去，于是团队解散，投奔中软的RTOS。松本行弘在《代码的未来》这本书里说，开发人员的成本越来越高，机器成本则是越来越便宜，所以我们的编程语言应该要侧重于开发效率和维护效率，而不应该太过于关注性能，至于性能这件事，完全可以通过升级更牛逼的硬件来很轻松的搞定。其实Ruby之父的这个观点在很久之前就被Donald Kunth说过了，“premature  optimization is the root of all evil”。两位大师的观点可谓殊途同归。<br />
+-<p style="padding-left: 30px;"></p><br />
+-    Donald Knuth在大多数软件工程师眼里可谓神一般的存在，它的这句名言也一直被码农们牢记在心。 Donald Knuth前辈并不是反对optimization，它只是反对premature optimization，即盲目无意义的优化，optimization应该要针对critical的东西。如何寻找critical的代码，就是一个profiling系统需要做的事情。当然profiling本身也属于可维护性的一部分。<br />
+-<p style="padding-left: 30px;"></p><br />
+-    Profiling的本质，是为了充分发挥CPU的能力。现代CPU的体系结构已经很牛逼了，但是相对而言，软件开发语言则没多大进步，再加上软件开发人员水平的良莠不齐，直接的后果就是，CPU的能力没有得到充分利用。虽然说使用更牛逼的CPU更牛逼的内存更牛逼的散热系统可以大幅的提高性能，但是在相同的配置下，比别人有更牛逼的表现不是更好嘛。iPhone和三星Andriod手机的对比不就是很好的证明嘛。<br />
+-<p style="padding-left: 30px;">现代CPU的流水线体系结构大概是这个样的。</p><br />
+-<img src="/images/455.jpg"><br />
+-Instruction Fetch Unit用来从memory中取指令到寄存器中，Decode and Issue Unit则是将指令翻译成CPU能够识别的编码然后发射到Functional Units（比如运算器等等）来执行这些指令，FU的执行结果再放回到寄存器中。 所以一条指令的执行完毕最好的情况下需要4个CPU cycles就可以搞定了。我们都已经知道流水线的原理就是，指令A在FU执行时，指令B在译码准备发射，指令C在被从内存中读取到寄存器中，于是这样就实现了不同指令的并行工作来提高CPU的效率。 CPU的这个设计思想被Unix开发人员学来了，于是就是有了管道（pipe）。再接着Erlang又把管道的原理用在了语言特性上来实现并发编程，最后Golang又把Erlang的管道特性给学了去。这并不是说CPU的设计人员有多么牛逼，而是说，软件开发人员要在CPU设计人员制定的规则下做事才能充分利用CPU的性能。<br />
+-<p style="padding-left: 30px;"></p><br />
+-    CPU的这种流水线存在的缺点，或者说，要依赖编程人员水平的地方在于，指令A可能是JUMP D，这样就导致指令B和指令C要被从流水线里面刷出去了，就造成CPU cycle的浪费。 要想避免这种浪费，就要要求程序自身具有很好的分支预测特性，即要充分迎合CPU的这种预测执行的特性。 在Linux内核里面随处可见的likely()/unlikely()就是做这个事情的，likely()/unlikely()是告诉编译器要去做什么以及不去做什么。因为CPU最后执行的是编译器生成的二进制，而不是我们写的代码，所以一个好的编译器对于程序性能的影响是巨大的。现在的编译器要比程序员聪明的多，它往往能够预测出程序接下来要执行的指令是什么，有时候我们加的likely()/unlikely()可能根本就没有意义甚至适得其反，因为程序员相比编译器而言太蠢了。有一个例子就是real-time Linux Kernel的maintainer Steven Rostedt做的一个统计，他发现内核里面有<a href="https://lwn.net/Articles/419102/">大量误用likely()/unlikely()的地方</a>，其中在<a href="https://lwn.net/Articles/420028/">page_mapping()函数里面的一个unlikely()有39%的概率是错误的</a>，然后这位大神就提交了一个patch把这个unlikely()给去掉了。所以，如果你没有十足的把握，就不要随便使用unlikely()/likely()这俩宏。 不过有一个基本准确的经验就是，在错误处理的分支上加unlikely()大致不会是坏事。比如：<br />
+-char * p = (char *)malloc(<span class="caps">SIZE</span>);<br />
+-if (unlikely(!p)) {<br />
+-perror(&#8220;malloc&#8221;);  // 原谅我没有缩进<br />
+-}</p>
+-<p>这里的unlikely()在绝大多数情况下都能够提升性能，不过，如果这段代码是non-critical的，那么这个unlikely()就是non-sense的，因为在这种情况下它对性能的提升可能近似为0.0000%，而且进一步而言，牛逼点的编译器自己也能够做这个事。如果这段代码真的是critical的话，那么这个unlikely()就有必要了。我们可以统计下linux内核的代码，unlikely()的使用次数大概是likely()的10倍，就是很多错误处理的分支都加了unlikely()的缘故。<br />
+-<p style="padding-left: 30px;"></p><br />
+-    除了这个分支预测之外，还有一个性质对流水线的影响较大，那就是数据依赖。指令B已经译码完成，准备要发出去的时候，发现它的操作数不可用，有可能别的CPU在使用这个操作数，于是指令B只能在这里傻傻的等待另外的CPU释放这个操作数。<br />
+-<p style="padding-left: 30px;"></p><br />
+-    所以对于流水线型的CPU，主要就这两方面决定着性能的好坏：1）数据依赖 2）分支预测。现在的并发编程也主要是解决的这两件事。<br />
+-<p style="padding-left: 30px;"></p><br />
+-    CPU的设计人员为了让程序员能够更直观的感受这两件事的表现，就给程序员提供了一些性能统计的寄存器，这些寄存器都在协处理0里面。他们做的事情，就是统计多长时间cpu cycle内，指令的issue/retire的数目，icache/dcache的hit/miss,以及l2 icache/dcache的hit/miss等等。比如说，如果icache的miss较大，那显然是程序的分支预测较差。<br />
+-<p style="padding-left: 30px;"></p><br />
+-    对于应用程序开发人员而言，是没有必要了解这么详细的性能寄存器信息的，或者说在这个上面花费精力意义不大。因而就有了perf、oprofile、systemtap、dtrace这些性能调试工具的应运而生。这些工具提供给程序员更友好的方式来分析程序，借助这些工具能够很直观的找到程序的critical部分。</p>
+-<p>注：<br />
+-<sup class="footnote" id="fnr1"><a href="#fn1">1</a></sup> 图是用Google Doc画的，第一次使用Google Doc画图，画的较差:(<br />
+-<sup class="footnote" id="fnr2"><a href="#fn2">2</a></sup> 本文的观点纯属个人歪歪，未必准确，但基本正确（所以说，汉语很博大精深不是） ：）</p>
+-<p>&nbsp;</p>
+-<p>&nbsp;</p>
+-<p>&nbsp;</p>
+-<p>&nbsp;</p>
+-		
+-		
+-	</div>
+-
+-
+-<div class="meta">
+-	<div class="date">
+-
+-
+-
+-
+-
+-
+-
+-
+-  
+-
+-
+-<time datetime="2014-03-06T00:00:00+08:00" pubdate data-updated="true">Mar 6<span>th</span>, 2014</time></div>
+-	<div class="tags">
+-
+-</div>
+-	
+-</div>
+-</article>  
+-
+ <nav id="pagenavi">
+     
+     
