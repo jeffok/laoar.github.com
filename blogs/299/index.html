@@ -7,7 +7,7 @@
 	<meta name="author" content="Yafang Shao">
 
 	
-	<meta name="description" content="     在某些情况下，我们需要将当前线程的执行挂起，直至某一事件发生。这个事件可能是一个有争抢的资源变为可用，时间的流逝，或者锁的释放。这个等待可以通过两种基本的方式来实现：Busy Waiting 和Sleeping。     &hellip;">
+	<meta name="description" content="三言两语聊Kernel：Busy Waiting or Sleeping？      在某些情况下，我们需要将当前线程的执行挂起，直至某一事件发生。这个事件可能是一个有争抢的资源变为可用，时间的流逝，或者锁的释放。这个等待可以通过两种基本的方式来实现：Busy Waiting 和Sleeping &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -97,6 +97,8 @@
      Sleeping相对于Busy Waiting的好处是，内核可以在等待期间去执行有意义的事情。坏处则是它的开销：维护一个链表，让你自己去睡眠，上下文切换到一个新的进程（再加上切换回你自己）。如果等待的时间较短，显然使用Busy Waiting更合理。</p></div>
 
 
+
+<!--
 <div class="meta">
 	<div class="date">
 
@@ -111,11 +113,9 @@
 
 
 <time datetime="2013-08-31T00:00:00+08:00" pubdate data-updated="true">Aug 31<span>st</span>, 2013</time></div>
-	<div class="tags">
-
-</div>
 	
 </div>
+!-->
 </article>
 
 	<div class="share">

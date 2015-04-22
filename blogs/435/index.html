@@ -7,7 +7,7 @@
 	<meta name="author" content="Yafang Shao">
 
 	
-	<meta name="description" content="让我们先来看一个小程序。 这个小程序的大概意思就是，注册了一个segmentation fault的handler， 在该handler里把SIGSEGV信号的一些信息打印出来，我这里打印了两个值，一个是进程自身的PID，另外一个是info-&gt;si_pid, &hellip;">
+	<meta name="description" content="为什么发送segment fault信号的进程总是PID0 ？ 让我们先来看一个小程序。 这个小程序的大概意思就是，注册了一个segmentation fault的handler， 在该handler里把SIGSEGV信号的一些信息打印出来，我这里打印了两个值，一个是进程自身的PID， &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -104,6 +104,8 @@
 <p>PS. : 写完一看字数，又是1000字，看来很适合写千字文。不深不浅聊技术，千字文是也。</p></div>
 
 
+
+<!--
 <div class="meta">
 	<div class="date">
 
@@ -118,11 +120,9 @@
 
 
 <time datetime="2014-02-15T00:00:00+08:00" pubdate data-updated="true">Feb 15<span>th</span>, 2014</time></div>
-	<div class="tags">
-
-</div>
 	
 </div>
+!-->
 </article>
 
 	<div class="share">
