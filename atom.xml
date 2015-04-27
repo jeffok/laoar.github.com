@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2015-04-23T23:09:18+08:00</updated>
+  <updated>2015-04-27T22:56:27+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -12,6 +12,242 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Open vSwitch datapath浅析]]></title>
+    <link href="http://laoar.github.io/blog/2015/04/27/open-vswitch/"/>
+    <updated>2015-04-27T21:43:46+08:00</updated>
+    <id>http://laoar.github.io/blog/2015/04/27/open-vswitch</id>
+    <content type="html"><![CDATA[<p>下图所示是Open vSwitch的组成(摘自Open vSwitch官网):<br></p>
+
+<center><img src="http://laoar.github.io/images/main-comp.png"></center>
+
+
+<p>它分为Kernel部分和User部分。<br></p>
+
+<h3>一 安装驱动</h3>
+
+
+<p>Kerenl部分是从Linux 2.6.32开始何如内核，默认是编译为一个KO，位于/lib/modules/`uname –r`/kernel/net/openvswitch/openvswitch.ko。<br></p>
+
+<center><img src="http://laoar.github.io/images/switch-kernel.png"></center>
+
+
+<p>应用open vswitch首先要做的就是install这个kernel module。需要注意，GRE Tunneling的支持需要gre.ko, VXLAN的支持需要vxlan.ko, 这两个KO都位于/lib/modules/`uname –r`/kernel/路径下。<br></p>
+
+<p>user部分是有两个daemon，一个是ovs-vswitchd，用来管理datapath，另外一个是ovsdb-server，用来维护一个数据库。<br>
+<h3>二 初始化dbserver </h3>
+在install好openvswitch.ko后，我们接着需要初始化这个ovsdb-server：<br>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">opendb</span><span class="o">-</span><span class="n">server</span> <span class="o">--</span><span class="n">remote</span><span class="o">=</span><span class="n">punix</span><span class="o">:/</span><span class="n">usr</span><span class="o">/</span><span class="n">local</span><span class="o">/</span><span class="n">var</span><span class="o">/</span><span class="n">run</span><span class="o">/</span><span class="n">openvswitch</span><span class="o">/</span><span class="n">db</span><span class="p">.</span><span class="n">sock</span> \
+</span><span class='line'>            <span class="o">--</span><span class="n">remote</span><span class="o">=</span><span class="n">Open_vSwitch</span><span class="p">,</span><span class="n">Open_vSwitch</span><span class="p">,</span><span class="n">manager_option</span> <span class="err">\</span>
+</span><span class='line'>            <span class="o">--</span><span class="n">pidfile</span> <span class="o">--</span><span class="n">detach</span>
+</span></code></pre></td></tr></table></div></figure>
+              此时会生成一个数据库文件（/usr/local/etc/conf.db）,该dbserver会将网络状态信息给记录到conf.db里面。这些网络状态使得open vswitch能够适应网络的动态变化，比如可以用来追踪VM的迁移。<br>
+这个dbserver还可以通过TCP的6632端口跟远端的openflow server进行通信，这个openflow server可以通过remote这个参数来指定。<br>
+</p>
+
+
+
+
+<h3>三 启动ovs－vswitchd</h3>
+
+
+<p>接下来就需要启动ovs-vswitchd：<br>
+<center>ovs-vswitchd &#8211;pidfile &#8211;detach </center>
+整个OVS的核心就是这个ovs-vswitchd。<br>
+这样子open vswich就在PC上运行起来了。</p>
+
+
+
+
+<h3>四 构建网络拓扑</h3>
+
+
+<p>我们来构建如下图所示的一个网络拓扑：<br>
+<center> <img src="http://laoar.github.io/images/switch-topo.png"> </center>
+</p>
+
+
+<h4>1. 首先需要增加一个bridge(br0)</h4>
+
+
+<p>
+<center>ovs-vsctl add-br br0</center>
+执行这个命令后，<br>
+1.1 将br0记录到ovsdb里面<br>
+1.2 ovs-vswitchd创建一个新的bridge<br>
+1.3 ovs-vswitchd通过netlink这种方式，发相应的cmd给kernel，执行对应的handler来生成一个datapath以及和其相关的一些结构体。<br>
+每个bridge都对应于一个datapath结构体。<br>
+</p>
+
+
+<h4>2. 接着来将网络结构设备连接到该bridge</h4>
+
+
+<p>
+<center>ovs-ctl add-port br0 eth1 </center>
+执行这个命令后，<br>
+2.1  将该信息记录到ovsdb <br>
+2.2  ovs-vswitchd在bridge上新增一个端口，并将其设置为混杂模式（NETDEV_PROMISC），设置为混杂模式的目的是为了接收非本机MAC地址的包 <br>
+2.3  ovs-vswitchd通过netlink调用到kernel端的handler，此时：<br>
+i. 找到“eth1”对应的net_device <br>
+ii.  把该net_device的handler替换为ovs的handler，这样net_device的进包就不会进入普通的内核处理流程，而是由OVS接收过来处理。<br>
+iii. 产生一个新的vport结构体<br>
+整个过程如下图所示：<br>
+<center><img src="http://laoar.github.io/images/switch-handler.png"></center>
+至此，就初始化完成了kernel module的主要结构体datapath/vport/flow_table。这些主要结构体的关系如下图所示：<br>
+<center><img src="http://laoar.github.io/images/switch-struct.png"> </center>
+</p>
+
+
+<h4>3. 设置openflow server </h4>
+
+
+<p>下面这个命令可以用来设置远端用来和ovs-vswitchd通信的openflow server：<br>
+<center>ovs-vsctl set-controller br0 tcp:XXX.XXX.XXX.XXX:6633</center>
+如下图所示：<br>
+<center><img src="http://laoar.github.io/images/switch-controller.png"> </center>
+根据不同的设备类型，ovs实现了不同的vport以作支持。目前OVS共支持了6种vport：<br>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">A</span><span class="p">.</span> <span class="n">Network</span> <span class="n">device</span> <span class="o">:</span> <span class="n">tap</span> <span class="o">&amp;</span> <span class="n">system</span> <span class="n">device</span>
+</span><span class='line'><span class="n">B</span><span class="p">.</span> <span class="n">Network</span> <span class="n">device</span> <span class="n">implemented</span> <span class="n">by</span> <span class="n">datapath</span><span class="o">:</span> <span class="n">internal</span> <span class="n">device</span>
+</span><span class='line'><span class="n">internal</span> <span class="n">device</span><span class="err">存在的目的是为了给</span><span class="n">bridge</span><span class="err">分配</span><span class="n">IP</span><span class="err">地址。</span>
+</span><span class='line'><span class="n">C</span><span class="p">.</span> <span class="n">GRE</span> <span class="n">tunnel</span>
+</span><span class='line'><span class="n">D</span><span class="p">.</span> <span class="n">GRE64</span> <span class="n">tunnel</span>
+</span><span class='line'><span class="n">E</span><span class="p">.</span> <span class="n">VXLAN</span> <span class="n">tunnel</span>
+</span><span class='line'><span class="n">F</span><span class="p">.</span> <span class="n">LISP</span> <span class="n">tunnel</span>
+</span></code></pre></td></tr></table></div></figure>
+</p>
+
+
+<h3>五 以ping为例子来看下包处理流程.</h3>
+
+
+<p>VM0来ping VM1. </p>
+
+
+<p>当vm0以ping发送一个ICMP报文给OVS时，OVS会依次进行如下处理：</p>
+
+
+<h4>1 ping</h4>
+
+
+<p>VM0发送报文到tap0， tap0和br0的一个端口相连。br0的端口对应一个vport结构体。</p>
+
+
+<p></p>
+
+<h4>2 ovs receive</h4>
+
+
+<p>ovs执行tap0的receive handler，（即在前面执行ovs-ctl add-port br0 eth1 tag=XXX时注册的那个handler）<br>
+     tag=XXX就是vlan，通过vlan来实现网络隔离的功能。</p>
+
+
+<h4>3 flow key</h4>
+
+
+<p>从sk_buff中解析出来L2～L4的信息生成一个flow_key.<br> 
+          flow可以理解为一个以太网包所包含的头部信息的集合，在一个flow table里面的一个flow必须是唯一的，它是包含L2/L3/L4这些头部的一个细粒度的实体。一个TCP连接由两个flow组成，每个方向上有一个。<br>
+<center><img src="http://laoar.github.io/images/switch-flow-key.png"></center>
+</p>
+
+
+<h4>4 flow lookup</h4>
+
+
+<p>
+使用该key来执行flow_lookup, 去跟kernel module里面维护的flow table进行比较。<br>
+首先去跟 flow_table里的 mask_cache数组进行比较， mask_cache里面只有 sk_buff的 hash值所以很快速；接着再去跟 mask_array这个数组进行比较，这个数组里面存放是的 sw_flow_key, 查找相对慢一些。如果在 mask_array里面匹配到了这个 flow，就会把该 sk_buff的 hash值给放到 mask_cache里面。 在 kenerl里的这部分比较称之为 ovs的 fast path<br>
+<center><img src="http://laoar.github.io/images/switch-path.png"> </center>
+</p>
+
+
+<h4>5 flow action</h4>
+
+
+<p>
+如果在kernel中查找到了对应的flow entry，就去执行对应的flow action。<br>
+这些action是告诉datapath怎么去处理flow里面的这些packets。<br>
+action也可以为空，即丢弃这些packets。<br>
+datapath的这些action跟openflow定义的action是一致的。<br>
+</p>
+
+
+<h4>6 send upcall</h4>
+
+
+<p> 如果没有match到，就执行upcall通过netlink的方式给ovs-vswitchd发送OVS_PACKET_CMD_MISS命令。<br>
+UPCALL会包含整个packet，虽然不必要拷贝整个的packet给user space，可以做一些优化，但是由于只是拷贝first packet（比如TCP SYN），所以这种优化意义不大，而且有时候可能真的会用到整个packet。 <br>
+ovs-vswitch一次只处理一个upcall，为了能够让每一个port产生的upcall都能够得到即使处理，datapath是采用的round robin这种方式来让每个port发送upcall。<br>
+UPCALL发送出去后，dadapath的处理就结束了。<br>
+一个普通的UPCALL结构如下图所示。<br>
+<center><img src="http://laoar.github.io/images/switch-upcall.png"></center>
+</p>
+
+
+<h4>7 handle upcall </h4>
+
+
+<p>
+ovs-vswitchd执行read_upcalls来读取upcall。<br>
+ read_upcalls的主要处理流程如下图所示。<br>
+<center><img src="http://laoar.github.io/images/switch-routine.png"> </center>
+Hash bucket的数据结构是hmap，如下图所示<br>
+<center><img src="http://laoar.github.io/images/switch-hmap.png"></center>
+</p>
+
+
+<h4>8 flow table match</h4>
+
+
+<p>
+在userspace维护着openflowtable。对hmap里面的flow以wildcard的方式来与openflowtable匹配。<br>
+Openflowtable的匹配过程大致如下图。<br>
+<center><img src="http://laoar.github.io/images/switch-flow-table.png"> </center>
+</p>
+
+
+<h4>9 MAC learning</h4>
+
+
+<p>
+在open vswitch里面配置MAC learning功能<br>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">ovs</span><span class="o">-</span><span class="n">ofctl</span> <span class="n">add</span><span class="o">-</span><span class="n">flow</span> <span class="n">br0</span> <span class="err">\</span>
+</span><span class='line'>  <span class="s">&quot;table=2 actions=learn(table=10, NXM_OF_VLAN_TCI[0..11], \</span>
+</span><span class='line'><span class="s">    NXM_OF_ETH_DST[]=NXM_OF_ETH_SRC[], \</span>
+</span><span class='line'><span class="s">    load:NXM_OF_IN_PORT[]-&gt;NXM_NX_REG0[0..15]), \  </span>
+</span><span class='line'>    <span class="n">resubmit</span><span class="p">(,</span><span class="mi">3</span><span class="p">)</span><span class="err">“</span>
+</span></code></pre></td></tr></table></div></figure>
+<center><img src="http://laoar.github.io/images/switch-learning.png"> </center>
+</p>
+
+
+<p>Ref：<br>
+•Openflow spec 1.4.0<br>
+<a href="https://www.opennetworking.org/images/stories/downloads/sdn-resources/onf-specifications/openflow/openflow-spec-v1.4.0.pdf">https://www.opennetworking.org/images/stories/downloads/sdn-resources/onf-specifications/openflow/openflow-spec-v1.4.0.pdf</a> <br>
+•Open vswitch 2.3.1<br>
+<a href="http://openvswitch.org/releases/openvswitch-2.3.1.tar.gz">http://openvswitch.org/releases/openvswitch-2.3.1.tar.gz</a><br>
+•Why OVS ?<br>
+<a href="https://github.com/openvswitch/ovs/blob/master/WHY-OVS.md">https://github.com/openvswitch/ovs/blob/master/WHY-OVS.md</a> <br>
+•Example<br>
+<a href="http://openvswitch.org/support/config-cookbooks/">http://openvswitch.org/support/config-cookbooks/</a><br></p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[编译器输出函数的算法对性能的影响]]></title>
@@ -2685,54 +2921,6 @@ beqz rt, 1b</p><br />
 <p>这句话的意思就是我前面说的，两个cpu同时ll/sc一个内存地址，sc的时候会让另外一个cpu的sc失败，而自己sc成功。我找遍了各种资料，也没有见详细说明两个cpu同时ll/sc同一个内存地址时，sc指令又碰巧同时执行了，到底会发生什么。我觉得，我们可以这样想，就像世界杯踢点球一样，要是俩决赛的队伍到了最后要踢点球了，而每一个球员又碰巧都罚进了，那岂不是这俩队就一直射到世界末日？Hmm… 相信我，总有人会成为倒霉蛋的。球场上不是有裁判么，CPU也有类似的决策：总线裁决。这种情况下就要靠总线裁决。</p>
 <p>&nbsp;</p>
 <p>P.S.: 写这篇blog，花了一些精力在找各种链接上，anyway， 治学要严谨。 我之前的领域是linux kernel，从未看过freebsd，现在一对比freebsd，发现这两者的区别确实很有趣。感觉这就像为什么很多人喜欢旅游一样，虽然旅游归来又继续朝九晚五的按步就班，看似没有任何改变，但终究两个地域的对比会对你有所影响，只是没有那么明显而已，这是一个量变到质变的过程，没有人会一下子成为千万富翁的，除非你去抢银行。 所以，我们在一个地方呆久了，就应该出去走一走，看看外面是什么样子。在一个公司或者一个领域也是这样，抬起头来看看外面，否则就像世外桃源似的，乃不知有汉，无论魏晋。不过这样未尝不是件好事，北朝鲜的人民生活就很幸福，谁说不是哪。关键是，就像李国柱大牛（注：华为公司一位德高望重的前辈）说的，看你自己追求的是什么。</p>]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[三言两语聊Kernel：该怎么理解Terminal]]></title>
-    <link href="http://laoar.github.io/blogs/338"/>
-    <updated>2013-09-28T00:00:00+08:00</updated>
-    <id>http://laoar.github.io/blogs/338</id>
-    <content type="html"><![CDATA[<p style="padding-left: 30px;"></p>
-<p>    对于unix系的操作系统而言，即使是看起来很酷的MacOS，都有Terminal这个东西：</p>
-<p><a href="http://www.laoar.net/wp-content/uploads/2013/09/b6a1a15ff43df3648ff3883c28a223e0.png"><img class="aligncenter size-full wp-image-339" title="b6a1a15ff43df3648ff3883c28a223e0" src="http://www.laoar.net/wp-content/uploads/2013/09/b6a1a15ff43df3648ff3883c28a223e0.png" alt="" width="172" height="147" /></a>那么Terminal到底是什么，该怎么来理解它？<br />
-<p style="padding-left: 30px;"></p><br />
-    Terminal是一种设备，它具备输入输出能力，通常我们在程序里会使用reguler files，pipe，socket来用作输入输出，但是他们远不具备terminal那么强大的输入输出能力。 Terminal设计的目的是为了让我们与电脑的交互更容易。<br />
-<p style="padding-left: 30px;"></p><br />
-    当你在Terminal里运行一个程序的时候，你可以通过Ctrl-C来给它发送一个interrrupt信号（SIGINT）；如果该程序是从文件里面读的\x03字符，显然它不会收到SIGINT信号。当你在Terminal里运行一个程序，如果它产生了一个^G字符(\x07)，那么，你就会听到一个beep声；如果该程序是从文件里面读取到的该字符，或者将该字符写入到一个文件中，显然不会产生beep声。举个例子，在终端里面运行下面这段代码，你会不停的听到beep声。Yeah,it is so easy,but so funny.And, don&#8217;t forget to ask why.<br />
-<p style="text-align: left; padding-left: 60px;"><span style="color: #808000;">#include &lt;stdio.h&gt;</span><br />
-<span style="color: #808000;">#include &lt;unistd.h&gt;</span></p><br />
-<p style="text-align: left; padding-left: 60px;"><span style="color: #808000;">int main()</span><br />
-<span style="color: #808000;">{</span><br />
-<span style="color: #808000;">    unsigned int usec = 100;</span><br />
-<span style="color: #808000;">    while (1) {</span><br />
-<span style="color: #808000;">        printf(&#8220;\x07&#8221;);</span><br />
-<span style="color: #808000;">        usleep(usec);</span><br />
-<span style="color: #808000;">    }<br />
-</span><span style="color: #808000;">    return 0;<br />
-</span><span style="color: #808000;">}</span></p><br />
-    当你在终端里执行<span style="color: #999999;">ls -G</span>(至少Mac是这样，FreeBSD也这样，SUSE也这样，例外的是Redhat，它是<span style="color: #999999;">ls &#8212;color</span>),你会看到当前目录里的文件和子目录会有颜色的显示。不过，如果该目录里的东西要被写入到一个文件中，well，你不能在一个文本文件中显示出颜色来，can U now？<br />
-<p style="padding-left: 30px;"></p><br />
-    好吧，这到底是怎么一回事，它是怎么个工作原理哪？ 当程序与一个文件交互时，最终会通过kernel driver。如果你在一个ext2分区上open/read/write，ext2 filesystem的drivder就会被调用；如果你open一个FIFO，它会使用pipe driver(Linux:fs/pipe.c;  FreeBSD:<span style="color: #ff0000;"><span class="caps">TBD</span></span>); 如果你open一个terminal设备节点，terminal设备驱动就会处理这个请求。<br />
-<p style="padding-left: 30px;"></p><br />
-    Terminal driver控制的设备稍微多一些。 ext2 driver只需要和磁盘进行通信；pipe driver则不涉及任何硬件；而terminal driver需要监控keyboard／mouse，将字符打印到屏幕上，以及将beep声发送到speaker。从这个角度来看，terminal可以认为是个抽象化的东西，它代表了人机交互所有用到的东西。当然，X系统也是运行在一个terminal上，对linux系统而言，它对应的设备是/dev/tty7, 这也是为什么使用Alt+Ctrl+F7可以切换到X系统的原因。<br />
-<p style="padding-left: 30px;"></p><br />
-    对于一个典型的PC而言，在任何时间，某一个终端会运行在前台，其他的终端则是在后台。 位于前台的终端会接收keyboard／mouse的输入，同样也会独占的访问在monitor上显示的东西。比如，当你按下某个键比如‘K’，terminal driver会将该字符显示到屏幕上，并且将它存在一个buffer里面，因此，当接下来某个进程从终端设备来读取数据的时候会接收到这个字符。 terminal也会对一些功能键作出反应，比如Ctrl-A，terminal将其显示为^A,并且在process获取它之前将其编码为\x01。当一个process往terminal上写字符时，这些字符会被显示到屏幕上;但对于一些控制序列，比如以<a href="http://www.gnu.org/software/screen/manual/html_node/Control-Sequences.html">ESC开始的control sequences</a> ，terminal不会将其显示到屏幕上，而是会作出一些特殊的行为，比如移动cursor，或者改变当前的文本颜色，等等，当然process是不能直接看到这些行为的，它是为了给你看的。另外，BEL字符会产生一个beep音，而不是通常的可视化输出。<br />
-<p style="padding-left: 30px;"></p><br />
-     Terminal也会用来控制任务，比如，Ctrl-C来打断一个process group，Ctrl-Z来挂起一个process group，对于terminal driver而言就是发动SIGINT或者SIGSTP给在前台运行的process group。 任务控制是基于这个原理：运行在一个控制终端（/dev/tty）上的process通常是受该控制终端控制的。例如，terminal driver会纪录它控制了哪些session以及哪个process group在前台。/dev/tty是指向控制终端的一种特殊设备，具体是指向哪个设备可以通过它提供的ioctl接口来获取。<br />
-<p style="padding-left: 30px;"></p><br />
-    所有前面说到的这些很cool的功能都是在terminal driver里面来实现的，可以概括为下图所示：</p>
-<p><a href="http://www.laoar.net/wp-content/uploads/2013/09/1e5e32cb531e354b6f897853e0c49280.png"><img class="aligncenter size-full wp-image-340" title="1e5e32cb531e354b6f897853e0c49280" src="http://www.laoar.net/wp-content/uploads/2013/09/1e5e32cb531e354b6f897853e0c49280.png" alt="" width="732" height="576" /></a><br />
-<p style="padding-left: 30px;"></p><br />
-    与Terminal相关容易把人搞糊涂的一个概念是shell。shell是一个应用程序，它用来提示你输入，并且执行你的命令。shell是不感知到字符显示以及处理按键事件的，这是terminal要为它处理好的，因此terminal是对shell的一个封装，给它提供了一个人机交互的桥梁。 通常我们使用较多的shell是bash。 对应到上图，“foregroud process group”基本上都会有一个shell进程，它要么在读写字符，要么在等待它的子进程（这个子进程在读或者写字符）退出。 这个前台进程组的&quot;stdin&quot;会得到控制终端发送给它的字符，这些字符可能是你输入的，也可能是程序产生的。 这个前台进程组的“stdout”是控制终端输入以显示到屏幕上的ASCII码流。<br />
-<p style="padding-left: 30px;"></p><br />
-    还有个东西叫做console(/dev/console), console是terminal的一种类型。 对于我们而言，console比较直观的一个理解是，它是系统日志输出的地方，那么从这个角度看，console可以认为是用来管理系统的。</p>
-<p><strong><span style="color: #ff0000;"> P.S.：</span></strong></p>
-<p><strong><span style="color: #ff0000;">个人见解，如果觉得写的有不对的地方，请直接喷：）</span></strong></p>
-<p>&nbsp;</p>
-<p>ref：</p>
-<p><sup class="footnote" id="fnr1"><a href="#fn1">1</a></sup> <a href="http://www.linusakesson.net/programming/tty/index.php">The <span class="caps">TTY</span> demystified </a></p>
-<p>&nbsp;</p>
-<p>&nbsp;</p>]]></content>
   </entry>
   
 </feed>
