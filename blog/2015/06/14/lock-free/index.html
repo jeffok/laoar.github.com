@@ -1,0 +1,367 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>lock-free、网络吞吐量、并发及其他 - One Man's Yammer</title>
+	<meta name="author" content="Yafang Shao">
+
+	
+	<meta name="description" content="Lock-free、网络吞吐量、并发及其他 前段时间尝试更改我们系统里的并发实现，用lockfree来实现了一遍以提升网络吞吐量。在这个过程中遇到了一些很有趣的技术细节，在这里记录一下。 公司业务不便多说，我就借助dpdk的packet processing模型来说明一下。下图摘自dpdk. &hellip;">
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="" rel="alternate" title="One Man's Yammer" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/favicon.png" rel="shortcut icon">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	<script async="true" src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+	
+</head>
+
+
+<body>
+	<header id="header" class="inner"><h1><a href="/">One Man's Yammer</a></h1>
+<nav id="main-nav"><ul class="main">
+	<li><a href="/read">BookWall</a></li>
+</ul>
+</nav>
+<nav id="mobile-nav"> <ul class="main">
+	<li><a href="/read">BookWall</a></li>
+</ul>
+ </nav>
+<!--	<div class="menu"> --!>
+		<!--<a class="button">Menu</a>
+		<div class="container"><ul class="main">
+	<li><a href="/read">BookWall</a></li>
+</ul>
+</div>--!>
+	<!--</div>--!>
+<!--</nav>--!>
+<!-- @yfshao
+	<div class="alignright search">
+		<a class="button"></a>
+		<div class="container">
+			<form action="false" method="get">
+				<input type="text" name="q" results="0">
+				<input type="hidden" name="q" value="site:laoar.github.io">
+			</form>
+		</div>
+	</div>
+</nav>
+--!>
+<!--
+<nav id="sub-nav" class="alignright">
+	<div class="social">
+		
+		
+		
+		
+    
+		
+		
+		
+		
+		
+    
+	</div>
+	<form class="search" action="false" method="get">
+		<input class="alignright" type="text" name="q" results="0">
+		<input type="hidden" name="q" value="site:laoar.github.io">
+	</form>
+</nav>
+--!>
+<!----!>
+</header>
+	
+		
+	
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">Lock-free、网络吞吐量、并发及其他</h2>
+	<div class="entry-content"><p>前段时间尝试更改我们系统里的并发实现，用lockfree来实现了一遍以提升网络吞吐量。在这个过程中遇到了一些很有趣的技术细节，在这里记录一下。</p>
+
+
+<p>公司业务不便多说，我就借助dpdk的packet processing模型来说明一下。下图摘自dpdk.org。</p>
+
+
+<center> <img src="/images/lockfree-dpdk.jpg"> </center>
+
+
+<p>如上图所示，是一个典型的packet processing模型，RX这个线程接受到数据包后送给distributor，然后Worker Lcore这些线程从Distributor那里获取数据包来处理。和本次讨论无关的技术不在此阐述，我将其简化为更加清晰明了的下图。
+</p>
+
+
+<center> <img src="/images/lockfree-ring.jpg"> </center>
+
+
+<p>
+我们的问题简化为如下：已知ring buffer是一个大小为2048 * sizeof(long)的数组, 有一个RX线程往ring buffer里面保存mbuf的地址，有N个worker线程来从ring buffer里面获取mbuf的地址。在这种场景下如何来实现一个lock-free的buffer？ 
+</p>
+
+
+<p>
+在<a href="http://www.linuxjournal.com/content/lock-free-multi-producer-multi-consumer-queue-ring-buffer">Linux Journal</a>上有一个现成的实现，不过很可惜，虽然他的方案很巧妙，但是存在一个bug，稍后会解释这个bug。
+</p>
+
+
+<p>
+下面是一个简短实现这个lock-free ring的一段代码，我借鉴了linux journal上的那篇文章。具体的实现细节以及原理我不再描述，那篇文章描述的很详细，浅显明了。我在这里只解析它里面的那个bug。
+</p>
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="n">ptr_array_</span><span class="p">[</span><span class="n">thr_pos</span><span class="p">().</span><span class="n">head</span> <span class="o">&amp;</span> <span class="n">Q_MASK</span><span class="p">]</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">;</span>
+</span><span class='line'>    <span class="n">thr_pos</span><span class="p">().</span><span class="n">head</span> <span class="o">=</span> <span class="n">ULONG_MAX</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="n">T</span> <span class="o">*</span><span class="n">ret</span> <span class="o">=</span> <span class="n">ptr_array_</span><span class="p">[</span><span class="n">thr_pos</span><span class="p">().</span><span class="n">tail</span> <span class="o">&amp;</span> <span class="n">Q_MASK</span><span class="p">];</span>
+</span><span class='line'>    <span class="n">thr_pos</span><span class="p">().</span><span class="n">tail</span> <span class="o">=</span> <span class="n">ULONG_MAX</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>
+上面这两段代码均应该在那两个语句之间添加barrier，即：
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="n">ptr_array_</span><span class="p">[</span><span class="n">thr_pos</span><span class="p">().</span><span class="n">head</span> <span class="o">&amp;</span> <span class="n">Q_MASK</span><span class="p">]</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">;</span>
+</span><span class='line'>    <span class="n">barrier</span><span class="p">();</span>
+</span><span class='line'>    <span class="n">thr_pos</span><span class="p">().</span><span class="n">head</span> <span class="o">=</span> <span class="n">ULONG_MAX</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="n">T</span> <span class="o">*</span><span class="n">ret</span> <span class="o">=</span> <span class="n">ptr_array_</span><span class="p">[</span><span class="n">thr_pos</span><span class="p">().</span><span class="n">tail</span> <span class="o">&amp;</span> <span class="n">Q_MASK</span><span class="p">];</span>
+</span><span class='line'>    <span class="n">barrier</span><span class="p">();</span>
+</span><span class='line'>    <span class="n">thr_pos</span><span class="p">().</span><span class="n">tail</span> <span class="o">=</span> <span class="n">ULONG_MAX</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+否则它就可能会被编译器（gcc）给优化为比如如下：<br>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="k">register</span>  <span class="n">tmp</span> <span class="o">=</span> <span class="n">thr_pos</span><span class="p">().</span><span class="n">head</span> <span class="o">&amp;</span> <span class="n">Q_MASK</span><span class="p">;</span>
+</span><span class='line'><span class="n">thr_pos</span><span class="p">().</span><span class="n">head</span> <span class="o">=</span> <span class="n">ULONG_MAX</span><span class="p">;</span>
+</span><span class='line'><span class="n">ptr_array_</span><span class="p">[</span><span class="n">tmp</span><span class="p">]</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">;</span>
+</span></code></pre></td></tr></table></div></figure>
+之所以做这个优化，是因为计算机的空间相近性原则，编译器会尽量将临近内存操作给放在一起以提高cache的命中率。
+对于共享内存模型的这种并发，C语言的编译器并不去关心哪些变量是共享的，它只是依据局部最优性原则来做优化。所以对于C程序员而言，在实现基于共享内存模型的这种并发时，C编译器的这种优化是很大的一个挑战， 它可能会引入一些很难以定位的bug。所以，用C来实现并发，尤其是lockfree的并发，是一个非常需要经验的技术活。
+</p>
+
+
+<p>
+好在编译器的这种bug是可见的，我们可以通过反汇编来发现这种bug。如下是有无barrier的一段反汇编代码对比（注：以下反汇编直接引自我在我们系统里的实现，跟上面代码有出入，但这不重要）：
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="c1">//1. 无barrier    </span>
+</span><span class='line'>   <span class="mo">0064001</span><span class="n">b</span> <span class="n">divu</span> <span class="n">zero</span><span class="p">,</span><span class="n">v1</span><span class="p">,</span><span class="n">a0</span>
+</span><span class='line'>    <span class="mf">008001f</span><span class="mi">4</span> <span class="n">teq</span> <span class="n">a0</span><span class="p">,</span><span class="n">zero</span><span class="p">,</span><span class="mh">0x7</span>
+</span><span class='line'>    <span class="mo">00001010</span> <span class="n">mfhi</span> <span class="n">v0</span>
+</span><span class='line'>    <span class="mo">000210</span><span class="mi">80</span> <span class="n">sll</span> <span class="n">v0</span><span class="p">,</span><span class="n">v0</span><span class="p">,</span><span class="mh">0x2</span>
+</span><span class='line'>    <span class="mo">004</span><span class="n">a1021</span> <span class="n">addu</span> <span class="n">v0</span><span class="p">,</span><span class="n">v0</span><span class="p">,</span><span class="n">t2</span>
+</span><span class='line'>    <span class="n">ac400044</span> <span class="n">sw</span> <span class="n">zero</span><span class="p">,</span><span class="mi">68</span><span class="p">(</span><span class="n">v0</span><span class="p">)</span>    <span class="c1">// ring_buf.pkt[tmp] = NULL;</span>
+</span><span class='line'>    <span class="n">aceb0014</span> <span class="n">sw</span> <span class="n">t3</span><span class="p">,</span><span class="mi">20</span><span class="p">(</span><span class="n">a3</span><span class="p">)</span>       <span class="c1">// ring_buf-&gt;thr_read[hwt_id] = ptr;</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">//2. 有barrier</span>
+</span><span class='line'>    <span class="n">aceb0014</span> <span class="n">sw</span> <span class="n">t3</span><span class="p">,</span><span class="mi">20</span><span class="p">(</span><span class="n">a3</span><span class="p">)</span>     <span class="c1">// ring_buf-&gt;thr_read[hwt_id] = ptr;</span>
+</span><span class='line'>    <span class="mo">0064001</span><span class="n">b</span> <span class="n">divu</span> <span class="n">zero</span><span class="p">,</span><span class="n">v1</span><span class="p">,</span><span class="n">a0</span>
+</span><span class='line'>    <span class="mf">008001f</span><span class="mi">4</span> <span class="n">teq</span> <span class="n">a0</span><span class="p">,</span><span class="n">zero</span><span class="p">,</span><span class="mh">0x7</span>
+</span><span class='line'>    <span class="mo">00001010</span> <span class="n">mfhi</span> <span class="n">v0</span>
+</span><span class='line'>    <span class="mo">000210</span><span class="mi">80</span> <span class="n">sll</span> <span class="n">v0</span><span class="p">,</span><span class="n">v0</span><span class="p">,</span><span class="mh">0x2</span>
+</span><span class='line'>    <span class="mo">004</span><span class="n">a1021</span> <span class="n">addu</span> <span class="n">v0</span><span class="p">,</span><span class="n">v0</span><span class="p">,</span><span class="n">t2</span>
+</span><span class='line'>    <span class="n">ac400044</span> <span class="n">sw</span> <span class="n">zero</span><span class="p">,</span><span class="mi">68</span><span class="p">(</span><span class="n">v0</span><span class="p">)</span>  <span class="c1">// ring_buf.pkt[tmp] = NULL;</span>
+</span></code></pre></td></tr></table></div></figure>
+</p>
+
+
+<p>
+这类因为编译器而引入的bug虽然挺折磨人，但毕竟是可见的。在并行程序里面还有一类bug则是完全不可见的，那就是CPU的cache同步问题，这一类问题不仅仅是技术活了，更是意识活。在X86上，一般不会有CPU的cache同步问题，因为它的cache一致性做的比较好，但是在MIPS／ARM这种CPU上，CPU的cache同步问题就比较突出，原因就是他们的cache一致性做的比较差，所以就需要显示的使用sync指令来保证cache的一致性，即通过软件来弥补硬件的不足。
+</p>
+
+
+<p>
+同样是上面这个例子：
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="n">ptr_array_</span><span class="p">[</span><span class="n">thr_pos</span><span class="p">().</span><span class="n">head</span> <span class="o">&amp;</span> <span class="n">Q_MASK</span><span class="p">]</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">;</span>  <span class="o">&lt;&lt;&lt;&lt;</span> <span class="err">语句</span><span class="n">A</span>
+</span><span class='line'>    <span class="n">barrier</span><span class="p">();</span>
+</span><span class='line'>    <span class="n">thr_pos</span><span class="p">().</span><span class="n">head</span> <span class="o">=</span> <span class="n">ULONG_MAX</span><span class="p">;</span>         <span class="o">&lt;&lt;&lt;&lt;</span> <span class="err">语句</span><span class="n">B</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+虽然加了barrier，确保了语句A一定会在语句B之前得到执行，但是如果ptr_array_[]和thr_pos().head不在同一个cache line里面，就有可能存在thr_pos().head先被同步到内存，ptr_array_[]后被同步到内存的情况，那么在这个时间空窗内，thr_pos().head已经被更新，它的previous value就可以被其他CPU使用，就会导致该CPU还没有写入其他CPU就从ptr_array_[thr_pos().head & Q_MASK] 里读数据的情况，这自然会导致错误。如下图所示：<br>
+<center> <img src="/images/lockfree-cache.jpg"> </center>
+另外，在共享内存模型中关于lockfree算法的必备基本功是对atomic的认识。atomic是针对内存操作而言的，我们可以这样认为，如果一个语句对于同一个内存只访问一次，我们就认为它是atomic的。如果需要访问多次该内存，我们就得借助编译器或者操作系统提供的atomic函数来访问。
+</p>
+
+
+<p><p>
+以下是一些简单的例子来说明一下：<br>
+1.  <br>
+int x; <br>
+// 之所以用&amp;，是说这是个内存。同时，有了&amp;后，编译器不会将其优化为register变量。 <br>
+*(&amp;x) = 0x12345678; &lt;&lt;&lt;   <br>
+对于32-bit CPU而言，它无法用一条语句来操作32bit的立即数，因为机器码只有32bit。所以它会做如下拆分（MIPS）：
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="mi">3</span><span class="n">c027fff</span>    <span class="n">lui</span> <span class="n">v0</span><span class="p">,</span><span class="mh">0x1234</span>
+</span><span class='line'><span class="mi">344</span><span class="n">bffff</span>    <span class="n">ori</span> <span class="n">t3</span><span class="p">,</span><span class="n">v0</span><span class="p">,</span><span class="mh">0x5678</span>
+</span><span class='line'><span class="mo">00</span><span class="mi">804821</span>    <span class="n">sc</span>    <span class="n">t3</span><span class="p">,</span><span class="mi">12</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span> <span class="err">#请不要在意为什么这里是</span><span class="mi">12</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+虽然这条语句被编译为了3条指令，但是它只有一次内存访问，所以这个语句是原子的。即，内存写操作是原子的。同样，内存读操作也是原子的。
+</p>
+<p>
+2.<br>
+volatile  int x = 1; <br>
+volatile int y; <br>
+y = x;   &lt;&lt;&lt;  <br>
+虽然这里会访问两次内存操作，读x时要访问x所在的内存，写y时要访问y所在内存。但是它只访问一次y，所以对于y内存而言，是原子的。
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">lw</span> <span class="n">v0</span><span class="p">,</span> <span class="mi">12</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span>    <span class="o">&lt;&lt;&lt;&lt;</span> <span class="err">读取变量</span><span class="n">x</span>
+</span><span class='line'><span class="n">sw</span> <span class="n">v0</span><span class="p">,</span> <span class="mi">16</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span>   <span class="o">&lt;&lt;&lt;&lt;</span> <span class="err">存储给</span><span class="n">y</span>
+</span></code></pre></td></tr></table></div></figure>
+12(sp)和16(sp)是不同的内存地址，所以这条语句对于y而言是原子的。PS：如果还需要保证写入y之前x不被改写，那就要借助atomic_write函数了。
+</p>
+<p>
+3. <br>
+volatile int x = 1; <br>
+x++;   &lt;&lt;&lt; <br>
+对于这条语句而言，首先它会从内存中取出x，然后做加法运算，最后将运算结果写入到内存。如下汇编：
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">lw</span>  <span class="n">v0</span><span class="p">,</span> <span class="mi">12</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span>  <span class="o">&lt;&lt;&lt;&lt;</span> <span class="err">第一次内存访问</span>
+</span><span class='line'><span class="n">add</span> <span class="n">v0</span><span class="p">,</span> <span class="n">v0</span><span class="p">,</span> <span class="mi">1</span>
+</span><span class='line'><span class="n">sw</span> <span class="n">v0</span><span class="p">,</span> <span class="mi">12</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span>  <span class="o">&lt;&lt;&lt;&lt;</span> <span class="err">第二次内存访问</span>
+</span></code></pre></td></tr></table></div></figure>
+那么这条x++这条语句就不是原子的，所以就得使用atomic_add()来操作x。
+</p>
+<p>
+简单的说，对于所有需要算数运算的操作，它都不是原子的。PS：只指对内存变量做算数运算
+</p></p>
+
+<p><h3>Ref:</h3>
+1. 我自己写的一个Single-Writer Multi-Reader lockfree的代码 <br>
+<a href="https://github.com/laoar/Single-Writer-Mul-Reader-lock-free-ring">Single-Writer Multi-Reader lockfree Ring</a></p>
+</div>
+
+
+
+<!--
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-06-14T21:57:38+08:00" pubdate data-updated="true">Jun 14<span>th</span>, 2015</time></div>
+	
+</div>
+!-->
+</article>
+
+	<div class="share">
+	<div class="addthis_toolbox addthis_default_style ">
+		
+		
+		
+		
+	</div>
+	
+</div>
+
+
+
+<section id="comment">
+    <h2 class="title">Comments</h2>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+</section>
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2015
+
+    Yafang Shao
+
+</footer>
+	<script src="/javascripts/slash.js"></script>
+<script src="/javascripts/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+	$('.fancybox').fancybox();
+})(jQuery);
+</script> <!-- Delete or comment this line to disable Fancybox -->
+
+
+<script type="text/javascript">
+      var disqus_shortname = 'laoar';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://laoar.github.io/blog/2015/06/14/lock-free/';
+        var disqus_url = 'http://laoar.github.io/blog/2015/06/14/lock-free/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//go.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+</body>
+</html>

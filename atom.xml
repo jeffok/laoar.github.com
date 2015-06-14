@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2015-06-06T12:59:08+08:00</updated>
+  <updated>2015-06-14T22:28:09+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -12,6 +12,222 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[lock-free、网络吞吐量、并发及其他]]></title>
+    <link href="http://laoar.github.io/blog/2015/06/14/lock-free/"/>
+    <updated>2015-06-14T21:57:38+08:00</updated>
+    <id>http://laoar.github.io/blog/2015/06/14/lock-free</id>
+    <content type="html"><![CDATA[<p>前段时间尝试更改我们系统里的并发实现，用lockfree来实现了一遍以提升网络吞吐量。在这个过程中遇到了一些很有趣的技术细节，在这里记录一下。</p>
+
+
+<p>公司业务不便多说，我就借助dpdk的packet processing模型来说明一下。下图摘自dpdk.org。</p>
+
+
+<center> <img src="http://laoar.github.io/images/lockfree-dpdk.jpg"> </center>
+
+
+<p>如上图所示，是一个典型的packet processing模型，RX这个线程接受到数据包后送给distributor，然后Worker Lcore这些线程从Distributor那里获取数据包来处理。和本次讨论无关的技术不在此阐述，我将其简化为更加清晰明了的下图。
+</p>
+
+
+<center> <img src="http://laoar.github.io/images/lockfree-ring.jpg"> </center>
+
+
+<p>
+我们的问题简化为如下：已知ring buffer是一个大小为2048 * sizeof(long)的数组, 有一个RX线程往ring buffer里面保存mbuf的地址，有N个worker线程来从ring buffer里面获取mbuf的地址。在这种场景下如何来实现一个lock-free的buffer？ 
+</p>
+
+
+<p>
+在<a href="http://www.linuxjournal.com/content/lock-free-multi-producer-multi-consumer-queue-ring-buffer">Linux Journal</a>上有一个现成的实现，不过很可惜，虽然他的方案很巧妙，但是存在一个bug，稍后会解释这个bug。
+</p>
+
+
+<p>
+下面是一个简短实现这个lock-free ring的一段代码，我借鉴了linux journal上的那篇文章。具体的实现细节以及原理我不再描述，那篇文章描述的很详细，浅显明了。我在这里只解析它里面的那个bug。
+</p>
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="n">ptr_array_</span><span class="p">[</span><span class="n">thr_pos</span><span class="p">().</span><span class="n">head</span> <span class="o">&amp;</span> <span class="n">Q_MASK</span><span class="p">]</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">;</span>
+</span><span class='line'>    <span class="n">thr_pos</span><span class="p">().</span><span class="n">head</span> <span class="o">=</span> <span class="n">ULONG_MAX</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="n">T</span> <span class="o">*</span><span class="n">ret</span> <span class="o">=</span> <span class="n">ptr_array_</span><span class="p">[</span><span class="n">thr_pos</span><span class="p">().</span><span class="n">tail</span> <span class="o">&amp;</span> <span class="n">Q_MASK</span><span class="p">];</span>
+</span><span class='line'>    <span class="n">thr_pos</span><span class="p">().</span><span class="n">tail</span> <span class="o">=</span> <span class="n">ULONG_MAX</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>
+上面这两段代码均应该在那两个语句之间添加barrier，即：
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="n">ptr_array_</span><span class="p">[</span><span class="n">thr_pos</span><span class="p">().</span><span class="n">head</span> <span class="o">&amp;</span> <span class="n">Q_MASK</span><span class="p">]</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">;</span>
+</span><span class='line'>    <span class="n">barrier</span><span class="p">();</span>
+</span><span class='line'>    <span class="n">thr_pos</span><span class="p">().</span><span class="n">head</span> <span class="o">=</span> <span class="n">ULONG_MAX</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="n">T</span> <span class="o">*</span><span class="n">ret</span> <span class="o">=</span> <span class="n">ptr_array_</span><span class="p">[</span><span class="n">thr_pos</span><span class="p">().</span><span class="n">tail</span> <span class="o">&amp;</span> <span class="n">Q_MASK</span><span class="p">];</span>
+</span><span class='line'>    <span class="n">barrier</span><span class="p">();</span>
+</span><span class='line'>    <span class="n">thr_pos</span><span class="p">().</span><span class="n">tail</span> <span class="o">=</span> <span class="n">ULONG_MAX</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+否则它就可能会被编译器（gcc）给优化为比如如下：<br>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="k">register</span>  <span class="n">tmp</span> <span class="o">=</span> <span class="n">thr_pos</span><span class="p">().</span><span class="n">head</span> <span class="o">&amp;</span> <span class="n">Q_MASK</span><span class="p">;</span>
+</span><span class='line'><span class="n">thr_pos</span><span class="p">().</span><span class="n">head</span> <span class="o">=</span> <span class="n">ULONG_MAX</span><span class="p">;</span>
+</span><span class='line'><span class="n">ptr_array_</span><span class="p">[</span><span class="n">tmp</span><span class="p">]</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">;</span>
+</span></code></pre></td></tr></table></div></figure>
+之所以做这个优化，是因为计算机的空间相近性原则，编译器会尽量将临近内存操作给放在一起以提高cache的命中率。
+对于共享内存模型的这种并发，C语言的编译器并不去关心哪些变量是共享的，它只是依据局部最优性原则来做优化。所以对于C程序员而言，在实现基于共享内存模型的这种并发时，C编译器的这种优化是很大的一个挑战， 它可能会引入一些很难以定位的bug。所以，用C来实现并发，尤其是lockfree的并发，是一个非常需要经验的技术活。
+</p>
+
+
+<p>
+好在编译器的这种bug是可见的，我们可以通过反汇编来发现这种bug。如下是有无barrier的一段反汇编代码对比（注：以下反汇编直接引自我在我们系统里的实现，跟上面代码有出入，但这不重要）：
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="c1">//1. 无barrier    </span>
+</span><span class='line'>   <span class="mo">0064001</span><span class="n">b</span> <span class="n">divu</span> <span class="n">zero</span><span class="p">,</span><span class="n">v1</span><span class="p">,</span><span class="n">a0</span>
+</span><span class='line'>    <span class="mf">008001f</span><span class="mi">4</span> <span class="n">teq</span> <span class="n">a0</span><span class="p">,</span><span class="n">zero</span><span class="p">,</span><span class="mh">0x7</span>
+</span><span class='line'>    <span class="mo">00001010</span> <span class="n">mfhi</span> <span class="n">v0</span>
+</span><span class='line'>    <span class="mo">000210</span><span class="mi">80</span> <span class="n">sll</span> <span class="n">v0</span><span class="p">,</span><span class="n">v0</span><span class="p">,</span><span class="mh">0x2</span>
+</span><span class='line'>    <span class="mo">004</span><span class="n">a1021</span> <span class="n">addu</span> <span class="n">v0</span><span class="p">,</span><span class="n">v0</span><span class="p">,</span><span class="n">t2</span>
+</span><span class='line'>    <span class="n">ac400044</span> <span class="n">sw</span> <span class="n">zero</span><span class="p">,</span><span class="mi">68</span><span class="p">(</span><span class="n">v0</span><span class="p">)</span>    <span class="c1">// ring_buf.pkt[tmp] = NULL;</span>
+</span><span class='line'>    <span class="n">aceb0014</span> <span class="n">sw</span> <span class="n">t3</span><span class="p">,</span><span class="mi">20</span><span class="p">(</span><span class="n">a3</span><span class="p">)</span>       <span class="c1">// ring_buf-&gt;thr_read[hwt_id] = ptr;</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">//2. 有barrier</span>
+</span><span class='line'>    <span class="n">aceb0014</span> <span class="n">sw</span> <span class="n">t3</span><span class="p">,</span><span class="mi">20</span><span class="p">(</span><span class="n">a3</span><span class="p">)</span>     <span class="c1">// ring_buf-&gt;thr_read[hwt_id] = ptr;</span>
+</span><span class='line'>    <span class="mo">0064001</span><span class="n">b</span> <span class="n">divu</span> <span class="n">zero</span><span class="p">,</span><span class="n">v1</span><span class="p">,</span><span class="n">a0</span>
+</span><span class='line'>    <span class="mf">008001f</span><span class="mi">4</span> <span class="n">teq</span> <span class="n">a0</span><span class="p">,</span><span class="n">zero</span><span class="p">,</span><span class="mh">0x7</span>
+</span><span class='line'>    <span class="mo">00001010</span> <span class="n">mfhi</span> <span class="n">v0</span>
+</span><span class='line'>    <span class="mo">000210</span><span class="mi">80</span> <span class="n">sll</span> <span class="n">v0</span><span class="p">,</span><span class="n">v0</span><span class="p">,</span><span class="mh">0x2</span>
+</span><span class='line'>    <span class="mo">004</span><span class="n">a1021</span> <span class="n">addu</span> <span class="n">v0</span><span class="p">,</span><span class="n">v0</span><span class="p">,</span><span class="n">t2</span>
+</span><span class='line'>    <span class="n">ac400044</span> <span class="n">sw</span> <span class="n">zero</span><span class="p">,</span><span class="mi">68</span><span class="p">(</span><span class="n">v0</span><span class="p">)</span>  <span class="c1">// ring_buf.pkt[tmp] = NULL;</span>
+</span></code></pre></td></tr></table></div></figure>
+</p>
+
+
+<p>
+这类因为编译器而引入的bug虽然挺折磨人，但毕竟是可见的。在并行程序里面还有一类bug则是完全不可见的，那就是CPU的cache同步问题，这一类问题不仅仅是技术活了，更是意识活。在X86上，一般不会有CPU的cache同步问题，因为它的cache一致性做的比较好，但是在MIPS／ARM这种CPU上，CPU的cache同步问题就比较突出，原因就是他们的cache一致性做的比较差，所以就需要显示的使用sync指令来保证cache的一致性，即通过软件来弥补硬件的不足。
+</p>
+
+
+<p>
+同样是上面这个例子：
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="n">ptr_array_</span><span class="p">[</span><span class="n">thr_pos</span><span class="p">().</span><span class="n">head</span> <span class="o">&amp;</span> <span class="n">Q_MASK</span><span class="p">]</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">;</span>  <span class="o">&lt;&lt;&lt;&lt;</span> <span class="err">语句</span><span class="n">A</span>
+</span><span class='line'>    <span class="n">barrier</span><span class="p">();</span>
+</span><span class='line'>    <span class="n">thr_pos</span><span class="p">().</span><span class="n">head</span> <span class="o">=</span> <span class="n">ULONG_MAX</span><span class="p">;</span>         <span class="o">&lt;&lt;&lt;&lt;</span> <span class="err">语句</span><span class="n">B</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+虽然加了barrier，确保了语句A一定会在语句B之前得到执行，但是如果ptr_array_[]和thr_pos().head不在同一个cache line里面，就有可能存在thr_pos().head先被同步到内存，ptr_array_[]后被同步到内存的情况，那么在这个时间空窗内，thr_pos().head已经被更新，它的previous value就可以被其他CPU使用，就会导致该CPU还没有写入其他CPU就从ptr_array_[thr_pos().head & Q_MASK] 里读数据的情况，这自然会导致错误。如下图所示：<br>
+<center> <img src="http://laoar.github.io/images/lockfree-cache.jpg"> </center>
+另外，在共享内存模型中关于lockfree算法的必备基本功是对atomic的认识。atomic是针对内存操作而言的，我们可以这样认为，如果一个语句对于同一个内存只访问一次，我们就认为它是atomic的。如果需要访问多次该内存，我们就得借助编译器或者操作系统提供的atomic函数来访问。
+</p>
+
+
+<p><p>
+以下是一些简单的例子来说明一下：<br>
+1.  <br>
+int x; <br>
+// 之所以用&amp;，是说这是个内存。同时，有了&amp;后，编译器不会将其优化为register变量。 <br>
+*(&amp;x) = 0x12345678; &lt;&lt;&lt;   <br>
+对于32-bit CPU而言，它无法用一条语句来操作32bit的立即数，因为机器码只有32bit。所以它会做如下拆分（MIPS）：
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="mi">3</span><span class="n">c027fff</span>    <span class="n">lui</span> <span class="n">v0</span><span class="p">,</span><span class="mh">0x1234</span>
+</span><span class='line'><span class="mi">344</span><span class="n">bffff</span>    <span class="n">ori</span> <span class="n">t3</span><span class="p">,</span><span class="n">v0</span><span class="p">,</span><span class="mh">0x5678</span>
+</span><span class='line'><span class="mo">00</span><span class="mi">804821</span>    <span class="n">sc</span>    <span class="n">t3</span><span class="p">,</span><span class="mi">12</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span> <span class="err">#请不要在意为什么这里是</span><span class="mi">12</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+虽然这条语句被编译为了3条指令，但是它只有一次内存访问，所以这个语句是原子的。即，内存写操作是原子的。同样，内存读操作也是原子的。
+</p>
+<p>
+2.<br>
+volatile  int x = 1; <br>
+volatile int y; <br>
+y = x;   &lt;&lt;&lt;  <br>
+虽然这里会访问两次内存操作，读x时要访问x所在的内存，写y时要访问y所在内存。但是它只访问一次y，所以对于y内存而言，是原子的。
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">lw</span> <span class="n">v0</span><span class="p">,</span> <span class="mi">12</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span>    <span class="o">&lt;&lt;&lt;&lt;</span> <span class="err">读取变量</span><span class="n">x</span>
+</span><span class='line'><span class="n">sw</span> <span class="n">v0</span><span class="p">,</span> <span class="mi">16</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span>   <span class="o">&lt;&lt;&lt;&lt;</span> <span class="err">存储给</span><span class="n">y</span>
+</span></code></pre></td></tr></table></div></figure>
+12(sp)和16(sp)是不同的内存地址，所以这条语句对于y而言是原子的。PS：如果还需要保证写入y之前x不被改写，那就要借助atomic_write函数了。
+</p>
+<p>
+3. <br>
+volatile int x = 1; <br>
+x++;   &lt;&lt;&lt; <br>
+对于这条语句而言，首先它会从内存中取出x，然后做加法运算，最后将运算结果写入到内存。如下汇编：
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">lw</span>  <span class="n">v0</span><span class="p">,</span> <span class="mi">12</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span>  <span class="o">&lt;&lt;&lt;&lt;</span> <span class="err">第一次内存访问</span>
+</span><span class='line'><span class="n">add</span> <span class="n">v0</span><span class="p">,</span> <span class="n">v0</span><span class="p">,</span> <span class="mi">1</span>
+</span><span class='line'><span class="n">sw</span> <span class="n">v0</span><span class="p">,</span> <span class="mi">12</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span>  <span class="o">&lt;&lt;&lt;&lt;</span> <span class="err">第二次内存访问</span>
+</span></code></pre></td></tr></table></div></figure>
+那么这条x++这条语句就不是原子的，所以就得使用atomic_add()来操作x。
+</p>
+<p>
+简单的说，对于所有需要算数运算的操作，它都不是原子的。PS：只指对内存变量做算数运算
+</p></p>
+
+<p><h3>Ref:</h3>
+1. 我自己写的一个Single-Writer Multi-Reader lockfree的代码 <br>
+<a href="https://github.com/laoar/Single-Writer-Mul-Reader-lock-free-ring">Single-Writer Multi-Reader lockfree Ring</a></p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Open vSwitch datapath浅析]]></title>
@@ -2873,54 +3089,6 @@ BSD的实现由应用场景来决定的，Linux Kernel则纯粹是为了一药�
 <p><span style="line-height: 1.5;">    现在已经很晚了，有点疲累，所以匆匆写完，也没有到处找链接给索引。所以只是作为一个入门参考，具体细节您还得自己慢慢分析。另外再说一句，BSD的TAIQ确实设计的很巧妙，不像Linux Kernel的list简单粗暴的用0指针来实现container_of(). 具体细节您得看代码，如有不明白，尽管google，有很多好事者写了这方面的解析，当然大多数不过C+V而已。</span></p>
 <p><span style="line-height: 1.5;">    Damn it，从12点10分开始写，已经写到1:30了，得睡觉了。</span></p>
 <p><span style="line-height: 1.5;">    明天见：）</span></p>]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[三言两语聊Kernel：atomic ]]></title>
-    <link href="http://laoar.github.io/blogs/361"/>
-    <updated>2013-10-16T00:00:00+08:00</updated>
-    <id>http://laoar.github.io/blogs/361</id>
-    <content type="html"><![CDATA[<p>atomic的意思是原子，那么原子操作该怎么来理解？</p>
-<p><a href="http://www.kerneltravel.net/downloads/UnderstandLinuxKernel2nd.pdf">《Understading the Linux Kernel(2nd Section)》</a>的解释是，“操作是单个指令执行，中间不能中断，且避免其他CPU访问同一存储单元”。其实这样说的很不是清楚，会让人费解。我对于原子操作的理解是这样的，说白了，原子操作的目的是，我在对某个地址操作的过程中，这个地址空间里面的数据不会被其他的东西给修改。我们知道，对于CPU而言，它的最小执行单元就是一条指令，指令在流水线（取指／译码／执行等）线执行的过程是不会被打断的，而在两条指令间是可以被打断的，即，程序员的意思是让CPU执行完指令A就去执行指令B，但是CPU在执行完指令A后就可能会被其他东西打断而没有去执行指令B，比如被中断打断；除了被打断，还有可能会被别的CPU给改写数据。原子操作要做的事就是，如何保证在在这些情况下依然可以实现我们前面说的那个目的。</p>
-<p>先从atomic的数据结构来说起。看下<a href="http://lxr.oss.org.cn/source/include/linux/types.h?a=mips#L177">linux内核对于atomic type的定义</a>：<br />
-<p style="padding-left: 60px;">typedef struct {int <a href="http://lxr.oss.org.cn/ident?a=mips;i=counter">counter</a>; } <a href="http://lxr.oss.org.cn/ident?a=mips;i=atomic_t">atomic_t</a>;<br />
-typedef struct {long <a href="http://lxr.oss.org.cn/ident?a=mips;i=counter">counter</a>; } <a href="http://lxr.oss.org.cn/ident?a=mips;i=atomic64_t">atomic64_t</a>;</p><br />
-看到这个定义，想必你的第一感一定是，为什么要定义成结构体，而不是直接定义成：<br />
-<p style="padding-left: 60px;">typedef int atomic_t: ?</p><br />
-这样定义有什么好处吗，我可以定义成int吗？</p>
-<p>我们再来看下freebsd对于atomic_t的定义，很遗憾的是，<a href="https://github.com/freebsd/freebsd/blob/master/sys/mips/include/atomic.h">较新的freebsd源码已经看不到atomic_t的定义了，原子操作都是直接使用volatile uin32_t。 </a> 。对于较老版本的freebsd，它是这样定义atomic_t的：<br />
-<p style="padding-left: 60px;">typedef volatile int aotmic32_t.<br />
-typedef volatile long long atomic64_t;</p><br />
- All right, freebsd和linux确实看起来是两个世界，两帮天才各实现自己的东西，都觉得自己的实现是好的。</p>
-<p>我举freebsd对于atomic_t的定义，是为了说明，直接使用typedef int atomic_t不是不可以，一样可以实现要做的事，从语言技巧的角度来看，定义成struct跟不定义成struct没有什么区别。那，为什么linux要定义成一个结构体哪？</p>
-<p>再来看下<a href="http://lxr.oss.org.cn/source/Documentation/atomic_ops.txt">linux kernel atomic的maintainer对此的解释</a>：</p>
-<p><em>&#8220;The atomic_t type should be defined as a signed integer. Also, it should be made opaque such that any kind of cast to a normal C integer type will fail.  &#8221;</em></p>
-<p>他说的倒是很严重的样子，“any kind of cast to a normal C int type will fail”，其实就是说，你丫别随便操作atomic_t这个类型，又是类型转换又是直接操作counter，出了事别怪我丫没有提醒你，你要使用atomic_t 这样类型，就必须得通过我给你提供的一系列atomic interface，我之所以费那么大劲用个结构体来把它给封装起来就是为了防止你乱用。 所以，这句话完全等价于:&#8220;hey, you guy, it is my territery&#8221;. 可以看出，定义成struct代表了该<span style="color: #0000ff;">作者的设计理念，即：一起操作都要通过接口，别走捷径</span>。所以内核开发者切记直接使用atomic_data_p-&gt;counter，这是没有理解作者的设计意图，应该要atomic_read(atomic_data_p)这样来用。</p>
-<p>解释完了struct，再来看下volatile。</p>
-<p>想必大家都知道，volatile是告诉编译器的指令，让编译器编译的时候别做任何优化，就按照程序员的意图来，不要为了适应机器而改变什么。 该maintainer接下来又解释了为什么没有volatile：</p>
-<p><em>Historically, counter has been declared volatile.  This is now discouraged. See Documentation/volatile-considered-harmful.txt for the complete rationale.</em></p>
-<p>之所以去掉volatile, Jonathan Corbet先生的解释是,没有必要用volatile,因为它对性能的损害太大了,在必要的地方用barrier()就可以了.  David S. Miller相信了Corbet的话, 正所谓艺高人胆大,于是三下五除二的把atomic.h里面的volatile都给去掉了,然后在必要的地方加了barrier. 不过freebsd guys没有听信Corbet这一套,而依旧很稳妥的在所有的地方都加着volatile.</p>
-<p>在这里我解释下volatile和barrier的区别, volatile是用来限制编译器的,它告诉编译器别自作聪明的调整代码或加或减代码来谋取性能,barrier则是限制cpu的,它告诉cpu要按照二进制的指令顺序去执行不要去搞一些乱序来谋求性能. 二者的杀伤力自然不一样, volatile显然更威猛一些.  当然barrier也细分了一些小弟来干不同的事,毕竟它依然对性能有很大的伤害,比如有些是防止指令乱序的,有些是防止对内存访问乱序的.</p>
-<p>说完了数据结构，接着看下具体的操作。以mips为例来说明，感觉mips设计的挺优雅的：）</p>
-<p>我们知道，一条指令是不会被打断的，自然对于一条指令就能够搞定的事情，我们是没有必要费劲去考虑它的原子性的，比如读和写，都可以用一条指令来完成，所以atomic_read和atomic_write会写成这个样子：<br />
-<p style="padding-left: 60px;">#define atomic_read(v) ((v)-&gt;counter)<br />
-#define atomic_write(v, i) ((v)-&gt;counter = i)</p><br />
-搞成这个样子，就是我前面说的，这是作者的理念：一切操作通过接口。</p>
-<p>&nbsp;</p>
-<p>MIPS是RISC架构, RISC架构都是load/store Architecture,  即它对于内存的读是通过load，写是通过strore。显然，对于这种架构，是不能够在内存地址间传递数据的，必须要通过寄存器来进行，那么指令的操作数显然不能包含两个不同的地址。比如我给某个地址里面的值加1， 那就得首先把这个地址里面的数据load到寄存器，然后给寄存器加1，再把该值store到那个内存地址。 于是问题就来了，这个add操作涉及到3条指令，在指令间就可能会被中断打断，也可能在store之前被其他的cpu给抢先一步改了这个内存里面的值。于是，就有了mips的<a href="http://en.wikipedia.org/wiki/Load-link/store-conditional">ll/sc</a>这个指令组合，ll/sc这个指令组合通过下面这段代码来保证对内存访问的原子性：<br />
-<p style="padding-left: 60px;">1:<br />
-ll rt, offset(base)<br />
-addi rt, rt, 1<br />
-sc rt, offset(base)<br />
-beqz rt, 1b</p><br />
-    首先来解释下，它是怎么处理被中断打断的情况的。</p>
-<p>mips为了处理ll/sc指令被中断打断的情况，专门搞了一个flag，叫做<a href="http://www.cs.cornell.edu/courses/cs3410/2013sp/MIPS_Vol2.pdf">LLbit</a>，这个flag对于程序员是不可见的，即程序员无法操作该flag。 当执行ll指令的时候，cpu会把LLbit给置为1,然后在执行sc指令的时候如果该bit依然为1,就认为操作的这个内存空间没有被改写，然后store新值进去，如果sc的时候发现该bit变为了0,那么就认为操作的内存空间在ll执行后sc执行前被改写了，此时sc就不往该内存空间更新新值。 中断返回时会把该bit给清零，由此来确保如果ll/sc之间被中断打断，那么就要重新ll（beqz指令就是做这个事的）。</p>
-<p>然后来看下它是怎么处理多处理同时操作同一个内存地址的情况的。</p>
-<p>为了处理这种情况，mips又专门搞了个寄存器，叫做<a href="http://www.cs.cornell.edu/courses/cs3410/2013sp/MIPS_Vol3.pdf">LLAddr</a>，它是一个协处理器的寄存器。当cpu执行ll指令的时候，会把ll的地址给保存在自己的协处理器寄存器LLAddr里面，然后cpu就会监控该地址，看是否在ll/sc之间别的处理器会写该地址，如果别的cpu写了该地址，就把LLbit给清零，于是接下来sc失败（即不往内存地址store数据，同时赋rt为0），再去重新ll（beqz跳转到前面的ll）。 Well，问题来了，假如两个cpu都执行ll/sc, 而且是操作的同一个内存地址，会出现什么情况？ 我们知道，在ll/sc之间的指令是不会去写这个内存地址的（否则，还要sc干嘛），那么总有一个cpu会首先执行到sc，第一个执行sc指令的cpu会成功的stroe进去新值，另外一个cpu发现自己LLAddr被别人改写了，于是将自己的LLbit置为0,那么sc失败，重新来过。你也许还会继续钻牛角尖，这俩CPU赶巧了，同时执行sc了，那会发生什么？很遗憾的是，mips manual里没有说这种情况，只说了这么一句话：</p>
-<p><em>“Executing LL on one processor does not cause an action that, by itself, causes an SC for the same block to fail on another processor.”</em></p>
-<p>这句话的意思就是我前面说的，两个cpu同时ll/sc一个内存地址，sc的时候会让另外一个cpu的sc失败，而自己sc成功。我找遍了各种资料，也没有见详细说明两个cpu同时ll/sc同一个内存地址时，sc指令又碰巧同时执行了，到底会发生什么。我觉得，我们可以这样想，就像世界杯踢点球一样，要是俩决赛的队伍到了最后要踢点球了，而每一个球员又碰巧都罚进了，那岂不是这俩队就一直射到世界末日？Hmm… 相信我，总有人会成为倒霉蛋的。球场上不是有裁判么，CPU也有类似的决策：总线裁决。这种情况下就要靠总线裁决。</p>
-<p>&nbsp;</p>
-<p>P.S.: 写这篇blog，花了一些精力在找各种链接上，anyway， 治学要严谨。 我之前的领域是linux kernel，从未看过freebsd，现在一对比freebsd，发现这两者的区别确实很有趣。感觉这就像为什么很多人喜欢旅游一样，虽然旅游归来又继续朝九晚五的按步就班，看似没有任何改变，但终究两个地域的对比会对你有所影响，只是没有那么明显而已，这是一个量变到质变的过程，没有人会一下子成为千万富翁的，除非你去抢银行。 所以，我们在一个地方呆久了，就应该出去走一走，看看外面是什么样子。在一个公司或者一个领域也是这样，抬起头来看看外面，否则就像世外桃源似的，乃不知有汉，无论魏晋。不过这样未尝不是件好事，北朝鲜的人民生活就很幸福，谁说不是哪。关键是，就像李国柱大牛（注：华为公司一位德高望重的前辈）说的，看你自己追求的是什么。</p>]]></content>
   </entry>
   
 </feed>
