@@ -147,7 +147,19 @@
 <span class='line-number'>10</span>
 <span class='line-number'>11</span>
 <span class='line-number'>12</span>
-</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="p">{</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="cm">/* </span>
+</span><span class='line'><span class="cm"> * &quot;memory&quot; hints the compiler that it will touch the memory address,</span>
+</span><span class='line'><span class="cm"> * so the instructions before and after it should not be reordered.</span>
+</span><span class='line'><span class="cm"> */</span>
+</span><span class='line'><span class="cp">#define barrier() asm volatile(&quot;&quot;:::&quot;memory&quot;);</span>
+</span><span class='line'>
+</span><span class='line'><span class="p">{</span>
 </span><span class='line'>    <span class="n">ptr_array_</span><span class="p">[</span><span class="n">thr_pos</span><span class="p">().</span><span class="n">head</span> <span class="o">&amp;</span> <span class="n">Q_MASK</span><span class="p">]</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">;</span>
 </span><span class='line'>    <span class="n">barrier</span><span class="p">();</span>
 </span><span class='line'>    <span class="n">thr_pos</span><span class="p">().</span><span class="n">head</span> <span class="o">=</span> <span class="n">ULONG_MAX</span><span class="p">;</span>
@@ -174,7 +186,7 @@
 
 
 <p>
-好在编译器的这种bug是可见的，我们可以通过反汇编来发现这种bug。如下是有无barrier的一段反汇编代码对比（注：以下反汇编直接引自我在我们系统里的实现，跟上面代码有出入，但这不重要）：
+好在instruction reordering 这种bug是可见的，我们可以通过反汇编来发现这种bug。如下是有无barrier的一段反汇编代码对比（注：以下反汇编直接引自我在我们系统里的实现，跟上面代码有出入，但这不重要）：
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -198,23 +210,23 @@
 </span><span class='line'>    <span class="mo">00001010</span> <span class="n">mfhi</span> <span class="n">v0</span>
 </span><span class='line'>    <span class="mo">000210</span><span class="mi">80</span> <span class="n">sll</span> <span class="n">v0</span><span class="p">,</span><span class="n">v0</span><span class="p">,</span><span class="mh">0x2</span>
 </span><span class='line'>    <span class="mo">004</span><span class="n">a1021</span> <span class="n">addu</span> <span class="n">v0</span><span class="p">,</span><span class="n">v0</span><span class="p">,</span><span class="n">t2</span>
-</span><span class='line'>    <span class="n">ac400044</span> <span class="n">sw</span> <span class="n">zero</span><span class="p">,</span><span class="mi">68</span><span class="p">(</span><span class="n">v0</span><span class="p">)</span>    <span class="c1">// ring_buf.pkt[tmp] = NULL;</span>
-</span><span class='line'>    <span class="n">aceb0014</span> <span class="n">sw</span> <span class="n">t3</span><span class="p">,</span><span class="mi">20</span><span class="p">(</span><span class="n">a3</span><span class="p">)</span>       <span class="c1">// ring_buf-&gt;thr_read[hwt_id] = ptr;</span>
+</span><span class='line'>    <span class="n">ac400044</span> <span class="n">sw</span> <span class="n">zero</span><span class="p">,</span><span class="mi">68</span><span class="p">(</span><span class="n">v0</span><span class="p">)</span>     <span class="err">#</span> <span class="n">ring_buf</span><span class="p">.</span><span class="n">pkt</span><span class="p">[</span><span class="n">tmp</span><span class="p">]</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+</span><span class='line'>    <span class="n">aceb0014</span> <span class="n">sw</span> <span class="n">t3</span><span class="p">,</span><span class="mi">20</span><span class="p">(</span><span class="n">a3</span><span class="p">)</span>       <span class="err">#</span> <span class="n">ring_buf</span><span class="o">-&gt;</span><span class="n">thr_read</span><span class="p">[</span><span class="n">hwt_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">;</span>
 </span><span class='line'>
 </span><span class='line'><span class="c1">//2. 有barrier</span>
-</span><span class='line'>    <span class="n">aceb0014</span> <span class="n">sw</span> <span class="n">t3</span><span class="p">,</span><span class="mi">20</span><span class="p">(</span><span class="n">a3</span><span class="p">)</span>     <span class="c1">// ring_buf-&gt;thr_read[hwt_id] = ptr;</span>
+</span><span class='line'>    <span class="n">aceb0014</span> <span class="n">sw</span> <span class="n">t3</span><span class="p">,</span><span class="mi">20</span><span class="p">(</span><span class="n">a3</span><span class="p">)</span>     <span class="err">#</span> <span class="n">ring_buf</span><span class="o">-&gt;</span><span class="n">thr_read</span><span class="p">[</span><span class="n">hwt_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">;</span>
 </span><span class='line'>    <span class="mo">0064001</span><span class="n">b</span> <span class="n">divu</span> <span class="n">zero</span><span class="p">,</span><span class="n">v1</span><span class="p">,</span><span class="n">a0</span>
 </span><span class='line'>    <span class="mf">008001f</span><span class="mi">4</span> <span class="n">teq</span> <span class="n">a0</span><span class="p">,</span><span class="n">zero</span><span class="p">,</span><span class="mh">0x7</span>
 </span><span class='line'>    <span class="mo">00001010</span> <span class="n">mfhi</span> <span class="n">v0</span>
 </span><span class='line'>    <span class="mo">000210</span><span class="mi">80</span> <span class="n">sll</span> <span class="n">v0</span><span class="p">,</span><span class="n">v0</span><span class="p">,</span><span class="mh">0x2</span>
 </span><span class='line'>    <span class="mo">004</span><span class="n">a1021</span> <span class="n">addu</span> <span class="n">v0</span><span class="p">,</span><span class="n">v0</span><span class="p">,</span><span class="n">t2</span>
-</span><span class='line'>    <span class="n">ac400044</span> <span class="n">sw</span> <span class="n">zero</span><span class="p">,</span><span class="mi">68</span><span class="p">(</span><span class="n">v0</span><span class="p">)</span>  <span class="c1">// ring_buf.pkt[tmp] = NULL;</span>
+</span><span class='line'>    <span class="n">ac400044</span> <span class="n">sw</span> <span class="n">zero</span><span class="p">,</span><span class="mi">68</span><span class="p">(</span><span class="n">v0</span><span class="p">)</span>  <span class="err">#</span> <span class="n">ring_buf</span><span class="p">.</span><span class="n">pkt</span><span class="p">[</span><span class="n">tmp</span><span class="p">]</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
 </span></code></pre></td></tr></table></div></figure>
 </p>
 
 
 <p>
-这类因为编译器而引入的bug虽然挺折磨人，但毕竟是可见的。在并行程序里面还有一类bug则是完全不可见的，那就是CPU的cache同步问题，这一类问题不仅仅是技术活了，更是意识活。在X86上，一般不会有CPU的cache同步问题，因为它的cache一致性做的比较好，但是在MIPS／ARM这种CPU上，CPU的cache同步问题就比较突出，原因就是他们的cache一致性做的比较差，所以就需要显示的使用sync指令来保证cache的一致性，即通过软件来弥补硬件的不足。
+instruction reordering引入的bug虽然挺折磨人，但毕竟是可见的。在并行程序里面还有一类bug则是完全不可见的，那就是memory reordering问题，这一类问题不仅仅是技术活了，更是意识活。在X86上，一般不会有memory reordering问题，因为它是strong order的，cache一致性做的比较好。但是在MIPS／ARM这种weak order的CPU上，memory reordering问题就比较突出，他们的cache一致性做的比较差，所以就需要显示的使用sync指令来保证cache的一致性，即通过软件来弥补硬件的不足。
 </p>
 
 
@@ -237,12 +249,17 @@
 </p>
 
 
-<p><p>
+<p>
 以下是一些简单的例子来说明一下：<br>
-1.  <br>
-int x; <br>
-// 之所以用&amp;，是说这是个内存。同时，有了&amp;后，编译器不会将其优化为register变量。 <br>
-*(&amp;x) = 0x12345678; &lt;&lt;&lt;   <br>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="mf">1.</span>
+</span><span class='line'>    <span class="kt">int</span> <span class="n">x</span><span class="p">;</span>
+</span><span class='line'>    <span class="c1">// 之所以用&amp;，是说这是个内存。同时，有了&amp;后，编译器不会将其优化为register变量。</span>
+</span><span class='line'>    <span class="o">*</span><span class="p">(</span><span class="o">&amp;</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="mh">0x12345678</span><span class="p">;</span> <span class="o">&lt;&lt;&lt;</span>
+</span></code></pre></td></tr></table></div></figure>
 对于32-bit CPU而言，它无法用一条语句来操作32bit的立即数，因为机器码只有32bit。所以它会做如下拆分（MIPS）：
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -253,11 +270,18 @@ int x; <br>
 </span></code></pre></td></tr></table></div></figure>
 虽然这条语句被编译为了3条指令，但是它只有一次内存访问，所以这个语句是原子的。即，内存写操作是原子的。同样，内存读操作也是原子的。
 </p>
+
+
 <p>
-2.<br>
-volatile  int x = 1; <br>
-volatile int y; <br>
-y = x;   &lt;&lt;&lt;  <br>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="mf">2.</span>
+</span><span class='line'>    <span class="k">volatile</span>  <span class="kt">int</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+</span><span class='line'>    <span class="k">volatile</span> <span class="kt">int</span> <span class="n">y</span><span class="p">;</span>
+</span><span class='line'>    <span class="n">y</span> <span class="o">=</span> <span class="n">x</span><span class="p">;</span>   <span class="o">&lt;&lt;&lt;</span>
+</span></code></pre></td></tr></table></div></figure>
 虽然这里会访问两次内存操作，读x时要访问x所在的内存，写y时要访问y所在内存。但是它只访问一次y，所以对于y内存而言，是原子的。
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -266,10 +290,16 @@ y = x;   &lt;&lt;&lt;  <br>
 </span></code></pre></td></tr></table></div></figure>
 12(sp)和16(sp)是不同的内存地址，所以这条语句对于y而言是原子的。PS：如果还需要保证写入y之前x不被改写，那就要借助atomic_write函数了。
 </p>
+
+
 <p>
-3. <br>
-volatile int x = 1; <br>
-x++;   &lt;&lt;&lt; <br>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="mf">3.</span>
+</span><span class='line'>    <span class="k">volatile</span> <span class="kt">int</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+</span><span class='line'>    <span class="n">x</span><span class="o">++</span><span class="p">;</span>   <span class="o">&lt;&lt;&lt;</span>
+</span></code></pre></td></tr></table></div></figure>
 对于这条语句而言，首先它会从内存中取出x，然后做加法运算，最后将运算结果写入到内存。如下汇编：
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -280,13 +310,23 @@ x++;   &lt;&lt;&lt; <br>
 </span></code></pre></td></tr></table></div></figure>
 那么这条x++这条语句就不是原子的，所以就得使用atomic_add()来操作x。
 </p>
+
+
 <p>
 简单的说，对于所有需要算数运算的操作，它都不是原子的。PS：只指对内存变量做算数运算
-</p></p>
+</p>
 
-<p><h3>Ref:</h3>
-1. 我自己写的一个Single-Writer Multi-Reader lockfree的代码 <br>
-<a href="https://github.com/laoar/Single-Writer-Mul-Reader-lock-free-ring">Single-Writer Multi-Reader lockfree Ring</a></p>
+
+
+
+<h3>Ref:</h3>
+
+
+<ol>
+<li>我自己写的一个Single-Writer Multi-Reader lockfree的代码 <br>
+<a href="https://github.com/laoar/Single-Writer-Mul-Reader-lock-free-ring">Single-Writer Multi-Reader lockfree Ring</a></li>
+</ol>
+
 </div>
 
 
