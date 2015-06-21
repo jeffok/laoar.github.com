@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2015-06-15T21:41:53+08:00</updated>
+  <updated>2015-06-21T13:57:01+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -2844,14 +2844,151 @@ void foobar(void);</p><br />
 <img src="http://laoar.github.io/images/455.jpg"><br />
 Instruction Fetch Unit用来从memory中取指令到寄存器中，Decode and Issue Unit则是将指令翻译成CPU能够识别的编码然后发射到Functional Units（比如运算器等等）来执行这些指令，FU的执行结果再放回到寄存器中。 所以一条指令的执行完毕最好的情况下需要4个CPU cycles就可以搞定了。我们都已经知道流水线的原理就是，指令A在FU执行时，指令B在译码准备发射，指令C在被从内存中读取到寄存器中，于是这样就实现了不同指令的并行工作来提高CPU的效率。 CPU的这个设计思想被Unix开发人员学来了，于是就是有了管道（pipe）。再接着Erlang又把管道的原理用在了语言特性上来实现并发编程，最后Golang又把Erlang的管道特性给学了去。这并不是说CPU的设计人员有多么牛逼，而是说，软件开发人员要在CPU设计人员制定的规则下做事才能充分利用CPU的性能。<br />
 <p style="padding-left: 30px;"></p><br />
-    CPU的这种流水线存在的缺点，或者说，要依赖编程人员水平的地方在于，指令A可能是JUMP D，这样就导致指令B和指令C要被从流水线里面刷出去了，就造成CPU cycle的浪费。 要想避免这种浪费，就要要求程序自身具有很好的分支预测特性，即要充分迎合CPU的这种预测执行的特性。 在Linux内核里面随处可见的likely()/unlikely()就是做这个事情的，likely()/unlikely()是告诉编译器要去做什么以及不去做什么。因为CPU最后执行的是编译器生成的二进制，而不是我们写的代码，所以一个好的编译器对于程序性能的影响是巨大的。现在的编译器要比程序员聪明的多，它往往能够预测出程序接下来要执行的指令是什么，有时候我们加的likely()/unlikely()可能根本就没有意义甚至适得其反，因为程序员相比编译器而言太蠢了。有一个例子就是real-time Linux Kernel的maintainer Steven Rostedt做的一个统计，他发现内核里面有<a href="https://lwn.net/Articles/419102/">大量误用likely()/unlikely()的地方</a>，其中在<a href="https://lwn.net/Articles/420028/">page_mapping()函数里面的一个unlikely()有39%的概率是错误的</a>，然后这位大神就提交了一个patch把这个unlikely()给去掉了。所以，如果你没有十足的把握，就不要随便使用unlikely()/likely()这俩宏。 不过有一个基本准确的经验就是，在错误处理的分支上加unlikely()大致不会是坏事。比如：<br />
-char * p = (char *)malloc(<span class="caps">SIZE</span>);<br />
-if (unlikely(!p)) {<br />
-perror(&#8220;malloc&#8221;);  // 原谅我没有缩进<br />
-}</p>
-<p>这里的unlikely()在绝大多数情况下都能够提升性能，不过，如果这段代码是non-critical的，那么这个unlikely()就是non-sense的，因为在这种情况下它对性能的提升可能近似为0.0000%，而且进一步而言，牛逼点的编译器自己也能够做这个事。如果这段代码真的是critical的话，那么这个unlikely()就有必要了。我们可以统计下linux内核的代码，unlikely()的使用次数大概是likely()的10倍，就是很多错误处理的分支都加了unlikely()的缘故。<br />
-<p style="padding-left: 30px;"></p><br />
-    除了这个分支预测之外，还有一个性质对流水线的影响较大，那就是数据依赖。指令B已经译码完成，准备要发出去的时候，发现它的操作数不可用，有可能别的CPU在使用这个操作数，于是指令B只能在这里傻傻的等待另外的CPU释放这个操作数。<br />
+    CPU的这种流水线存在的缺点，或者说，要依赖编程人员水平的地方在于，指令A可能是JUMP D，这样就导致指令B和指令C要被从流水线里面刷出去了，就造成CPU cycle的浪费。 要想避免这种浪费，就要要求程序自身具有很好的分支预测特性，即要充分迎合CPU的这种预测执行的特性。 在Linux内核里面随处可见的likely()/unlikely()就是做这个事情的，likely()/unlikely()是告诉编译器把if/while的代码块是紧挨着前面的代码还是放置到整个函数的最后面（因为if／while的汇编实现本来就是一个jump指令，所以可以把它跳转到任意合适的位置，这优点类似于goto）。因为CPU最后执行的是编译器生成的二进制，而不是我们写的代码，所以一个好的编译器对于程序性能的影响是巨大的。现在的编译器要比程序员聪明的多，它往往能够预测出程序接下来要执行的指令是什么，有时候我们加的likely()/unlikely()可能根本就没有意义甚至适得其反，因为程序员相比编译器而言太蠢了。有一个例子就是real-time Linux Kernel的maintainer Steven Rostedt做的一个统计，他发现内核里面有<a href="https://lwn.net/Articles/419102/">大量误用likely()/unlikely()的地方</a>，其中在<a href="https://lwn.net/Articles/420028/">page_mapping()函数里面的一个unlikely()有39%的概率是错误的</a>，然后这位大神就提交了一个patch把这个unlikely()给去掉了。所以，如果你没有十足的把握，就不要随便使用unlikely()/likely()这俩宏。 不过有一个基本准确的经验就是，在错误处理的分支上加unlikely()大致不会是坏事。比如：<br />
+<div class='bogus-wrapper'><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="kt">char</span> <span class="o">*</span> <span class="n">p</span> <span class="o">=</span> <span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="p">)</span><span class="n">malloc</span><span class="p">(</span><span class="n">SIZE</span><span class="p">);</span>
+</span><span class='line'><span class="k">if</span> <span class="p">(</span><span class="n">unlikely</span><span class="p">(</span><span class="o">!</span><span class="n">p</span><span class="p">))</span> <span class="p">{</span>
+</span><span class='line'>    <span class="n">perror</span><span class="p">(</span><span class="s">&quot;malloc&quot;</span><span class="p">);</span> <span class="err"> </span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure></div></p>
+<p>这里的unlikely()在绝大多数情况下都不是有害的，不过，如果这段代码是non-critical的，那么这个unlikely()就是non-sense的，因为在这种情况下它对性能的提升可能近似为0.0000%。即使这段代码真的是critical的话，这个unlikely()并非就有必要去添加，因为编译器在编译的时候自己也能够判断出来。<br />
+<p>曾有人对linux kernel里面likely／unlikely的使用情况做过统计，发现unlikely()的使用次数大概是likely()的10倍，就是很多错误处理的分支都加了unlikely()的缘故。</p></p>
+<p style="padding-left: 30px;"></p>
+<p>对于likely／unlikely的使用的一个基本原则是，只有在critical path里面，我们才去考虑使用它，是否有必要去使用likely／unlikely还需要借助它的反汇编代码来进一步验证。比如，如下两段反汇编是添加了likely和没有添加likely的的对比：<br />
+<div class='bogus-wrapper'><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+<span class='line-number'>58</span>
+<span class='line-number'>59</span>
+<span class='line-number'>60</span>
+<span class='line-number'>61</span>
+<span class='line-number'>62</span>
+<span class='line-number'>63</span>
+<span class='line-number'>64</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="cp"># 1. if (likely($v1 ＝= 0x7fffffff))</span>
+</span><span class='line'><span class="mf">20015f</span><span class="n">ec</span><span class="o">:</span>   <span class="mi">8</span><span class="n">c8240ec</span>    <span class="n">lw</span>  <span class="n">v0</span><span class="p">,</span><span class="mi">16620</span><span class="p">(</span><span class="n">a0</span><span class="p">)</span>
+</span><span class='line'><span class="mf">20015ff</span><span class="mi">0</span><span class="o">:</span>   <span class="mo">00073</span><span class="mi">880</span>    <span class="n">sll</span> <span class="n">a3</span><span class="p">,</span><span class="n">a3</span><span class="p">,</span><span class="mh">0x2</span>
+</span><span class='line'><span class="mf">20015ff</span><span class="mi">4</span><span class="o">:</span>   <span class="mi">248</span><span class="n">a0010</span>    <span class="n">addiu</span>   <span class="n">t2</span><span class="p">,</span><span class="n">a0</span><span class="p">,</span><span class="mi">16</span>
+</span><span class='line'><span class="mf">20015ff</span><span class="mi">8</span><span class="o">:</span>   <span class="mo">00</span><span class="n">ea3821</span>    <span class="n">addu</span>    <span class="n">a3</span><span class="p">,</span><span class="n">a3</span><span class="p">,</span><span class="n">t2</span>
+</span><span class='line'><span class="mf">20015ff</span><span class="n">c</span><span class="o">:</span>   <span class="n">aca20000</span>    <span class="n">sw</span>  <span class="n">v0</span><span class="p">,</span><span class="mi">0</span><span class="p">(</span><span class="n">a1</span><span class="p">)</span>
+</span><span class='line'><span class="mi">20016000</span><span class="o">:</span>   <span class="mi">8</span><span class="n">ce30014</span>    <span class="n">lw</span>  <span class="n">v1</span><span class="p">,</span><span class="mi">20</span><span class="p">(</span><span class="n">a3</span><span class="p">)</span>
+</span><span class='line'><span class="mi">20016004</span><span class="o">:</span>   <span class="mi">3</span><span class="n">c027fff</span>    <span class="n">lui</span> <span class="n">v0</span><span class="p">,</span><span class="mh">0x7fff</span>
+</span><span class='line'><span class="mi">20016008</span><span class="o">:</span>   <span class="mi">344</span><span class="n">bffff</span>    <span class="n">ori</span> <span class="n">t3</span><span class="p">,</span><span class="n">v0</span><span class="p">,</span><span class="mh">0xffff</span>
+</span><span class='line'><span class="mi">2001600</span><span class="n">c</span><span class="o">:</span>   <span class="mo">00</span><span class="mi">804821</span>    <span class="n">move</span>    <span class="n">t1</span><span class="p">,</span><span class="n">a0</span>
+</span><span class='line'>						<span class="err">#</span> <span class="k">if</span> <span class="p">(</span><span class="err">$</span><span class="n">v1</span> <span class="o">!=</span> <span class="err">$</span><span class="n">t3</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>							<span class="k">goto</span> <span class="mi">20016038</span><span class="p">;</span>
+</span><span class='line'>						<span class="p">}</span>
+</span><span class='line'><span class="mi">20016010</span><span class="o">:</span>   <span class="mi">146</span><span class="n">b0009</span>    <span class="n">bne</span> <span class="n">v1</span><span class="p">,</span><span class="n">t3</span><span class="p">,</span><span class="mi">20016038</span> <span class="o">&lt;</span><span class="n">xxxx</span><span class="o">+</span><span class="mh">0x4c</span><span class="o">&gt;</span>
+</span><span class='line'><span class="mi">20016014</span><span class="o">:</span>   <span class="mi">24854074</span>    <span class="n">addiu</span>   <span class="n">a1</span><span class="p">,</span><span class="n">a0</span><span class="p">,</span><span class="mi">16500</span>
+</span><span class='line'><span class="mi">20016018</span><span class="o">:</span>   <span class="mi">24020001</span>    <span class="n">li</span>  <span class="n">v0</span><span class="p">,</span><span class="mi">1</span>
+</span><span class='line'><span class="mi">2001601</span><span class="n">c</span><span class="o">:</span>   <span class="mf">0000000f</span>    <span class="n">sync</span>
+</span><span class='line'><span class="mi">20016020</span><span class="o">:</span>   <span class="n">c083001c</span>    <span class="n">ll</span>  <span class="n">v1</span><span class="p">,</span><span class="mi">28</span><span class="p">(</span><span class="n">a0</span><span class="p">)</span>
+</span><span class='line'><span class="mi">20016024</span><span class="o">:</span>   <span class="mo">00624021</span>    <span class="n">addu</span>    <span class="n">t0</span><span class="p">,</span><span class="n">v1</span><span class="p">,</span><span class="n">v0</span>
+</span><span class='line'><span class="mi">20016028</span><span class="o">:</span>   <span class="n">e088001c</span>    <span class="n">sc</span>  <span class="n">t0</span><span class="p">,</span><span class="mi">28</span><span class="p">(</span><span class="n">a0</span><span class="p">)</span>
+</span><span class='line'><span class="mi">2001602</span><span class="n">c</span><span class="o">:</span>   <span class="mf">1100ff</span><span class="n">fc</span>    <span class="n">beqz</span>    <span class="n">t0</span><span class="p">,</span><span class="mi">20016020</span> <span class="o">&lt;</span><span class="n">xxxx</span><span class="o">+</span><span class="mh">0x34</span><span class="o">&gt;</span>
+</span><span class='line'><span class="mi">20016030</span><span class="o">:</span>   <span class="mo">00000000</span>    <span class="n">nop</span>
+</span><span class='line'><span class="mi">20016034</span><span class="o">:</span>   <span class="n">ace30014</span>    <span class="n">sw</span>  <span class="n">v1</span><span class="p">,</span><span class="mi">20</span><span class="p">(</span><span class="n">a3</span><span class="p">)</span>
+</span><span class='line'>					<span class="mi">20016038</span><span class="o">:</span>
+</span><span class='line'><span class="mi">20016038</span><span class="o">:</span>   <span class="mi">8</span><span class="n">ce20014</span>    <span class="n">lw</span>  <span class="n">v0</span><span class="p">,</span><span class="mi">20</span><span class="p">(</span><span class="n">a3</span><span class="p">)</span>
+</span><span class='line'><span class="mi">2001603</span><span class="n">c</span><span class="o">:</span>   <span class="mi">8</span><span class="n">d430010</span>    <span class="n">lw</span>  <span class="n">v1</span><span class="p">,</span><span class="mi">16</span><span class="p">(</span><span class="n">t2</span><span class="p">)</span>
+</span><span class='line'><span class="mi">20016040</span><span class="o">:</span>   <span class="mo">0043102</span><span class="n">b</span>    <span class="n">sltu</span>    <span class="n">v0</span><span class="p">,</span><span class="n">v0</span><span class="p">,</span><span class="n">v1</span>
+</span><span class='line'><span class="mi">20016044</span><span class="o">:</span>   <span class="mf">1040001f</span>    <span class="n">beqz</span>    <span class="n">v0</span><span class="p">,</span><span class="mi">200160</span><span class="n">c4</span> <span class="o">&lt;</span><span class="n">xxxx</span><span class="o">+</span><span class="mh">0xd8</span><span class="o">&gt;</span>
+</span><span class='line'><span class="mi">20016048</span><span class="o">:</span>   <span class="mo">00000000</span>    <span class="n">nop</span>
+</span><span class='line'><span class="mi">2001604</span><span class="n">c</span><span class="o">:</span>   <span class="mi">252340</span><span class="n">cc</span>    <span class="n">addiu</span>   <span class="n">v1</span><span class="p">,</span><span class="n">t1</span><span class="p">,</span><span class="mi">16588</span>
+</span><span class='line'><span class="mi">20016050</span><span class="o">:</span>   <span class="mi">24020001</span>    <span class="n">li</span>  <span class="n">v0</span><span class="p">,</span><span class="mi">1</span>
+</span><span class='line'><span class="mi">20016054</span><span class="o">:</span>   <span class="mi">70620018</span>    <span class="n">saa</span> <span class="n">v0</span><span class="p">,(</span><span class="n">v1</span><span class="p">)</span>
+</span><span class='line'><span class="mi">20016058</span><span class="o">:</span>   <span class="mf">0000000f</span>    <span class="n">sync</span>
+</span><span class='line'><span class="mi">2001605</span><span class="n">c</span><span class="o">:</span>   <span class="mi">8</span><span class="n">ce40014</span>    <span class="n">lw</span>  <span class="n">a0</span><span class="p">,</span><span class="mi">20</span><span class="p">(</span><span class="n">a3</span><span class="p">)</span>
+</span><span class='line'><span class="mi">20016060</span><span class="o">:</span>   <span class="mi">8</span><span class="n">d230010</span>    <span class="n">lw</span>  <span class="n">v1</span><span class="p">,</span><span class="mi">16</span><span class="p">(</span><span class="n">t1</span><span class="p">)</span>
+</span><span class='line'><span class="mi">20016064</span><span class="o">:</span>   <span class="mo">00</span><span class="mi">83001</span><span class="n">b</span>    <span class="n">divu</span>    <span class="n">zero</span><span class="p">,</span><span class="n">a0</span><span class="p">,</span><span class="n">v1</span>
+</span><span class='line'>
+</span><span class='line'><span class="cp"># 2. if (unlikely($t1 == 0x7fffffff))</span>
+</span><span class='line'><span class="mi">20016004</span><span class="o">:</span>   <span class="mi">3</span><span class="n">c027fff</span>    <span class="n">lui</span> <span class="n">v0</span><span class="p">,</span><span class="mh">0x7fff</span>
+</span><span class='line'><span class="mi">20016008</span><span class="o">:</span>   <span class="mi">344</span><span class="n">bffff</span>    <span class="n">ori</span> <span class="n">t3</span><span class="p">,</span><span class="n">v0</span><span class="p">,</span><span class="mh">0xffff</span>
+</span><span class='line'><span class="mi">2001600</span><span class="n">c</span><span class="o">:</span>   <span class="mo">00</span><span class="mi">804821</span>    <span class="n">move</span>    <span class="n">t1</span><span class="p">,</span><span class="n">a0</span>
+</span><span class='line'>						<span class="k">if</span> <span class="p">(</span><span class="err">$</span><span class="n">v1</span> <span class="o">==</span> <span class="err">$</span><span class="n">t3</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>							<span class="k">goto</span> <span class="mi">200160</span><span class="n">ac</span><span class="p">;</span>
+</span><span class='line'>						<span class="p">}</span>
+</span><span class='line'><span class="mi">20016010</span><span class="o">:</span>   <span class="mi">106</span><span class="n">b0026</span>    <span class="n">beq</span> <span class="n">v1</span><span class="p">,</span><span class="n">t3</span><span class="p">,</span><span class="mi">200160</span><span class="n">ac</span> <span class="o">&lt;</span><span class="n">xxxx</span><span class="o">+</span><span class="mh">0xc0</span><span class="o">&gt;</span>
+</span><span class='line'><span class="mi">20016014</span><span class="o">:</span>   <span class="mi">24854074</span>    <span class="n">addiu</span>   <span class="n">a1</span><span class="p">,</span><span class="n">a0</span><span class="p">,</span><span class="mi">16500</span>
+</span><span class='line'><span class="mi">20016018</span><span class="o">:</span>   <span class="mi">8</span><span class="n">ce20014</span>    <span class="n">lw</span>  <span class="n">v0</span><span class="p">,</span><span class="mi">20</span><span class="p">(</span><span class="n">a3</span><span class="p">)</span>
+</span><span class='line'><span class="mi">2001601</span><span class="n">c</span><span class="o">:</span>   <span class="mi">8</span><span class="n">d430010</span>    <span class="n">lw</span>  <span class="n">v1</span><span class="p">,</span><span class="mi">16</span><span class="p">(</span><span class="n">t2</span><span class="p">)</span>
+</span><span class='line'><span class="mi">20016020</span><span class="o">:</span>   <span class="mo">0043102</span><span class="n">b</span>    <span class="n">sltu</span>    <span class="n">v0</span><span class="p">,</span><span class="n">v0</span><span class="p">,</span><span class="n">v1</span>
+</span><span class='line'><span class="mi">20016024</span><span class="o">:</span>   <span class="mf">1040001f</span>    <span class="n">beqz</span>    <span class="n">v0</span><span class="p">,</span><span class="mi">200160</span><span class="n">a4</span> <span class="o">&lt;</span><span class="n">xxxx</span><span class="o">+</span><span class="mh">0xb8</span><span class="o">&gt;</span>
+</span><span class='line'><span class="mi">20016028</span><span class="o">:</span>   <span class="mo">00000000</span>    <span class="n">nop</span>
+</span><span class='line'><span class="mi">2001602</span><span class="n">c</span><span class="o">:</span>   <span class="mi">252340</span><span class="n">cc</span>    <span class="n">addiu</span>   <span class="n">v1</span><span class="p">,</span><span class="n">t1</span><span class="p">,</span><span class="mi">16588</span>
+</span><span class='line'><span class="mi">20016030</span><span class="o">:</span>   <span class="mi">24020001</span>    <span class="n">li</span>  <span class="n">v0</span><span class="p">,</span><span class="mi">1</span>
+</span><span class='line'><span class="p">...</span>
+</span><span class='line'><span class="p">...</span>
+</span><span class='line'><span class="mi">200160</span><span class="n">a8</span><span class="o">:</span>   <span class="mf">2402ff</span><span class="n">ff</span>    <span class="n">li</span>  <span class="n">v0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span>
+</span><span class='line'>				<span class="mi">200160</span><span class="n">ac</span><span class="o">:</span>
+</span><span class='line'><span class="mi">200160</span><span class="n">ac</span><span class="o">:</span>   <span class="mi">24020001</span>    <span class="n">li</span>  <span class="n">v0</span><span class="p">,</span><span class="mi">1</span>  <span class="err">#</span> <span class="err">这是另外一个</span><span class="n">cache</span> <span class="n">line</span>
+</span><span class='line'><span class="mi">200160</span><span class="n">b0</span><span class="o">:</span>   <span class="mf">0000000f</span>    <span class="n">sync</span>
+</span><span class='line'><span class="mi">200160</span><span class="n">b4</span><span class="o">:</span>   <span class="n">c083001c</span>    <span class="n">ll</span>  <span class="n">v1</span><span class="p">,</span><span class="mi">28</span><span class="p">(</span><span class="n">a0</span><span class="p">)</span>
+</span><span class='line'><span class="mi">200160</span><span class="n">b8</span><span class="o">:</span>   <span class="mo">00624021</span>    <span class="n">addu</span>    <span class="n">t0</span><span class="p">,</span><span class="n">v1</span><span class="p">,</span><span class="n">v0</span>
+</span><span class='line'><span class="mi">200160</span><span class="n">bc</span><span class="o">:</span>   <span class="n">e088001c</span>    <span class="n">sc</span>  <span class="n">t0</span><span class="p">,</span><span class="mi">28</span><span class="p">(</span><span class="n">a0</span><span class="p">)</span>
+</span><span class='line'><span class="mi">200160</span><span class="n">c0</span><span class="o">:</span>   <span class="mf">1100ff</span><span class="n">fc</span>    <span class="n">beqz</span>    <span class="n">t0</span><span class="p">,</span><span class="mi">200160</span><span class="n">b4</span> <span class="o">&lt;</span><span class="n">xxxx</span><span class="o">+</span><span class="mh">0xc8</span><span class="o">&gt;</span>
+</span><span class='line'><span class="mi">200160</span><span class="n">c4</span><span class="o">:</span>   <span class="mo">00000000</span>    <span class="n">nop</span>
+</span></code></pre></td></tr></table></div></figure></div><br />
+假设cacheline的大小是128bytes，我们可以看到在第二种情况时，if语句会跳转到另外一个cache line里面，这必然会造成cache miss，如果t1在大多数情况下都是0x7fffffff，那么这里就会有较明显的性能损失。<br />
+   <p> 除了这个分支预测之外，还有一个性质对流水线的影响较大，那就是数据依赖。指令B已经译码完成，准备要发出去的时候，发现它的操作数不可用，有可能别的CPU在使用这个操作数，于是指令B只能在这里傻傻的等待另外的CPU释放这个操作数。</p><br />
 <p style="padding-left: 30px;"></p><br />
     所以对于流水线型的CPU，主要就这两方面决定着性能的好坏：1）数据依赖 2）分支预测。现在的并发编程也主要是解决的这两件事。<br />
 <p style="padding-left: 30px;"></p><br />
@@ -2859,12 +2996,7 @@ perror(&#8220;malloc&#8221;);  // 原谅我没有缩进<br />
 <p style="padding-left: 30px;"></p><br />
     对于应用程序开发人员而言，是没有必要了解这么详细的性能寄存器信息的，或者说在这个上面花费精力意义不大。因而就有了perf、oprofile、systemtap、dtrace这些性能调试工具的应运而生。这些工具提供给程序员更友好的方式来分析程序，借助这些工具能够很直观的找到程序的critical部分。</p>
 <p>注：<br />
-<sup class="footnote" id="fnr1"><a href="#fn1">1</a></sup> 图是用Google Doc画的，第一次使用Google Doc画图，画的较差:(<br />
-<sup class="footnote" id="fnr2"><a href="#fn2">2</a></sup> 本文的观点纯属个人歪歪，未必准确，但基本正确（所以说，汉语很博大精深不是） ：）</p>
-<p>&nbsp;</p>
-<p>&nbsp;</p>
-<p>&nbsp;</p>
-<p>&nbsp;</p>]]></content>
+<sup class="footnote" id="fnr1"><a href="#fn1">1</a></sup> 图是用Google Doc画的，第一次使用Google Doc画图，画的不太好:(</p>]]></content>
   </entry>
   
   <entry>
