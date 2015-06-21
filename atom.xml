@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2015-06-21T13:57:01+08:00</updated>
+  <updated>2015-06-21T14:08:14+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -2932,9 +2932,9 @@ Instruction Fetch Unit用来从memory中取指令到寄存器中，Decode and Is
 </span><span class='line'><span class="mi">20016004</span><span class="o">:</span>   <span class="mi">3</span><span class="n">c027fff</span>    <span class="n">lui</span> <span class="n">v0</span><span class="p">,</span><span class="mh">0x7fff</span>
 </span><span class='line'><span class="mi">20016008</span><span class="o">:</span>   <span class="mi">344</span><span class="n">bffff</span>    <span class="n">ori</span> <span class="n">t3</span><span class="p">,</span><span class="n">v0</span><span class="p">,</span><span class="mh">0xffff</span>
 </span><span class='line'><span class="mi">2001600</span><span class="n">c</span><span class="o">:</span>   <span class="mo">00</span><span class="mi">804821</span>    <span class="n">move</span>    <span class="n">t1</span><span class="p">,</span><span class="n">a0</span>
-</span><span class='line'>						<span class="err">#</span> <span class="k">if</span> <span class="p">(</span><span class="err">$</span><span class="n">v1</span> <span class="o">!=</span> <span class="err">$</span><span class="n">t3</span><span class="p">)</span> <span class="p">{</span>
-</span><span class='line'>							<span class="k">goto</span> <span class="mi">20016038</span><span class="p">;</span>
-</span><span class='line'>						<span class="p">}</span>
+</span><span class='line'>                        <span class="k">if</span> <span class="p">(</span><span class="err">$</span><span class="n">v1</span> <span class="o">!=</span> <span class="err">$</span><span class="n">t3</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>                            <span class="k">goto</span> <span class="mi">20016038</span><span class="p">;</span>
+</span><span class='line'>                        <span class="p">}</span>
 </span><span class='line'><span class="mi">20016010</span><span class="o">:</span>   <span class="mi">146</span><span class="n">b0009</span>    <span class="n">bne</span> <span class="n">v1</span><span class="p">,</span><span class="n">t3</span><span class="p">,</span><span class="mi">20016038</span> <span class="o">&lt;</span><span class="n">xxxx</span><span class="o">+</span><span class="mh">0x4c</span><span class="o">&gt;</span>
 </span><span class='line'><span class="mi">20016014</span><span class="o">:</span>   <span class="mi">24854074</span>    <span class="n">addiu</span>   <span class="n">a1</span><span class="p">,</span><span class="n">a0</span><span class="p">,</span><span class="mi">16500</span>
 </span><span class='line'><span class="mi">20016018</span><span class="o">:</span>   <span class="mi">24020001</span>    <span class="n">li</span>  <span class="n">v0</span><span class="p">,</span><span class="mi">1</span>
@@ -2945,7 +2945,7 @@ Instruction Fetch Unit用来从memory中取指令到寄存器中，Decode and Is
 </span><span class='line'><span class="mi">2001602</span><span class="n">c</span><span class="o">:</span>   <span class="mf">1100ff</span><span class="n">fc</span>    <span class="n">beqz</span>    <span class="n">t0</span><span class="p">,</span><span class="mi">20016020</span> <span class="o">&lt;</span><span class="n">xxxx</span><span class="o">+</span><span class="mh">0x34</span><span class="o">&gt;</span>
 </span><span class='line'><span class="mi">20016030</span><span class="o">:</span>   <span class="mo">00000000</span>    <span class="n">nop</span>
 </span><span class='line'><span class="mi">20016034</span><span class="o">:</span>   <span class="n">ace30014</span>    <span class="n">sw</span>  <span class="n">v1</span><span class="p">,</span><span class="mi">20</span><span class="p">(</span><span class="n">a3</span><span class="p">)</span>
-</span><span class='line'>					<span class="mi">20016038</span><span class="o">:</span>
+</span><span class='line'>                <span class="mi">20016038</span><span class="o">:</span>
 </span><span class='line'><span class="mi">20016038</span><span class="o">:</span>   <span class="mi">8</span><span class="n">ce20014</span>    <span class="n">lw</span>  <span class="n">v0</span><span class="p">,</span><span class="mi">20</span><span class="p">(</span><span class="n">a3</span><span class="p">)</span>
 </span><span class='line'><span class="mi">2001603</span><span class="n">c</span><span class="o">:</span>   <span class="mi">8</span><span class="n">d430010</span>    <span class="n">lw</span>  <span class="n">v1</span><span class="p">,</span><span class="mi">16</span><span class="p">(</span><span class="n">t2</span><span class="p">)</span>
 </span><span class='line'><span class="mi">20016040</span><span class="o">:</span>   <span class="mo">0043102</span><span class="n">b</span>    <span class="n">sltu</span>    <span class="n">v0</span><span class="p">,</span><span class="n">v0</span><span class="p">,</span><span class="n">v1</span>
@@ -2963,9 +2963,9 @@ Instruction Fetch Unit用来从memory中取指令到寄存器中，Decode and Is
 </span><span class='line'><span class="mi">20016004</span><span class="o">:</span>   <span class="mi">3</span><span class="n">c027fff</span>    <span class="n">lui</span> <span class="n">v0</span><span class="p">,</span><span class="mh">0x7fff</span>
 </span><span class='line'><span class="mi">20016008</span><span class="o">:</span>   <span class="mi">344</span><span class="n">bffff</span>    <span class="n">ori</span> <span class="n">t3</span><span class="p">,</span><span class="n">v0</span><span class="p">,</span><span class="mh">0xffff</span>
 </span><span class='line'><span class="mi">2001600</span><span class="n">c</span><span class="o">:</span>   <span class="mo">00</span><span class="mi">804821</span>    <span class="n">move</span>    <span class="n">t1</span><span class="p">,</span><span class="n">a0</span>
-</span><span class='line'>						<span class="k">if</span> <span class="p">(</span><span class="err">$</span><span class="n">v1</span> <span class="o">==</span> <span class="err">$</span><span class="n">t3</span><span class="p">)</span> <span class="p">{</span>
-</span><span class='line'>							<span class="k">goto</span> <span class="mi">200160</span><span class="n">ac</span><span class="p">;</span>
-</span><span class='line'>						<span class="p">}</span>
+</span><span class='line'>                        <span class="k">if</span> <span class="p">(</span><span class="err">$</span><span class="n">v1</span> <span class="o">==</span> <span class="err">$</span><span class="n">t3</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>                            <span class="k">goto</span> <span class="mi">200160</span><span class="n">ac</span><span class="p">;</span>
+</span><span class='line'>                        <span class="p">}</span>
 </span><span class='line'><span class="mi">20016010</span><span class="o">:</span>   <span class="mi">106</span><span class="n">b0026</span>    <span class="n">beq</span> <span class="n">v1</span><span class="p">,</span><span class="n">t3</span><span class="p">,</span><span class="mi">200160</span><span class="n">ac</span> <span class="o">&lt;</span><span class="n">xxxx</span><span class="o">+</span><span class="mh">0xc0</span><span class="o">&gt;</span>
 </span><span class='line'><span class="mi">20016014</span><span class="o">:</span>   <span class="mi">24854074</span>    <span class="n">addiu</span>   <span class="n">a1</span><span class="p">,</span><span class="n">a0</span><span class="p">,</span><span class="mi">16500</span>
 </span><span class='line'><span class="mi">20016018</span><span class="o">:</span>   <span class="mi">8</span><span class="n">ce20014</span>    <span class="n">lw</span>  <span class="n">v0</span><span class="p">,</span><span class="mi">20</span><span class="p">(</span><span class="n">a3</span><span class="p">)</span>
@@ -2978,7 +2978,7 @@ Instruction Fetch Unit用来从memory中取指令到寄存器中，Decode and Is
 </span><span class='line'><span class="p">...</span>
 </span><span class='line'><span class="p">...</span>
 </span><span class='line'><span class="mi">200160</span><span class="n">a8</span><span class="o">:</span>   <span class="mf">2402ff</span><span class="n">ff</span>    <span class="n">li</span>  <span class="n">v0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span>
-</span><span class='line'>				<span class="mi">200160</span><span class="n">ac</span><span class="o">:</span>
+</span><span class='line'>                <span class="mi">200160</span><span class="n">ac</span><span class="o">:</span>
 </span><span class='line'><span class="mi">200160</span><span class="n">ac</span><span class="o">:</span>   <span class="mi">24020001</span>    <span class="n">li</span>  <span class="n">v0</span><span class="p">,</span><span class="mi">1</span>  <span class="err">#</span> <span class="err">这是另外一个</span><span class="n">cache</span> <span class="n">line</span>
 </span><span class='line'><span class="mi">200160</span><span class="n">b0</span><span class="o">:</span>   <span class="mf">0000000f</span>    <span class="n">sync</span>
 </span><span class='line'><span class="mi">200160</span><span class="n">b4</span><span class="o">:</span>   <span class="n">c083001c</span>    <span class="n">ll</span>  <span class="n">v1</span><span class="p">,</span><span class="mi">28</span><span class="p">(</span><span class="n">a0</span><span class="p">)</span>
