@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2015-06-21T14:08:14+08:00</updated>
+  <updated>2015-06-21T14:14:20+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -3171,7 +3171,7 @@ Instruction Fetch Unit用来从memory中取指令到寄存器中，Decode and Is
     <link href="http://laoar.github.io/blogs/402"/>
     <updated>2013-12-15T00:00:00+08:00</updated>
     <id>http://laoar.github.io/blogs/402</id>
-    <content type="html"><![CDATA[<p><span style="line-height: 1.5;">    一开始，我以为mdworker是“memory decompress worker”， 好吧，谁让我是linux内核出身的哪，正应了那句话，叫做“往往以自己的立场来揣测别人”。 事实上，它是“metadata server worker”。不过它让我很不爽的原因与它的名字无关，在我的Macbook刚升级到Mavericks的时候，大概是升级后还有很多善后工作要处理，它老是偷偷摸摸的运行，导致我看个优酷都卡的不行，你能体会到正到精彩处电脑却卡的连鼠标都动不了的那种心情。 需要声明的是，那段时间我在看《绝命毒师》，别想多。 </span></p>
+    <content type="html"><![CDATA[<p><span style="line-height: 1.5;">    一开始，我以为mdworker是“memory decompress worker”， 好吧，谁让我是linux内核出身的哪，正应了那句话，叫做“往往以自己的立场来揣测别人”。 事实上，它是“metadata server worker”。不过它让我很不爽的原因与它的名字无关，在我的Macbook刚升级到Mavericks的时候，大概是升级后还有很多善后工作要处理，它老是偷偷摸摸的运行，导致我看个优酷都卡的不行，你能体会到正到精彩处电脑却卡的连鼠标都动不了的那种心情。 需要声明的是，那段时间我在看《绝命毒师》:) </span></p>
 <p><span style="line-height: 1.5;">     然后我就有了要干掉这个mdworker的念头。作为一个内核出身的工程师，自然是不屑于打开control panal，这里勾一下那里选一下的这种毫无技术含量的做法的。I do it on my own。我打算自己写个C代码来控制它，虽然这不是个好方法，甚至都不是个正确的方法，但是至少我在思考并且知道是可行的,而且我还能搞定它。</span></p>
 <p><span style="line-height: 1.5;">    再然后我就发现我不太适合做一个freelance，我的这个想法一直拖拖拉拉都没动笔，过了段时间Maverick竟然很流畅了，mdworker也轻易不出山了，即使出山也没那么大动静了，这更让我没动力来写了。 </span></p>
 <p><span style="line-height: 1.5;">    最后，有一天我感冒了，周末躺在床上什么都不想动，于是打开了电脑就开始写这个很无聊的工具了。 </span></p>
@@ -3195,12 +3195,12 @@ Instruction Fetch Unit用来从memory中取指令到寄存器中，Decode and Is
 <p>5） 我要想控制别人，得比别人拥有更大的权利<br />
 <span style="line-height: 1.5;">    关键点：<br />
 </span><span style="line-height: 1.5;">    这个进程既然是控制进程，那么它得比被控制的进程具有更高的优先级来执行，不然被控制进程都执行完了那这个控制进程也没啥用了。<br />
-</span>    首先，这个控制进程选用什么样的调度策略。Oh, come on! 当然是选用Normal了，如果选用FIFO或者RR不是会更影响整个系统的性能嘛！<br />
+</span>    首先，这个控制进程选用什么样的调度策略。当然是选用Normal，如果选用FIFO或者RR不是会更影响整个系统的性能嘛！<br />
 接着，normal进程可以通过调整它的nice值来调整它的优先级，nice的范围是（－20，＋20），－20具有最高优先级，＋20的优先级最低。<br />
 最后，我们可以通过setpriority()这个函数来减小进程的nice值，不过，Only the super-user may lower priorities.（man手册）。也就是说，你要使用root权限。</p>
 <p><span style="line-height: 1.5;">    有了上面的思路之后，我就开始动笔写了，虽然躺在床上浑身乏力，可是手指还算灵活，敲起键盘来也还能噼里啪啦。 </span></p>
-<p><span style="line-height: 1.5;">    然后，我就在github上发现了一个类似的东西，叫做</span><a title="cpulimit" href="https://github.com/laoar/cpulimit"><span style="text-decoration: underline;">cpulimit</span></a><span style="line-height: 1.5;"> 。我看了一下它的代码，发现了很多bug，也想到了解决方案，后来看到这个项目只活跃了半年时间，而且都一年多没有commit了，就没有心思去给这个项目贡献点自己的力量了。 我的代码可以说是这个cpulimit的郭敬明版，虽然短小功能少，可是很强悍，正所谓浓缩的都是精华。 我正在着手将我的代码保存到github上时，忽然卡特打了个电话喊我一起打篮球。大概是写了点代码精神爽吧，虽然感冒没好完，我还是毫不犹豫的披挂上阵了。于是那个周日的下午，我和卡特,姚明一起在中科院电子所和其他几个人3v3了两三个小时，等到周一我起来去上班时感觉整个身子骨都散架了。 </span></p>
-<p><span style="line-height: 1.5;">    在我打算写这篇博客时，也将这个郭敬明版的cpulimit给放到了github上：</span><a title="my-task-manager" href="https://github.com/laoar/my-task-manager"><span style="text-decoration: underline;">my－task－manager</span><span style="line-height: 1.5;"> 。 </span></a></p>
+<p><span style="line-height: 1.5;">    然后，我就在github上发现了一个类似的东西，叫做</span><a title="cpulimit" href="https://github.com/laoar/cpulimit"><span style="text-decoration: underline;">cpulimit</span></a><span style="line-height: 1.5;"> 。我看了一下它的代码，发现了很多bug，也想到了解决方案，后来看到这个项目只活跃了半年时间，而且都一年多没有commit了，就没有心思去给这个项目贡献点自己的力量了。 我的代码可以说是这个cpulimit的mini版，虽然短小功能少，可是很强悍，正所谓浓缩的都是精华。 我正在着手将我的代码保存到github上时，忽然卡特打了个电话喊我一起打篮球。大概是写了点代码精神爽吧，虽然感冒没好完，我还是毫不犹豫的披挂上阵了。于是那个周日的下午，我和卡特,姚明一起在中科院电子所和其他几个人3v3了两三个小时，等到周一我起来去上班时感觉整个身子骨都散架了。 </span></p>
+<p><span style="line-height: 1.5;">    在我打算写这篇博客时，也将这个mini版的cpulimit给放到了github上：</span><a title="my-task-manager" href="https://github.com/laoar/my-task-manager"><span style="text-decoration: underline;">my－task－manager</span><span style="line-height: 1.5;"> 。 </span></a></p>
 <p><span style="line-height: 1.5;">    github确实是个好东西，你想写点什么时，总能在上面找到个类似的做参考。 作为一个程序员，如果都不知道github的话，那就太过于不思进取了。</span></p>]]></content>
   </entry>
   
