@@ -185,9 +185,6 @@
 <span class='line-number'>17</span>
 <span class='line-number'>18</span>
 <span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
 </pre></td><td class='code'><pre><code class='c'><span class='line'><span class="mf">1.</span>
 </span><span class='line'><span class="n">__pthread_create_2_1</span>
 </span><span class='line'>    <span class="cm">/* 这里分配线程栈 */</span>
@@ -205,10 +202,7 @@
 </span><span class='line'><span class="err"> </span> <span class="err"> </span> <span class="k">if</span> <span class="p">(</span><span class="n">pd</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">){</span>
 </span><span class='line'>        <span class="cm">/* MAP_PRIVATE | MAP_ANONYMOUS: 私有匿名映射 */</span>
 </span><span class='line'><span class="err"> </span> <span class="err"> </span> <span class="err"> </span> <span class="err">  </span><span class="n">mmap</span> <span class="p">(</span><span class="nb">NULL</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">prot</span><span class="p">,</span><span class="err"> </span><span class="n">MAP_PRIVATE</span> <span class="o">|</span> <span class="n">MAP_ANONYMOUS</span> <span class="o">|</span> <span class="n">MAP_STACK</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
-</span><span class='line'><span class="err">      </span>  <span class="cm">/*</span>
-</span><span class='line'><span class="cm">           接着设置一个保护区, 该区域的页表属性是PROT_NONE,</span>
-</span><span class='line'><span class="cm">           即Page can not be accessed</span>
-</span><span class='line'><span class="cm">         */</span>
+</span><span class='line'><span class="err">      </span>  <span class="cm">/* 接着设置一个保护区,该区域的页表属性是PROT_NONE(Page can not be accessed) */</span>
 </span><span class='line'><span class="err"> </span> <span class="err"> </span> <span class="err">  </span>  <span class="n">mprotect</span><span class="p">(</span><span class="n">guard</span><span class="p">,</span> <span class="n">guardsize</span><span class="p">,</span> <span class="n">PROT_NONE</span><span class="p">);</span>
 </span></code></pre></td></tr></table></div></figure></div><br />
 对于设置为PROT_NONE的页，是不能访问的，那么访问到这个保护区时就出现错误，linux是靠这种机制来实现栈溢出保护的。</p>
