@@ -7,8 +7,26 @@
 	<meta name="author" content="Yafang Shao">
 
 	
-	<meta name="description" content="三言两语聊kernel：线程栈 Oops! MacOS不支持proc文件系统，这或许是BSD系统最值得吐槽的地方吧。无奈只好到linux机器上写了这篇文章。
-下面是一个比较简单的多线程程序。程序如下， 上图是我的测试程序，我创建了3个线程。程序运行以后，我们可以通过/ proc/PID/ &hellip;">
+	<meta name="description" content="三言两语聊kernel：线程栈 Oops! MacOS不支持proc文件系统，这或许是BSD系统最值得吐槽的地方吧。无奈只好到linux机器上写了这篇文章。 下面是一个比较简单的多线程程序。程序如下，
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19 &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -80,64 +98,133 @@
 	
 	<div id="content" class="inner"><article class="post">
 	<h2 class="title">三言两语聊kernel：线程栈</h2>
-	<div class="entry-content"><p>Oops! MacOS不支持proc文件系统，这或许是BSD系统最值得吐槽的地方吧。无奈只好到linux机器上写了这篇文章。</p>
+	<div class="entry-content"><p>
+<p>Oops! MacOS不支持proc文件系统，这或许是BSD系统最值得吐槽的地方吧。无奈只好到linux机器上写了这篇文章。</p>
+</p>
+<p>
 <p>下面是一个比较简单的多线程程序。程序如下，<br />
-<img src="/images/250.jpg"><br />
+<div class='bogus-wrapper'><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">nt</span> <span class="nf">main</span><span class="p">()</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="kt">int</span> <span class="n">ret</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span><span class='line'>    <span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span><span class='line'>    <span class="cm">/* int stack_size = 128 * 1024; */</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">pthread_attr_t</span> <span class="n">attr</span><span class="p">;</span>
+</span><span class='line'>    <span class="cm">/* pthread_attr_setstacksize(&amp;attr, stack_size); */</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="n">ret</span> <span class="o">=</span> <span class="n">pthread_create</span><span class="p">(</span><span class="o">&amp;</span><span class="kr">thread</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="nb">NULL</span><span class="p">,</span> <span class="n">thread_func</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+</span><span class='line'>        <span class="k">if</span> <span class="p">(</span><span class="n">ret</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>            <span class="n">perror</span><span class="p">(</span><span class="s">&quot;create&quot;</span><span class="p">);</span>
+</span><span class='line'>            <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="p">;</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure></div><br />
 上图是我的测试程序，我创建了3个线程。程序运行以后，我们可以通过/ proc/<span class="caps">PID</span>/task来看该程序有多少线程在运行：<br />
-<img src="/images/250-2.jpg"><br />
+<center><img src="/images/250-2.jpg"></center><br />
 然后我们来看一下进程的地址空间。 /proc/<span class="caps">PID</span>/maps就是进程的地址空间。如下所示：<br />
-<img src="/images/250-3.jpg"><br />
-可以看出，进程的地址空间从低到高依次是：进程代码段(标志含有x)、只读数据段、可读写数据段、堆、栈（包括动态库的栈空间）。<br />
-<div><br />
-<div>    线程83438的栈：0xb7570000 &#8211; 0xb6d70000的值恰好是8M，线程栈默认大小是8M。0xb6d70000 &#8211; 0xb6d6f000的值是1K，这1K是保护页。</div><br />
-<div>    为什么这三个线程的栈都是8M？可以从ulimit命令来得出，这是进程的资源限制：</div><br />
-<img src="/images/250-4.jpg"><br />
-<div>    使用ulimit <del>a命令可以看出，进程资源限制中栈大小的限制是8194K，即8M。</div><br />
-<div>     那么，这个8M大小是不是可以更改的？以及后面会什么会有一个4K大小的保护页？这可以从glibc代码里面来获取答案：</div><br />
-<div><br />
-<div></div><br />
-<div>       <strong><span style="color: #808000;">  1. </span></strong></div><br />
-<div style="padding-left: 30px;"><strong><span style="color: #808000;">__pthread_create_2_1</span></strong></div><br />
-<div style="padding-left: 30px;"><strong><span style="color: #808000;">        /<strong><a><span style="color: #808000;">这里分配线程栈</span></a></strong>/</span></strong></div><br />
-<div style="padding-left: 30px;"><strong><span style="color: #808000;">        ALLOCATE_STACK (iattr, &amp;pd); </span></strong></div><br />
-<div style="padding-left: 30px;"><strong><span style="color: #808000;">2. </span></strong></div><br />
-<div style="padding-left: 30px;"><strong><span style="color: #808000;">allocate_stack就是具体的分配线程栈的函数：</span></strong></div><br />
-<div style="padding-left: 30px;"><strong><span style="color: #808000;">allocate_stack</span></strong></div><br />
-<div style="padding-left: 30px;"><strong><span style="color: #808000;">     <a><span style="color: #808000;">/<strong>如果没有设置线程栈大小，就使用默认值</span></a></strong>/</span></strong></div><br />
-<div style="padding-left: 30px;"><strong><span style="color: #808000;">     size = attr</del>&gt;stacksize ?: __default_stacksize;     </span></strong></div><br />
-<div style="padding-left: 30px;"><strong><span style="color: #808000;">     &#8230;</span></strong></div><br />
-<div style="padding-left: 30px;"><strong><span style="color: #808000;">      /* Try to get a stack from the cache.  <strong>/</span></strong></div><br />
-<div style="padding-left: 30px;"><strong><span style="color: #808000;">      pd = get_cached_stack (&amp;size, &amp;mem);</span></strong></div><br />
-<div style="padding-left: 30px;"><strong><span style="color: #808000;">     /</strong>如果没有从cache申请到，就要mmap申请一块内存*/</span></strong></div><br />
-<div style="padding-left: 30px;"><strong><span style="color: #808000;">      if (pd == <span class="caps">NULL</span>){</span></strong></div><br />
-<div style="padding-left: 30px;"><strong><span style="color: #808000;">           /<strong>MAP_PRIVATE | MAP_ANONYMOUS：私有匿名映射</strong>/</span></strong></div><br />
-<div style="padding-left: 30px;"><strong><span style="color: #808000;">          mmap (<span class="caps">NULL</span>, size, prot,  </span></strong></div><br />
-<p style="padding-left: 120px;"><strong><span style="color: #808000;">MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);   </span></strong></p></p>
-<div style="padding-left: 30px;"><strong><span style="color: #808000;">      }</span></strong></div>
-<div style="padding-left: 30px;"><strong><span style="color: #808000;">     /*</span></strong></div>
-<div style="padding-left: 30px;"><strong><span style="color: #808000;">        接着设置一个保护区，该区域的页表属性是PROT_NONE,</span></strong></div>
-<div style="padding-left: 30px;"><strong><span style="color: #808000;">        即Page can not be accessed</span></strong></div>
-<div style="padding-left: 30px;"><strong><span style="color: #808000;">     */</span></strong></div>
-<div style="padding-left: 30px;"><strong><span style="color: #808000;">      mprotect (guard, guardsize, PROT_NONE) </span></strong></div>
-<div style="padding-left: 30px;"><strong><span style="color: #808000;"> </span></strong></div>
-<div style="padding-left: 30px;"><strong><span style="color: #808000;">       对于设置为PROT_NONE的页，是不能访问的，那么访问到这个保护区时就出现错误，linux是靠这种机制来实现栈溢出保护的。</span></strong></div>
-<div style="padding-left: 30px;"></div>
-<div><span style="color: #000000;">    下面我们来调整线程栈：</span></div>
-<div><span style="color: #000000;">   <strong> 1. 设置pthread_attr属性</strong></span></div>
-</div>
-<p><img src="/images/250-5.jpg"><br />
-<div></div><br />
-<img src="/images/250-6.jpg"><br />
-<div><br />
-<div>可以看到此时的线程栈大小是： 0xb758f000 &#8211; 0xb756f000 = 128K.</div></p>
-</div>
-<div>    <strong>2.通过ulimit来统一设置当前shell下将要执行的程序的线程栈 </strong></div>
-<div>        ulimit -s  128</div>
-<div>
-<div>    要注意的是， ulimit -s是针对shell的设置， 即只对当前shell fork的进程有效。如果在另外一个shell上起进程，则是没有效果的。参见 man手册：“Control the resources available to a process started by the shell, on systems that allow such control.”</div>
-</div>
-<div></div>
-</div></div>
+<center><img src="/images/250-3.jpg"></center><br />
+可以看出，进程的地址空间从低到高依次是：进程代码段(标志含有x)、只读数据段、可读写数据段、堆、栈（包括动态库的栈空间）。</p>
+</p>
+<p>
+<p>线程18438的栈：(0xb7570000-0xb6d70000)的值恰好是8M，线程栈默认大小是8M。(0xb6d70000-0xb6d6f000)的值是1K，这1K是保护页。</p>
+</p>
+<p>
+<p>为什么这三个线程的栈都是8M？可以从ulimit命令来得出，这是进程的资源限制:<br />
+<center><img src="/images/250-4.jpg"></center><br />
+使用ulimit -a命令可以看出，进程资源限制中栈大小的限制是8194K，即8M.</p>
+</p>
+<p>
+<p>那么，这个8M大小是不是可以更改的？以及后面会什么会有一个4K大小的保护页？这可以从glibc代码里面来获取答案:<br />
+<div class='bogus-wrapper'><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="mf">1.</span>
+</span><span class='line'><span class="n">__pthread_create_2_1</span>
+</span><span class='line'>    <span class="cm">/* 这里分配线程栈 */</span>
+</span><span class='line'>    <span class="n">ALLOCATE_STACK</span>
+</span><span class='line'>
+</span><span class='line'><span class="mf">2.</span>
+</span><span class='line'><span class="cm">/* allocate_stack就是具体的分配线程栈的函数: */</span>
+</span><span class='line'><span class="n">allocate_stack</span>
+</span><span class='line'>    <span class="cm">/*如果没有设置线程栈大小，就使用默认值*/</span>
+</span><span class='line'>    <span class="n">size</span> <span class="o">=</span> <span class="n">attr</span> <span class="o">&gt;</span> <span class="n">stacksize</span> <span class="o">?:</span> <span class="n">__default_stacksize</span><span class="p">;</span>
+</span><span class='line'>	<span class="cm">/* ... */</span>
+</span><span class='line'> <span class="err">  </span> <span class="cm">/* Try to get a stack from the cache. */</span>
+</span><span class='line'><span class="err"> </span> <span class="err"> </span> <span class="n">pd</span> <span class="o">=</span> <span class="n">get_cached_stack</span> <span class="p">(</span><span class="o">&amp;</span><span class="n">size</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">mem</span><span class="p">);</span>
+</span><span class='line'><span class="err">   </span> <span class="cm">/* 如果没有从cache申请到，就要mmap申请一块内存 */</span>
+</span><span class='line'><span class="err"> </span> <span class="err"> </span> <span class="k">if</span> <span class="p">(</span><span class="n">pd</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">){</span>
+</span><span class='line'>        <span class="cm">/* MAP_PRIVATE | MAP_ANONYMOUS: 私有匿名映射 */</span>
+</span><span class='line'><span class="err"> </span> <span class="err"> </span> <span class="err"> </span> <span class="err">  </span><span class="n">mmap</span> <span class="p">(</span><span class="nb">NULL</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">prot</span><span class="p">,</span><span class="err"> </span><span class="n">MAP_PRIVATE</span> <span class="o">|</span> <span class="n">MAP_ANONYMOUS</span> <span class="o">|</span> <span class="n">MAP_STACK</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+</span><span class='line'><span class="err">      </span>  <span class="cm">/*</span>
+</span><span class='line'><span class="cm">		   接着设置一个保护区, 该区域的页表属性是PROT_NONE,</span>
+</span><span class='line'><span class="cm">		   即Page can not be accessed</span>
+</span><span class='line'><span class="cm">		 */</span>
+</span><span class='line'><span class="err"> </span> <span class="err"> </span> <span class="err">  </span>  <span class="n">mprotect</span><span class="p">(</span><span class="n">guard</span><span class="p">,</span> <span class="n">guardsize</span><span class="p">,</span> <span class="n">PROT_NONE</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure></div><br />
+对于设置为PROT_NONE的页，是不能访问的，那么访问到这个保护区时就出现错误，linux是靠这种机制来实现栈溢出保护的。</p>
+</p>
+<p>
+<p>下面我们来调整线程栈:<br />
+1. 设置pthread_attr属性<br>
+<center><img src="/images/250-5.jpg"></center><br />
+<center><img src="/images/250-6.jpg"></center><br />
+可以看到此时的线程栈大小是: (0xb758f000-0xb756f000) = 128K.</p>
+</p>
+<p>
+<p>2. 通过ulimit来统一设置当前shell下将要执行的程序的线程栈: <br>
+ulimit -s  128<br>
+要注意的是， ulimit -s是针对shell的设置， 即只对当前shell fork的进程有效。如果在另外一个shell上起进程，则是没有效果的。参见 man手册：“Control the resources available to a process started by the shell, on systems that allow such control.”</p>
+</p></div>
 
 
 
