@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2015-08-09T17:19:52+08:00</updated>
+  <updated>2015-08-10T23:55:28+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -12,6 +12,276 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[RFC-2461 IPv6 NDP中NA延时的一个实现方案：异步/多实例/实时性]]></title>
+    <link href="http://laoar.github.io/blog/2015/08/10/ndp/"/>
+    <updated>2015-08-10T23:38:35+08:00</updated>
+    <id>http://laoar.github.io/blog/2015/08/10/ndp</id>
+    <content type="html"><![CDATA[<p>
+最近为了解决NDP(Neighbor Discovery Protocol)里头的一个异步问题，去看了一下RFC-2461，以及如何去实现RFC中规定的proxy/anycast中advertisement中delay rule，以及思考了下如果要实现Multiple instance NDP应该怎么做扩展。
+</p>
+
+
+<p>
+在最新的FreeBSD(FeeBSD 11.X)代码里依然没有实现RFC－2461中规定的对于anycast或者proxy类型的NS包在回NA的时候需要一个小于1S的随机时间的延时。<br>
+&#8220;If the Target Address is an anycast address the sender SHOULD delay
+sending a response for a random time between 0 and  MAX_ANYCAST_DELAY_TIME seconds.&#8221; <br>
+  其中，MAX_ANYCAST_DELAY_TIME为1 second。 <br>
+大致意思就是说，对于接受到的每一个NS包，需要回一个NA给对端。对于anycast或者proxy这种类型的包，再回NA的时候需要一个时间延迟，该延时时一个小于1S的随机时间。
+</p>
+
+
+<p>
+FreeBSD的代码具体参见下面这个函数：<br>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'>  <span class="cm">/*</span>
+</span><span class='line'><span class="cm">   * Neighbor advertisement input handling.</span>
+</span><span class='line'><span class="cm">   *</span>
+</span><span class='line'><span class="cm">   * Based on RFC 2461</span>
+</span><span class='line'><span class="cm">   * Based on RFC 2462 (duplicate address detection)</span>
+</span><span class='line'><span class="cm">   *</span>
+</span><span class='line'><span class="cm">   * the following items are not implemented yet:</span>
+</span><span class='line'><span class="cm">   * - proxy advertisement delay rule (RFC2461 7.2.8, last paragraph, SHOULD)</span>
+</span><span class='line'><span class="cm">   * - anycast advertisement delay rule (RFC2461 7.2.7, SHOULD)</span>
+</span><span class='line'><span class="cm">   */</span>
+</span><span class='line'>
+</span><span class='line'><span class="kt">void</span> <span class="nf">nd6_na_input</span><span class="p">(</span><span class="k">struct</span> <span class="n">mbuf</span> <span class="o">*</span><span class="n">m</span><span class="p">,</span> <span class="kt">int</span> <span class="n">off</span><span class="p">,</span> <span class="kt">int</span> <span class="n">icmp6len</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+</p>
+
+
+<p>
+在Kernel里头对于延时的一个做法是借助一个timer机制：即我们启动一个定时器，给定时器设置一个超时时间，然后在定时器超时后去执行相应的操作。我们对这个场景做一些简化，只需要如下三个timer的API：
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="cm">/* 初始化一个timer */</span>
+</span><span class='line'><span class="kt">void</span> <span class="nf">timer_init</span><span class="p">(</span><span class="k">struct</span> <span class="n">timer</span> <span class="o">*</span><span class="n">t</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'><span class="cm">/* 启动timer，ticks是timer多长时间超时，超时后去执行func这个函数，arg是传递给func的参数 */</span>
+</span><span class='line'><span class="kt">void</span> <span class="nf">timer_start</span><span class="p">(</span><span class="k">struct</span> <span class="n">timer</span> <span class="o">*</span><span class="n">t</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ticks</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">func</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'><span class="cm">/* 强制终止一个timer，用在处理异常情况 */</span>
+</span><span class='line'><span class="kt">void</span> <span class="nf">timer_stop</span><span class="p">(</span><span class="k">struct</span> <span class="n">timer</span> <span class="o">*</span><span class="n">t</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+</p>
+
+
+<p>
+然后我们假设NA要执行的函数是anycast_delay_handler, 用到的参数na_arg,. <br>
+那么我们可以做如下一个大致实现:
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">nd6_na_input</span><span class="p">()</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="k">if</span> <span class="p">(</span><span class="n">anycast</span> <span class="o">||</span> <span class="n">proxy</span> <span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="kt">int</span> <span class="n">delay</span> <span class="o">=</span> <span class="n">random</span><span class="p">()</span> <span class="o">/</span> <span class="n">X</span><span class="p">;</span> <span class="cm">/* should less than MAX_ANYCAST_DELAY_TIME sec*/</span>
+</span><span class='line'>        <span class="k">struct</span> <span class="n">timer</span> <span class="o">*</span><span class="n">anycast_delay_timer</span><span class="p">;</span>
+</span><span class='line'>        <span class="n">anycast_delay_timer</span> <span class="o">=</span> <span class="p">(</span><span class="k">struct</span> <span class="n">timer</span> <span class="o">*</span><span class="p">)</span><span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="k">struct</span> <span class="n">timer</span><span class="p">));</span>
+</span><span class='line'>        <span class="k">if</span> <span class="p">(</span><span class="n">anycast</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>            <span class="k">goto</span> <span class="n">freeit</span><span class="p">;</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>        <span class="n">na_arg</span><span class="o">-&gt;</span><span class="n">timer</span> <span class="o">=</span> <span class="n">anycast_delay_timer</span><span class="p">;</span> <span class="cm">/* need free it in the async function */</span>
+</span><span class='line'>        <span class="n">jtimer_init</span><span class="p">(</span><span class="n">anycast_delay_timer</span><span class="p">);</span>
+</span><span class='line'>        <span class="n">jtimer_start</span><span class="p">(</span><span class="n">anycast_delay_timer</span><span class="p">,</span> <span class="n">delay</span><span class="p">,</span> <span class="n">anycast_delay_handler</span><span class="p">,</span> <span class="n">na_arg</span><span class="p">);</span>
+</span><span class='line'>        <span class="k">return</span><span class="p">;</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="nl">freeit:</span>
+</span><span class='line'>    <span class="err">…</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="kt">void</span>
+</span><span class='line'><span class="n">anycast_delay_handler</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="k">struct</span> <span class="n">na_arg_t</span> <span class="o">*</span><span class="n">na_arg</span> <span class="o">=</span> <span class="p">(</span><span class="k">struct</span> <span class="n">na_arg_t</span> <span class="o">*</span><span class="p">)</span><span class="n">arg</span><span class="p">;</span>
+</span><span class='line'>     <span class="cm">/*send out the NA packet*/</span>
+</span><span class='line'>    <span class="p">...</span>
+</span><span class='line'>    <span class="n">free</span><span class="p">(</span><span class="n">na_arg</span><span class="o">-&gt;</span><span class="n">timer</span><span class="p">);</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+</p>
+
+
+<p>
+一些说明：<br>
+1. anycast_delay_handler 是一个异步函数，即启动timer的函数nd6_na_input()不用等待该函数执行就直接返回，这也是timer的一种做法。 如果是同步函数，那就得等待该函数执行完毕后，nd6_na_input()再返回。<br>
+2. 由于anycast_delay_handler是异步函数，所以这个local timer就不能分配在栈空间，必须分配在堆空间，然后在timer超时后再在anycast_delay_handler里面free掉该timer。<br>
+3. 但是这种做法不太scalable，它的扩展性比较差。比如我们要想强制stop该timer就不是很好处理。通常我们都是把timer来定义为一个全局变量，而不是局部变量，然后让timer分时对处理各个任务。<br>
+</p>
+
+
+<p>
+所以，为了scalable考虑，我们还是得将该timer定义为一个全局的timer。<br>
+static struct timer anycast_delay_timer; /* 定义为一个static变量 */ <br>
+由于timeout handler跟start timer的函数是异步的，一旦定义为全局timer后，就要面临一个异步问题：在一个新的NS包到来后前一个NS包的NA的timer可能还没有超时，那么这个新的NA包去start这个timer就会出现问题。所以我们必须把需要发送的NS包都给添加到一个链表里面，然后该timer去这个链表里面去取。
+这可以借助FreeBSD的TAILQ机制来实现。<br>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="k">struct</span> <span class="n">na_struct_t</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="p">...</span>
+</span><span class='line'>    <span class="cm">/* 放到一个TAILQ里头 */</span>
+</span><span class='line'>    <span class="n">TAILQ_ENTRY</span><span class="p">(</span><span class="n">na_struct_t</span><span class="p">)</span> <span class="n">anycast_delay_list</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">TAILQ_HEAD</span><span class="p">(</span><span class="n">anycast_list_</span><span class="p">,</span> <span class="n">na_struct_t</span><span class="p">)</span> <span class="n">anycast_list</span> <span class="o">=</span> <span class="n">TAILQ_HEAD_INITIALIZER</span><span class="p">(</span><span class="n">anycast_list</span><span class="p">);</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">static</span> <span class="k">struct</span> <span class="n">timer</span> <span class="n">anycast_delay_timer</span><span class="p">;</span>
+</span><span class='line'><span class="k">static</span> <span class="n">boolean</span> <span class="n">timer_running</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">nd6_na_input</span><span class="p">()</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="p">...</span>
+</span><span class='line'>    <span class="k">if</span> <span class="p">(</span><span class="n">anycast</span> <span class="o">||</span> <span class="n">proxy</span> <span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="cm">/* should less than MAX_ANYCAST_DELAY_TIME sec*/</span>
+</span><span class='line'>        <span class="kt">int</span> <span class="n">delay</span> <span class="o">=</span> <span class="n">random</span><span class="p">()</span> <span class="o">/</span> <span class="n">X</span><span class="p">;</span>
+</span><span class='line'>        <span class="k">struct</span> <span class="n">na_struct_t</span> <span class="o">*</span><span class="n">na_arg</span> <span class="o">=</span> <span class="n">set_na</span><span class="p">(...);</span>
+</span><span class='line'>        <span class="n">mutex_lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">anycast_list_lock</span><span class="p">);</span>
+</span><span class='line'>        <span class="n">TAILQ_INSERT_TAIL</span><span class="p">(</span><span class="o">&amp;</span><span class="n">anycast_list</span><span class="p">,</span> <span class="n">na_arg</span><span class="p">,</span> <span class="n">anycast_delay_list</span><span class="p">);</span>
+</span><span class='line'>        <span class="n">mutex_unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">anycast_list_lock</span><span class="p">);</span>
+</span><span class='line'>        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">timer_running</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>            <span class="n">timer_running</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+</span><span class='line'>            <span class="n">timer_start</span><span class="p">(</span><span class="o">&amp;</span><span class="n">anycast_delay_timer</span><span class="p">,</span> <span class="n">delay</span><span class="p">,</span> <span class="n">anycast_delay_handler</span><span class="p">,</span> <span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="p">)</span><span class="mi">0</span><span class="p">);</span>
+</span><span class='line'>        <span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="k">return</span><span class="p">;</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'><span class="p">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="kt">void</span>
+</span><span class='line'><span class="n">anycast_delay_handler</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="n">mutext_lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">anycast_list_lock</span><span class="p">);</span>
+</span><span class='line'>  <span class="cm">/* once this function is executed, the tail should not be empty */</span>
+</span><span class='line'>    <span class="k">struct</span> <span class="n">na_arg_t</span> <span class="o">*</span><span class="n">na</span> <span class="o">=</span> <span class="n">TAILQ_FIRST</span><span class="p">(</span><span class="o">&amp;</span><span class="n">anycast_list</span><span class="p">);</span>
+</span><span class='line'>    <span class="n">TAILQ_REMOVE</span><span class="p">(</span><span class="o">&amp;</span><span class="n">anycast_list</span><span class="p">,</span> <span class="n">na</span><span class="p">,</span> <span class="n">anycast_delay_list</span><span class="p">);</span>
+</span><span class='line'>    <span class="cm">/*send out the NA packet*/</span>
+</span><span class='line'>     <span class="p">...</span>
+</span><span class='line'>    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">TAILQ_EMPTY</span><span class="p">(</span><span class="o">&amp;</span><span class="n">anycast_list</span><span class="p">))</span> <span class="p">{</span>
+</span><span class='line'>        <span class="cm">/* should less than MAX_ANYCAST_DELAY_TIME sec*/</span>
+</span><span class='line'>      <span class="kt">int</span> <span class="n">delay</span> <span class="o">=</span> <span class="n">random</span><span class="p">()</span> <span class="o">/</span> <span class="n">X</span><span class="p">;</span>
+</span><span class='line'>        <span class="cm">/* 还有NA需要send， 所以重启定时器 */</span>
+</span><span class='line'>        <span class="n">timer_start</span><span class="p">(</span><span class="o">&amp;</span><span class="n">anycast_delay_timer</span><span class="p">,</span> <span class="n">delay</span><span class="p">,</span> <span class="n">anycast_delay_handler</span><span class="p">,</span> <span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="p">)</span><span class="mi">0</span><span class="p">);</span>
+</span><span class='line'>    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span><span class='line'>        <span class="cm">/* 没有NA了，所以NS里面可以启动定时器了 */</span>
+</span><span class='line'>        <span class="n">timer_running</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>    <span class="n">mutext_unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">anycast_list_lock</span><span class="p">);</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+</p>
+
+
+<p>
+一些说明： <br>
+1.  在timeout函数的尾部判断是否需要重启定时器，这样来一个一个的处理TAILQ里面的元素。<br> 
+2.  这个TAILQ是一个全局的链表，所以需要考虑到并行问题，在对这个链表操作时需要加锁。 这个锁的粒度有些大，可以更改的更加小粒度一些，比如只要锁住插入/删除位置即可。 
+</p>
+
+
+<p>
+由于将所有的NA包都添加到了一个链表中来处理，那么就有可能导致链表很长，然后链表尾部的元素就可能花费N*delay(N为链表里面总的元素数)，这个时间就可能会远大于1s，这就跟RFC的标准不一致。所以得重新思考一个算法，使得确保这个时间小于1S。另外，由于FreeBSD/Linux是非实时的系统，所以还得考虑到这个时间误差。 
+</p>
+
+
+<p>
+/* 未完待续 */
+</p>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[lock-free、网络吞吐量性能、并发及其他]]></title>
@@ -3213,96 +3483,6 @@ Instruction Fetch Unit用来从memory中取指令到寄存器中，Decode and Is
 <p><span style="line-height: 1.5;">    有些事情现在不是太想说，也许等到成了个老头后，那个时候大家对这些事情都不太care了，再来写一写回忆录挺好的。  </span></p>
 <p><span style="line-height: 1.5;">    有一次我去武汉出差，早上8点钟左右(大概是这个时间点，反正很早)的样子我到了武研所，然后去打卡。在我进门的时候，我忽然感觉有个人从里面出来与我擦肩而过很熟悉，由于我走的太快，所以一时没想起来是谁。 于是我在回忆了几秒钟后赶紧再走到大楼的外面，然后我就认出了那个熟悉的背影，他是我的第二个徒弟。他是去食堂吃早饭，看着他在寒风中渐渐远去的背影，我很想跑过去跟他打声招呼，“hey，现在怎么样，挺好的吧”。但是理智告诉我，我还是别去了，于是我就看着他的背影消失在我的视线里，心里很难受。 我之所以不敢上前跟他打招呼，是因为他的第一年考评成绩为C，C在华为意味着什么想必大家都清楚。在我知道他的成绩是C的时候，我很震惊，我不知道为什么会是C。那个时候他还没有转正，只来华为有4，5个月的样子。后来到了他的转正答辩，由于他转正答辩前转到了另外一个组，所以我跟另外一个组我们一起来决定最终给他的转正成绩是什么。另外一个组的人坚持要给他B＋，我就找各种理由给他B，因为我知道假如我同意给了他B＋，我以后在华为的路可能会很坎坷。最终他的成绩还是B，这是我违背良心做的一件事，从此以后我一直对这件事很惭愧，一直觉得愧对于他。在这里我并不是想说什么好什么不好，只是我的一个忏悔，或者说，愿上帝原谅我，我想与人为善。</span></p>
 <p><span style="line-height: 1.5;">     在华为的经历，我的理解是成长的代价。这个时候是我由年轻热血到成熟稳重必须要经历的一个阶段，只不过这个阶段恰巧在华为而已（这句话是不是很熟悉，没错，孙董事长也说过），也许可能华为是加速了我的成长。如果再回到3年前，我会拒绝华为的offer，这样至少华为在我心里仍然是中国民族企业的骄傲。 </span></p>]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[三言两语聊Kernel：linux kernel和bsd kernel实现doubly-linked list的差异]]></title>
-    <link href="http://laoar.github.io/blogs/367"/>
-    <updated>2013-11-23T00:00:00+08:00</updated>
-    <id>http://laoar.github.io/blogs/367</id>
-    <content type="html"><![CDATA[<p>
-<p>First thing first，实现的目的是为了应用，所以我打算从应用的角度来开始写。为此我先写了两个用例，一个是双向链表在linux系统上的应用，一个是在bsd系统上的应用，代码放在了我的github上：</span><a style="line-height: 1.5;" title="list paradigm" href="https://github.com/laoar/list" target="_blank"><span>list paradigm</span> </a><span style="line-height: 1.5;">（P.S. : paradigm这个单词是公司里的英语老师Michael教的，所以在这里忍不住想用一下）。</p>
-</p>
-<p>
-<p>先简单解释下我写的这两个C文件。</p>
-</p>
-<p>
-<p><strong>1. linux_list.c</strong> <br></p>
-<p>在linux系统上，它的/usr/include目录就是我们编译C代码的头文件所在路径的其中一个。这个目录里有一个特殊的子目录，叫做/usr/inlude/linux,  之所以叫linux这个名字，是因为它是从linux kernel里面导出来的头文件，而不是从glibc库里面导出来的头文件。按理说，linux kernel导出来的头文件是给kernel module用的，所以一般都放在kernel module的编译路径里，现在既然在/usr/include/目录里也放了一份，那目的很明显了，用户态程序想用就用吧。但是坑爹的是，linux kernel头文件不是你想用就能用，因为linux kernel是GPL协议，而Glibc是LGPL协议，也就是说如果你include了linux kernel头文件，那么你的代码也必须是GPL的，你只有copyleft，没有copyright，你的代码就别指望着卖钱了，乖乖开源吧。 而如果你是include的glibc的头文件，那么没关系，你无需开源，你具有你写的代码的copyright。 需要声明的是，我不是一个开源的反对者，相反我认为开源挺有好处的，把代码提交给社区，总有热心人会帮你挑错或者帮你改进代码，这不挺好嘛。但是，我也不是一个GPL的提倡者，GPL这个东西，多少感觉有点社会主义大锅饭或者共产主义的味道，大锅饭的后果是某些人钻空子不劳而获，而另外一些人会丧失劳动的积极性进而生产力得不到很好的发展。<br />
-<br>
- 既然放在了/usr/include/ 这个目录下，那就是告诉应用程序开发者们想用就用吧，大不了开源。然而事情没有想象中的那么简单，就比如这个蛋疼的/usr/include/linux/list.h这个头文件，它竟然很操蛋的说“＃ifdef __KERNEL__”, 就是说，你是内核模块才能接着用后面这段代码。于是我被逼无奈在自己的C代码里面定义了这个宏，当然这是非常规手法，莫学，我只是为了写它的使用示例才这么干的。<br />
- <br>
-至于gcc的－D选项，想必大家都明白，它是为了方便选择性编译用的。</p>
-</p>
-<p>
-<p><strong>2. bsd_list.c</strong> <br>
-BSD的设计就很优雅，包括它的应用程序编译环境，不像linux那样一锅乱炖。 <span class="caps">BSD</span> kernel导出来的头文件是放在了 /usr/include/sys这个目录下，与linux list.h相对应的文件是queue.h,这个文件则是想用就能用，而且BSD协议也不要求你必须开源，所以尽管放心大胆的使用“＃include &lt;sys/queue.h&gt;”就好了。 另外，牛逼哄哄的Mac也是使用了很多BSD的组件，我的这个C文件就是在Mac上编译并执行的。当然，对于Mac而言，它有自己的sysroot路径，所以事实上queue.h是在/$%^&amp;<strong>!@###/sys/queue.h这个地方，$%^&amp;</strong>!@###这个鬼东西就是Mac的编译环境路径的名字，不必care。</p>
-</p>
-<p>
-<p>说了那么多，还没有说到正题，好了，言归正传。</p>
-</p>
-<p>
-<p>在网络系统上，不过就是收包和发包，所以Network里面对链表的使用主要就是添加和删除，很少涉及查找某一个元素或者把一个元素插入到中间某一个位置。对于添加和删除，无非就是，从头还是从尾添加，从头还是从为删除，或者说，先进先出，还是先进后出，也就是队列和栈。</p>
-</p>
-<p>
-<p>Linux在这方面设计的比较精巧，而且是一招鲜吃遍天。它的具体实现思想是，我先指定一个全局变量header，你可以选择往这个header的prev方向插也可以选择往这个header的next方向插，嗯，想必你已经明白了，它实现的是一个双向循环链表。对于栈而言就是，每来一个新元素，我就插入到header的next位置，遍历的时候我也往next方向遍历，那么first元素就是最新插入的元素。对于队列而言是，每来一个新元素，我就插入到header的prev位置，遍历的时候仍然是往next方向遍历，但这个时候first元素显然是最老插入的元素。是不是又是前又是后插来插去的把你插糊涂了？这怨不得我，谁让您的思想太邪恶了哪。 于是linux就靠struct list_head这个东西几乎搞定了所有涉及到链表的操作，这也是为什么我说它一招鲜吃遍天的原因。</p>
-</p>
-<p>
-<p><span class="caps">BSD</span> kernel则是实现了list的family， 比如SLIST／LIST／TAILQ等，在这里我说一下有代表性的TAILQ。我们知道BSD就是network的祖师爷，network协议的第一次编码实现就是在BSD系统上。 所以BSD链表的实现也带有明显的网络应用场景痕迹，就像queue.h里面解释的，“因为我们总是会从前往后查找（收包嘛自然是先来的先走了），所以我们双向链表的prev域并不是指向前一个元素，而是指向前一个元素的next域，而前一个元素的next域是指向我这个元素自身”，这样设计的好处从TAIQ_LAST()这个函数的实现里就可以一窥端倪。 BSD并没有像linux那样靠循环链表的表头header就可以想怎么玩就怎么玩，bsd不是一个循环链表。但是我又想实现从头从尾插从头从尾删怎么办，所以它得记录这个链表的first和last元素，这样就可以想从前就从前想从后就从后的插入和删除了。</p>
-</p>
-<p>
-<p>说一下TAILQ_LAST()这个函数。TAILQ_LAST()的一个技巧就是，指针就是指针，它不过就是4字节(32bit <span class="caps">CPU</span>)或者8字节(64bit <span class="caps">CPU</span>)而已，和名字无关。 比如我有下面两个结构体：<br />
-<div class='bogus-wrapper'><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="k">struct</span> <span class="n">XX</span><span class="p">{</span>
-</span><span class='line'>    <span class="k">struct</span> <span class="n">XX</span> <span class="o">*</span><span class="n">first</span><span class="err">；</span>
-</span><span class='line'>    <span class="k">struct</span> <span class="n">XX</span> <span class="o">**</span><span class="n">last</span><span class="p">;</span>
-</span><span class='line'><span class="p">}</span> <span class="n">header</span><span class="p">;</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">struct</span>  <span class="n">YY</span><span class="p">{</span>
-</span><span class='line'>    <span class="k">struct</span> <span class="n">YY</span> <span class="o">*</span><span class="n">next</span><span class="p">;</span>
-</span><span class='line'>    <span class="k">struct</span> <span class="n">YY</span> <span class="o">**</span><span class="n">prev</span><span class="p">;</span>
-</span><span class='line'><span class="p">}</span> <span class="n">type</span><span class="p">;</span>
-</span></code></pre></td></tr></table></div></figure></div><br />
-如果我知道了type的next域的地址，我想要获取type的prev元素里面的内容怎么办？ 最直接点的实现就是next域的地址加4再访问就好了，但是这样不优雅，太过于丑陋，作为优雅的BSD，自然要使用其他方法，这也是为什么我说container_of太过于简单粗暴的原因。BSD的实现是，我使用header和type具有相同的内存layout来做文章， 因为next域指向的元素类型跟type一样，那么我把type类型强制转换为header类型，访问header的last域就可以了。说的有点绕，请看代码实现，一看就明白。</p>
-</p>
-<p>
-<p>总结一下，linux kernel双向链表的基本结构体是，<br />
-<div class='bogus-wrapper'><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="k">struct</span> <span class="n">type</span> <span class="p">{</span>
-</span><span class='line'>    <span class="k">struct</span> <span class="n">type</span> <span class="o">*</span><span class="n">next</span><span class="p">;</span>
-</span><span class='line'>    <span class="k">struct</span> <span class="n">type</span> <span class="o">*</span><span class="n">prev</span><span class="p">;</span>
-</span><span class='line'><span class="p">};</span>
-</span></code></pre></td></tr></table></div></figure></div></p>
-</p>
-<p>
-<p><span class="caps">BSD</span> kernel双向链表的基本结构体是，<br />
-<div class='bogus-wrapper'><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="k">struct</span> <span class="n">type</span> <span class="p">{</span>
-</span><span class='line'>    <span class="k">struct</span> <span class="n">type</span> <span class="o">*</span><span class="n">next</span><span class="p">;</span>
-</span><span class='line'>    <span class="k">struct</span> <span class="n">type</span> <span class="o">**</span><span class="n">prev</span><span class="p">;</span>
-</span><span class='line'><span class="p">};</span>
-</span></code></pre></td></tr></table></div></figure></div></p>
-</p>
-<p>
-<p>BSD的实现由应用场景来决定的，Linux Kernel则纯粹是为了一药治百病。</p>
-</p>
-<p>
-<p>现在已经很晚了，有点疲累，所以匆匆写完，也没有到处找链接给索引。所以只是作为一个入门参考，具体细节您还得自己慢慢分析。另外再说一句，BSD的TAIQ确实设计的很巧妙，不像Linux Kernel的list简单粗暴的用0指针来实现container_of(). 具体细节您得看代码，如有不明白，尽管google，有很多好事者写了这方面的解析，当然大多数不过C+V而已。</p>
-</p>]]></content>
   </entry>
   
 </feed>
