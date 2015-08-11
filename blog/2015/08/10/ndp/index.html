@@ -94,6 +94,11 @@ sending a response for a random time between 0 and  MAX_ANYCAST_DELAY_TIME secon
 
 
 <p>
+引入延迟的主要原因是为了使代理的邻居项的优先级比其他授权的主机（例如，实际拥有Solicited L3地址的主机）的低。延迟时间是一个随机数的原因是，随机数的使用可以降低多个主机同时发出请求，并导致拥塞的可能。
+</p>
+
+
+<p>
 FreeBSD的代码具体参见下面这个函数：<br>
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -270,6 +275,15 @@ static struct timer anycast_delay_timer; /* 定义为一个static变量 */ <br>
 <span class='line-number'>49</span>
 <span class='line-number'>50</span>
 <span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+<span class='line-number'>58</span>
+<span class='line-number'>59</span>
+<span class='line-number'>60</span>
 </pre></td><td class='code'><pre><code class='c'><span class='line'><span class="k">struct</span> <span class="n">na_struct_t</span>
 </span><span class='line'><span class="p">{</span>
 </span><span class='line'>    <span class="p">...</span>
@@ -281,6 +295,10 @@ static struct timer anycast_delay_timer; /* 定义为一个static变量 */ <br>
 </span><span class='line'>
 </span><span class='line'><span class="k">static</span> <span class="k">struct</span> <span class="n">timer</span> <span class="n">anycast_delay_timer</span><span class="p">;</span>
 </span><span class='line'><span class="k">static</span> <span class="n">boolean</span> <span class="n">timer_running</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+</span><span class='line'><span class="cm">/* the max members in the anycast_delay_list */</span>
+</span><span class='line'><span class="cp">#define ANYCAST_DELAY_MAX_LEN 64</span>
+</span><span class='line'><span class="cm">/* anycast/proxy delay list length */</span>
+</span><span class='line'><span class="kt">int</span> <span class="n">anycast_delay_len</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 </span><span class='line'>
 </span><span class='line'><span class="n">nd6_na_input</span><span class="p">()</span>
 </span><span class='line'><span class="p">{</span>
@@ -290,7 +308,11 @@ static struct timer anycast_delay_timer; /* 定义为一个static变量 */ <br>
 </span><span class='line'>        <span class="kt">int</span> <span class="n">delay</span> <span class="o">=</span> <span class="n">random</span><span class="p">()</span> <span class="o">/</span> <span class="n">X</span><span class="p">;</span>
 </span><span class='line'>        <span class="k">struct</span> <span class="n">na_struct_t</span> <span class="o">*</span><span class="n">na_arg</span> <span class="o">=</span> <span class="n">set_na</span><span class="p">(...);</span>
 </span><span class='line'>        <span class="n">mutex_lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">anycast_list_lock</span><span class="p">);</span>
+</span><span class='line'>        <span class="k">if</span> <span class="p">(</span><span class="n">anycast_delay_len</span> <span class="o">&gt;</span> <span class="n">ANYCAST_DELAY_MAX_LEN</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>            <span class="k">goto</span> <span class="n">freeit</span><span class="p">;</span>
+</span><span class='line'>        <span class="p">}</span>
 </span><span class='line'>        <span class="n">TAILQ_INSERT_TAIL</span><span class="p">(</span><span class="o">&amp;</span><span class="n">anycast_list</span><span class="p">,</span> <span class="n">na_arg</span><span class="p">,</span> <span class="n">anycast_delay_list</span><span class="p">);</span>
+</span><span class='line'>        <span class="n">anycast_delay_len</span><span class="o">++</span><span class="p">;</span>
 </span><span class='line'>        <span class="n">mutex_unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">anycast_list_lock</span><span class="p">);</span>
 </span><span class='line'>        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">timer_running</span><span class="p">)</span> <span class="p">{</span>
 </span><span class='line'>            <span class="n">timer_running</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
@@ -305,14 +327,15 @@ static struct timer anycast_delay_timer; /* 定义为一个static变量 */ <br>
 </span><span class='line'><span class="n">anycast_delay_handler</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span>
 </span><span class='line'><span class="p">{</span>
 </span><span class='line'>    <span class="n">mutext_lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">anycast_list_lock</span><span class="p">);</span>
-</span><span class='line'>  <span class="cm">/* once this function is executed, the tail should not be empty */</span>
+</span><span class='line'>    <span class="cm">/* once this function is executed, the tail should not be empty */</span>
 </span><span class='line'>    <span class="k">struct</span> <span class="n">na_arg_t</span> <span class="o">*</span><span class="n">na</span> <span class="o">=</span> <span class="n">TAILQ_FIRST</span><span class="p">(</span><span class="o">&amp;</span><span class="n">anycast_list</span><span class="p">);</span>
 </span><span class='line'>    <span class="n">TAILQ_REMOVE</span><span class="p">(</span><span class="o">&amp;</span><span class="n">anycast_list</span><span class="p">,</span> <span class="n">na</span><span class="p">,</span> <span class="n">anycast_delay_list</span><span class="p">);</span>
+</span><span class='line'>    <span class="n">anycast_delay_len</span><span class="o">--</span><span class="p">;</span>
 </span><span class='line'>    <span class="cm">/*send out the NA packet*/</span>
 </span><span class='line'>     <span class="p">...</span>
 </span><span class='line'>    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">TAILQ_EMPTY</span><span class="p">(</span><span class="o">&amp;</span><span class="n">anycast_list</span><span class="p">))</span> <span class="p">{</span>
 </span><span class='line'>        <span class="cm">/* should less than MAX_ANYCAST_DELAY_TIME sec*/</span>
-</span><span class='line'>      <span class="kt">int</span> <span class="n">delay</span> <span class="o">=</span> <span class="n">random</span><span class="p">()</span> <span class="o">/</span> <span class="n">X</span><span class="p">;</span>
+</span><span class='line'>        <span class="kt">int</span> <span class="n">delay</span> <span class="o">=</span> <span class="n">random</span><span class="p">()</span> <span class="o">/</span> <span class="n">X</span><span class="p">;</span>
 </span><span class='line'>        <span class="cm">/* 还有NA需要send， 所以重启定时器 */</span>
 </span><span class='line'>        <span class="n">timer_start</span><span class="p">(</span><span class="o">&amp;</span><span class="n">anycast_delay_timer</span><span class="p">,</span> <span class="n">delay</span><span class="p">,</span> <span class="n">anycast_delay_handler</span><span class="p">,</span> <span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="p">)</span><span class="mi">0</span><span class="p">);</span>
 </span><span class='line'>    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
@@ -328,7 +351,8 @@ static struct timer anycast_delay_timer; /* 定义为一个static变量 */ <br>
 <p>
 一些说明： <br>
 1.  在timeout函数的尾部判断是否需要重启定时器，这样来一个一个的处理TAILQ里面的元素。<br> 
-2.  这个TAILQ是一个全局的链表，所以需要考虑到并行问题，在对这个链表操作时需要加锁。 这个锁的粒度有些大，可以更改的更加小粒度一些，比如只要锁住插入/删除位置即可。 
+2.  这个TAILQ是一个全局的链表，所以需要考虑到并行问题，在对这个链表操作时需要加锁。 这个锁的粒度有些大，可以更改的更加小粒度一些，比如只要锁住插入/删除位置即可。<br>
+3. 在往这个链表里面添加元素时，得确保这个链表不会很长，否则就导致占用太多资源，而且NA也不能及时的发送出去。所以我们得为这个链表设置一个最大长度，比如64. 如果超出这个值，就直接简单的丢弃掉这个包，这个网络处理的机制是一致的，网络太繁忙处理不过来，所以直接丢弃。
 </p>
 
 
@@ -338,7 +362,14 @@ static struct timer anycast_delay_timer; /* 定义为一个static变量 */ <br>
 
 
 <p>
-/* 未完待续 */
+所谓实时操作系统是指，如果一个任务需要执行，它会立即得到执行，而不会有时间延迟。对于Linux/FreeBSD这类系统而言，任务的执行都是依赖于时钟中断引起的调度，各个任务会有自己的优先级，在调度的时候会根据优先级来选择某一个任务得到执行，而且任务必须得等到时钟中断到来才可能得到执行机会，这就导致Linux/FreeBSD是非实时的。 考虑到这个因素，anycast/proxy的delay时间最好设置为一个小于1S的随机时间，比如最大为1s * (8 / 10)。
+</p>
+
+
+<p>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="cm">/* 未完待续 */</span>
+</span></code></pre></td></tr></table></div></figure>
 </p>
 
 </div>
