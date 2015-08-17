@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2015-08-15T17:50:23+08:00</updated>
+  <updated>2015-08-17T22:55:29+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -12,6 +12,219 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[FreeBSD里的callwheel机制(补充前一篇)]]></title>
+    <link href="http://laoar.github.io/blog/2015/08/17/callwheel/"/>
+    <updated>2015-08-17T22:04:09+08:00</updated>
+    <id>http://laoar.github.io/blog/2015/08/17/callwheel</id>
+    <content type="html"><![CDATA[<p>
+FreeBSD里的定时器是基于一种callwheel机制，因为前一篇用到了timer，所以这里就简单介绍一下其基本原理。之所以单独成一篇，是由于前一篇篇幅太长了。
+</p>
+
+
+<h3> 一 timer </h3>
+
+
+<p>
+来看下timer start的时候做了什么事, 在FreeBSD里timer是借助于callout API来实现的。callout是FreeBSD提供的一个kernel interface，它可以让一个函数在未来被调用。
+</p>
+
+
+<p>
+在FreeBSD里面和时间有关的一些应用都会用到callout, 它在系统里面的一些应用如下： 
+<center><img src="http://laoar.github.io/images/callwhell-callout.jpg"></center>
+对于callout的具体细节不在此讨论，只说一下和定时器有关的关键部分。
+</p>
+
+
+<p>
+timer start函数如下所示：
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">timer_start</span> <span class="p">(</span><span class="k">struct</span>  <span class="n">callout</span> <span class="o">*</span><span class="n">c</span><span class="p">,</span> <span class="p">...)</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>     <span class="p">...</span>
+</span><span class='line'>   <span class="c1">// 首先计算出超时时刻</span>
+</span><span class='line'>     <span class="n">expire</span> <span class="o">=</span> <span class="n">ticks</span> <span class="o">+</span> <span class="n">delay_ticks</span><span class="p">;</span>
+</span><span class='line'>   <span class="c1">// 将该callout结构体添加到callwheel里面对应的TAILQ中</span>
+</span><span class='line'>   <span class="c1">// callwheelmask是(callwheelsize - 1), 它由callout数目来决定</span>
+</span><span class='line'>     <span class="n">TAILQ_INSERT_TAIL</span><span class="p">(</span><span class="o">&amp;</span><span class="n">callwheel</span><span class="p">[</span><span class="n">expire</span> <span class="o">&amp;</span> <span class="n">callwheelmask</span><span class="p">],</span> <span class="n">c</span><span class="p">,</span> <span class="p">...);</span>
+</span><span class='line'>     <span class="p">...</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+可以看到，该callout是通过一种hash算法(expire & callwheelmask)来被添加到对应的TAILQ里面。callwheelsize是一个实验值，如果值太小的话显然会导致hash冲突比较多；而如果太大也不行，它会预先分配很多内存。所以FreeBSD Kernel Guys就采用了一个实验值，即假定一个进程（注意，在kernel里，进程和线程是没有区别的）以及一个打开的文件描述符都可以有一个callout。所以callout的最大值ncallout就被设置为了:
+<center>ncallout = 16 + maxproc + maxfiles; </center>
+callwheelsize是不大于ncallout的最大的2的幂值，比如如果ncallout是2076，那么callwheelsize就是2048。
+</p>
+
+
+<p>
+callout是借助于时钟中断来实现的。
+</p>
+
+
+<h3> 二 hardclock</h3>
+
+
+<p>
+首先要明白一个概念，什么是时钟中断上半部(hardclock)与时钟中断下半部(softclock).中断的上半部是不可以被打断的，它通常用来处理比较紧急且耗时短的任务；中断的下半部则是可以被打断的，它可以用来处理那些比较耗时的任务。比如timer，它就是在时钟中断的下半部处理的，即softclock里面。
+</p>
+
+
+<p>
+以下代码皆摘自FreeBSD Kernel。FreeBSD Kernel时钟这部分的代码相对比较稳定，基本没有太大变化。
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="cm">/*</span>
+</span><span class='line'><span class="cm">* The real-time timer, interrupting hz times per second.</span>
+</span><span class='line'><span class="cm">*/</span>
+</span><span class='line'><span class="c1">// 时钟中断入口函数。1秒会有hz个中断。在BSD里面，hz默认配置的是1000或者100.</span>
+</span><span class='line'><span class="kt">void</span>
+</span><span class='line'><span class="n">hardclock</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span>
+</span><span class='line'>   <span class="c1">// 每来一次中断， ticks增加1.</span>
+</span><span class='line'>     <span class="n">ticks</span><span class="o">++</span><span class="p">;.</span>
+</span><span class='line'>   <span class="c1">// 如果当前ticks对应的callwheel链表不为空，就说明有timer需要处理.</span>
+</span><span class='line'>     <span class="k">if</span> <span class="p">(</span><span class="n">TAILQ_FIRST</span><span class="p">(</span><span class="o">&amp;</span><span class="n">callwheel</span><span class="p">[</span><span class="n">ticks</span> <span class="o">&amp;</span> <span class="n">callwheelmask</span><span class="p">])</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>          <span class="n">need_softclock</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+</span><span class='line'>          <span class="c1">// 否则（所有的timer都处理完了），就&gt;让softticks跟ticks保持一致.（softticks是一直小于等于ticks的）</span>
+</span><span class='line'>     <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">softticks</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">==</span> <span class="n">ticks</span><span class="p">)</span>
+</span><span class='line'>          <span class="o">++</span><span class="n">softticks</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'>     <span class="c1">// 如果需要时钟软中断，就在这里启动。 </span>
+</span><span class='line'>     <span class="k">if</span> <span class="p">(</span><span class="n">need_softclock</span><span class="p">)</span>
+</span><span class='line'>        <span class="n">swi_sched</span><span class="p">(</span><span class="n">softclock_ih</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+Nota bene. 往右拉可以看到全部的注释文字。
+</p>
+
+
+<h3> 三 softclock</h3>
+
+
+<p>
+
+软时钟中断的入口函数是softclock
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="cm">/*</span>
+</span><span class='line'><span class="cm">* Software (low priority) clock interrupt.</span>
+</span><span class='line'><span class="cm">* Run periodic events from timeout queue.</span>
+</span><span class='line'><span class="cm">*/</span>
+</span><span class='line'><span class="kt">void</span>
+</span><span class='line'><span class="nf">softclock</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">dummy</span><span class="p">)</span>
+</span><span class='line'>   <span class="c1">// softticks一直小于等于ticks   </span>
+</span><span class='line'>     <span class="k">while</span> <span class="p">(</span><span class="n">softticks</span> <span class="o">!=</span> <span class="n">ticks</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="c1">// 来记录时钟软中断数    </span>
+</span><span class='line'>          <span class="n">softticks</span><span class="o">++</span><span class="p">;</span>
+</span><span class='line'>           <span class="cm">/*</span>
+</span><span class='line'><span class="cm">            * softticks may be modified by hard clock, so cache</span>
+</span><span class='line'><span class="cm">            * it while we work on a given bucket.</span>
+</span><span class='line'><span class="cm">            */</span>
+</span><span class='line'>          <span class="n">curticks</span> <span class="o">=</span> <span class="n">softticks</span><span class="p">;</span>
+</span><span class='line'>        <span class="c1">// 取出当前softticks&gt;对应的timer链表</span>
+</span><span class='line'>          <span class="n">bucket</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">callwheel</span><span class="p">[</span><span class="n">curticks</span> <span class="o">&amp;</span> <span class="n">callwheelmask</span><span class="p">];</span>
+</span><span class='line'>          <span class="n">c</span> <span class="o">=</span> <span class="n">TAILQ_FIRST</span><span class="p">(</span><span class="n">bucket</span><span class="p">);</span>
+</span><span class='line'>          <span class="k">while</span> <span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>               <span class="k">if</span> <span class="p">(</span><span class="n">c</span><span class="o">-&gt;</span><span class="n">c_time</span> <span class="o">!=</span> <span class="n">curticks</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>                  <span class="c1">// 保持该元素在链表里，持续的检查这个链表.</span>
+</span><span class='line'>                    <span class="n">c</span> <span class="o">=</span> <span class="n">TAILQ_NEXT</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">c_links</span><span class="p">.</span><span class="n">tqe</span><span class="p">);</span>
+</span><span class='line'>                    <span class="o">++</span><span class="n">steps</span><span class="p">;</span>
+</span><span class='line'>                    <span class="k">if</span> <span class="p">(</span><span class="n">steps</span> <span class="o">&gt;=</span> <span class="n">MAX_SOFTCLOCK_STEPS</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>                         <span class="n">nextsoftcheck</span> <span class="o">=</span> <span class="n">c</span><span class="p">;</span>
+</span><span class='line'>                         <span class="p">;</span>
+</span><span class='line'>                         <span class="n">c</span> <span class="o">=</span> <span class="n">nextsoftcheck</span><span class="p">;</span>
+</span><span class='line'>                         <span class="n">steps</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span><span class='line'>                    <span class="p">}</span>
+</span><span class='line'>               <span class="c1">// 这个timer expire了  </span>
+</span><span class='line'>               <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span><span class='line'>                  <span class="c1">// 取下一个要判断的timer</span>
+</span><span class='line'>                    <span class="n">nextsoftcheck</span> <span class="o">=</span> <span class="n">TAILQ_NEXT</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">c_links</span><span class="p">.</span><span class="n">tqe</span><span class="p">);</span>
+</span><span class='line'>                    <span class="n">TAILQ_REMOVE</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">c_links</span><span class="p">.</span><span class="n">tqe</span><span class="p">);</span>
+</span><span class='line'>                  <span class="c1">// 执行相应的函数</span>
+</span><span class='line'>                    <span class="n">c_func</span><span class="p">(</span><span class="n">c_arg</span><span class="p">);</span>
+</span><span class='line'>                    <span class="n">c</span> <span class="o">=</span> <span class="n">nextsoftcheck</span><span class="p">;</span>
+</span><span class='line'>               <span class="p">}</span>
+</span><span class='line'>          <span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+一张图来描述callwheel结构体，就是这个样子的：<br>
+<center><img src="http://laoar.github.io/images/callwheel-struct.jpg"> </center>
+</p>
+
+
+
+
+<h3> ref. </h3>
+
+
+<ol>
+<li><a href="http://people.freebsd.org/~davide/asia/callout_paper.pdf">callout paper</a></li>
+<li><a href="http://lists.freebsd.org/pipermail/freebsd-arch/2013-January/013807.html">discussion on callout</a></li>
+</ol>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[RFC-2461 IPv6 NDP中NA延时的一个实现方案：异步/多实例/实时性]]></title>
@@ -3658,17 +3871,6 @@ Instruction Fetch Unit用来从memory中取指令到寄存器中，Decode and Is
 <p><span style="line-height: 1.5;">    然后，我就在github上发现了一个类似的东西，叫做</span><a title="cpulimit" href="https://github.com/laoar/cpulimit"><span style="text-decoration: underline;">cpulimit</span></a><span style="line-height: 1.5;"> 。我看了一下它的代码，发现了很多bug，也想到了解决方案，后来看到这个项目只活跃了半年时间，而且都一年多没有commit了，就没有心思去给这个项目贡献点自己的力量了。 我的代码可以说是这个cpulimit的mini版，虽然短小功能少，可是很强悍，正所谓浓缩的都是精华。 我正在着手将我的代码保存到github上时，忽然卡特打了个电话喊我一起打篮球。大概是写了点代码精神爽吧，虽然感冒没好完，我还是毫不犹豫的披挂上阵了。于是那个周日的下午，我和卡特,姚明一起在中科院电子所和其他几个人3v3了两三个小时，等到周一我起来去上班时感觉整个身子骨都散架了。 </span></p>
 <p><span style="line-height: 1.5;">    在我打算写这篇博客时，也将这个mini版的cpulimit给放到了github上：</span><a title="my-task-manager" href="https://github.com/laoar/my-task-manager"><span style="text-decoration: underline;">my－task－manager</span><span style="line-height: 1.5;"> 。 </span></a></p>
 <p><span style="line-height: 1.5;">    github确实是个好东西，你想写点什么时，总能在上面找到个类似的做参考。 作为一个程序员，如果都不知道github的话，那就太过于不思进取了。</span></p>]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[我为什么从华为离职]]></title>
-    <link href="http://laoar.github.io/blogs/393"/>
-    <updated>2013-11-23T00:00:00+08:00</updated>
-    <id>http://laoar.github.io/blogs/393</id>
-    <content type="html"><![CDATA[<p><span style="line-height: 13px;">    最近知乎上有很多“我为什么从XX离职”这一类的问题，很火热，所以也忍不住想写点东西。 </span></p>
-<p><span style="line-height: 1.5;">    有些事情现在不是太想说，也许等到成了个老头后，那个时候大家对这些事情都不太care了，再来写一写回忆录挺好的。  </span></p>
-<p><span style="line-height: 1.5;">    有一次我去武汉出差，早上8点钟左右(大概是这个时间点，反正很早)的样子我到了武研所，然后去打卡。在我进门的时候，我忽然感觉有个人从里面出来与我擦肩而过很熟悉，由于我走的太快，所以一时没想起来是谁。 于是我在回忆了几秒钟后赶紧再走到大楼的外面，然后我就认出了那个熟悉的背影，他是我的第二个徒弟。他是去食堂吃早饭，看着他在寒风中渐渐远去的背影，我很想跑过去跟他打声招呼，“hey，现在怎么样，挺好的吧”。但是理智告诉我，我还是别去了，于是我就看着他的背影消失在我的视线里，心里很难受。 我之所以不敢上前跟他打招呼，是因为他的第一年考评成绩为C，C在华为意味着什么想必大家都清楚。在我知道他的成绩是C的时候，我很震惊，我不知道为什么会是C。那个时候他还没有转正，只来华为有4，5个月的样子。后来到了他的转正答辩，由于他转正答辩前转到了另外一个组，所以我跟另外一个组我们一起来决定最终给他的转正成绩是什么。另外一个组的人坚持要给他B＋，我就找各种理由给他B，因为我知道假如我同意给了他B＋，我以后在华为的路可能会很坎坷。最终他的成绩还是B，这是我违背良心做的一件事，从此以后我一直对这件事很惭愧，一直觉得愧对于他。在这里我并不是想说什么好什么不好，只是我的一个忏悔，或者说，愿上帝原谅我，我想与人为善。</span></p>
-<p><span style="line-height: 1.5;">     在华为的经历，我的理解是成长的代价。这个时候是我由年轻热血到成熟稳重必须要经历的一个阶段，只不过这个阶段恰巧在华为而已（这句话是不是很熟悉，没错，孙董事长也说过），也许可能华为是加速了我的成长。如果再回到3年前，我会拒绝华为的offer，这样至少华为在我心里仍然是中国民族企业的骄傲。 </span></p>]]></content>
   </entry>
   
 </feed>
