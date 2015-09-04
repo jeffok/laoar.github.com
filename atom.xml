@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2015-09-04T23:38:58+08:00</updated>
+  <updated>2015-09-04T23:40:14+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -14,7 +14,7 @@
 
   
   <entry>
-    <title type="html"><![CDATA[Docker背后的技术:Namespace]]></title>
+    <title type="html"><![CDATA[Docker背后的技术: Namespace]]></title>
     <link href="http://laoar.github.io/blog/2015/09/04/namespace/"/>
     <updated>2015-09-04T23:04:21+08:00</updated>
     <id>http://laoar.github.io/blog/2015/09/04/namespace</id>
