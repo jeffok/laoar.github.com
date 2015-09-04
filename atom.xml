@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2015-08-17T22:55:29+08:00</updated>
+  <updated>2015-09-04T23:36:52+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -12,6 +12,135 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Docker背后的技术:Namespaces]]></title>
+    <link href="http://laoar.github.io/blog/2015/09/04/namespace/"/>
+    <updated>2015-09-04T23:04:21+08:00</updated>
+    <id>http://laoar.github.io/blog/2015/09/04/namespace</id>
+    <content type="html"><![CDATA[<h3>
+背景知识：一句话概括Docker
+</h3>
+
+
+<p>
+Docker是基于Linux container的一个容器管理工具。它的作用是将应用程序给容器化，以保证在同一个Kernel上运行的应用程序的运行环境相互隔离，让容器内的这些进程觉得在这个系统里只有这些进程而感知不到其他进程的存在。与Docker容易进行比较的一种技术是KVM，KVM的作用是虚拟化，它实现一些硬件的虚拟化，这样来在一个VM里运行其他的Kernel。Docker的优点是可以快速的创建线程，并且以native的速度快速执行，高效的使用系统资源。
+</p>
+
+
+<p>
+Docker的概貌如下图：
+<center><img src="http://laoar.github.io/images/namespace-docker.png"> </center>
+Docker的原生内核是Linux，如果要在非Linux（Windows/Mac OS）上运行Docker还是得需要有VM。
+</p>
+
+
+<h3>
+Docker用到的内核技术
+</h3>
+
+
+<p>
+在Linux Kernel里对资源进行控制的机制是cgroup，实现资源隔离的机制是namespace， cgroup和namespace就是Linux container用到的两个内核机制。
+</p>
+
+
+<h3>
+Namespace背景知识：进程地址空间
+</h3>
+
+
+<p>
+下图是32-bit Linux典型的地址空间分布:
+<center><img src="http://laoar.github.io/images/namespace-space.png"></center>
+如图所示，在User Space(0~3G)各个进程拥有自己独立的地址空间，它们互相看不到对方。这些进程通过Kernel API(syscall/ioctl/socket/trap&#8230;)进入Kenrel Space(3G~4G)，然后使用内核提供的服务，所有的进程共享同一个Kenrel Space。
+</p>
+
+
+<p>
+这样带来的结果就是，虽然在User Space所有的进程都有独立的地址空间，互相看不到对方，然而在Kernel Space，他们是感知到其他进程存在的。
+</p>
+
+
+<p>
+如何让进程在使用内核服务时感知不到其他无关进程的存在，就产生了namespace这个技术。
+</p>
+
+
+<h3>
+Namespace：抽象，封装，多实例
+</h3>
+
+
+<p>
+在内核里面有很多全局变量，比如init进程(1号进程)，比如根目录(/)，比如时钟，比如路由表，这些全局变量就是内核提供的一些全局资源。实现进程的隔离，首先要解决的就是这些全局资源问题，让各个容器内的进程都有自己独立的全局资源，即全局资源的多实例化，每个容器内都有这些全局资源的一个实例。具体到编程角度，就是将这些全局变量给封装。
+</p>
+
+
+<p>
+比如对于根目录(/)的如下封装: (摘自Kernel-3.9)
+<center><img src="http://laoar.github.io/images/namespace-mnt.png"> </center>
+mnt_namespace是mount namespaces的抽象数据结构。mount namespaces是内核里已经实现的namespaces中的一个，它的作用是隔离挂载点(mount point), 这样一个mount namespaces里的这组进程只能看到自己的目录结构，并且把它的挂载点当作根目录，从而看不到它的挂载点之外的目录结构。这有些类似于chroot这个命令的作用。
+</p>
+
+
+<p>
+来看下docker的具体示例。<br>
+下图是在Host OS(我的Macbook的OS)里的目录结构：
+<center><img src="http://laoar.github.io/images/namespace-host.png"></center>
+然后我们在docker machine里启动一个ubuntu container，看下这个container的目录结构：
+
+<center><img src="http://laoar.github.io/images/namespace-container.png"></center>
+ 可以看到这是一个新的目录结构。其中hostname那一项是该container的ID。
+</p>
+
+
+<p>
+为了实现mount namespaces，mount()以及umount()这两个系统调用都要做出相应的改变。他们不再操作对所有进程均可见的全局挂载点，取而代之的是只影响跟该mount space相关的进程。
+</p>
+
+
+
+
+<h3>
+Namespace的过去，现状及未来
+</h3>
+
+
+<p>
+Mount namespaces是Linux Kernel里最先出现的一个namespace，它是为了解决clone()系统调用而增加的，由于当时想不到还会有其他的namespace，所以就给mount namespaces起了一个比较通用的名字，叫做CLONE_NEWNS，即new namespace的意思。那个时候更不要说会预见到有container这种东西了。
+</p>
+
+
+<p>
+伴随着container这个概念的产生，增加了更多的namespaces来满足需要。<br>
+比如Network namespaces用来实现网络资源(网络设备，IP地址，IP路由表，端口号，等等)的隔离。<br>
+比如PID namespaces用来实现PID号这个资源的隔离，这样在不同的PID namespaces中可以使用同一个PID，比如每个namespace都有它自己的init进程(PID 1)，init进程是所有其他进程的祖先进程。<br>
+比如IPC namespaces用来隔离System V IPC标识以及Posix消息队列。<br>
+比如UTS namespaces用来封装uname()这个系统调用。<br>
+比如User namespaces用来隔离用户ID和组ID。那么这样就可以让一个用户在某个container里拥有root权限但是在整个系统里却没有root权限。
+</p>
+
+
+<p>
+我前面提到的这6个namespaces就是目前最新Linux Kernel(Kernel-4.2)里所有已实现的namespaces。由于Linux Kernel里拥有非常多的全局资源，随着越来越多应用场景的出现，每一个全局变量都有可能被封装进namespace，这就不可避免在将来会产生新的namespace，比如甚至系统时间都可能会被封装进namespace这样不同的container就会有不同的时间。由此伴随而来的一个问题就是，如何来组织这些namespaces来避免namespace种类的大爆炸以及系统复杂性的增加，这会是一个挑战。
+</p>
+
+
+
+
+<h3>
+Ref
+</h3>
+
+
+<ol>
+<li><a href="https://docs.docker.com/">Docker Docs</a></li>
+<li><a href="https://lwn.net/Articles/531114/ ">LWN:Namespaces in operation</a></li>
+</ol>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[FreeBSD里的callwheel机制(补充前一篇)]]></title>
@@ -508,7 +637,6 @@ static struct timer anycast_delay_timer; /* 定义为一个static变量 */ <br>
 1.  在timeout函数的尾部判断是否需要重启定时器，这样来一个一个的处理TAILQ里面的元素。<br> 
 2.  这个TAILQ是一个全局的链表，所以需要考虑到并行问题，在对这个链表操作时需要加锁。 这个锁的粒度有些大，可以更改的更加小粒度一些，比如只要锁住插入/删除位置即可。定时器超时函数是在软中断中执行的，它不是进程上下文，所以不能执行休眠和调度。所以在timeout函数里面访问共享数据的时候，不能使用mutex来加锁，要使用spinlock来加锁。(mutex会睡眠，spinlock则是一直忙等)<br>
 3. 在往这个链表里面添加元素时，得确保这个链表不会很长，否则就导致占用太多资源，而且NA也不能及时的发送出去。所以我们得为这个链表设置一个最大长度，比如64. 如果超出这个值，就直接简单的丢弃掉这个包，这个网络处理的机制是一致的，网络太繁忙处理不过来，所以直接丢弃。<br>
-4. 中断上下文里面不能睡眠的一个重要原因是，中断上下文没有自己独立的栈空间，它跟进程共享内核栈空间。在最新的Linux kernel里面会实现中断线程化，中断和内核分别用于自己独立的栈空间。
 </p>
 
 
@@ -3833,44 +3961,6 @@ Instruction Fetch Unit用来从memory中取指令到寄存器中，Decode and Is
 <p>注：<br />
 <sup class="footnote" id="fnr1"><a href="#fn1">1</a></sup>  一开始是写在豆瓣上的<br />
 <sup class="footnote" id="fnr2"><a href="#fn2">2</a></sup> <a href="http://www.laoar.net/blogs/227">我的2012</a></p>]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[MacOS:mdworker曾让我很不爽]]></title>
-    <link href="http://laoar.github.io/blogs/402"/>
-    <updated>2013-12-15T00:00:00+08:00</updated>
-    <id>http://laoar.github.io/blogs/402</id>
-    <content type="html"><![CDATA[<p><span style="line-height: 1.5;">    一开始，我以为mdworker是“memory decompress worker”， 好吧，谁让我是linux内核出身的哪，正应了那句话，叫做“往往以自己的立场来揣测别人”。 事实上，它是“metadata server worker”。不过它让我很不爽的原因与它的名字无关，在我的Macbook刚升级到Mavericks的时候，大概是升级后还有很多善后工作要处理，它老是偷偷摸摸的运行，导致我看个优酷都卡的不行，你能体会到正到精彩处电脑却卡的连鼠标都动不了的那种心情。 需要声明的是，那段时间我在看《绝命毒师》:) </span></p>
-<p><span style="line-height: 1.5;">     然后我就有了要干掉这个mdworker的念头。作为一个内核出身的工程师，自然是不屑于打开control panal，这里勾一下那里选一下的这种毫无技术含量的做法的。I do it on my own。我打算自己写个C代码来控制它，虽然这不是个好方法，甚至都不是个正确的方法，但是至少我在思考并且知道是可行的,而且我还能搞定它。</span></p>
-<p><span style="line-height: 1.5;">    再然后我就发现我不太适合做一个freelance，我的这个想法一直拖拖拉拉都没动笔，过了段时间Maverick竟然很流畅了，mdworker也轻易不出山了，即使出山也没那么大动静了，这更让我没动力来写了。 </span></p>
-<p><span style="line-height: 1.5;">    最后，有一天我感冒了，周末躺在床上什么都不想动，于是打开了电脑就开始写这个很无聊的工具了。 </span></p>
-<p><span style="line-height: 1.5;">    我的目的是这样的：我要让这个进程的cpu占用率低于某个值，比如10%。</span></p>
-<p><span style="line-height: 1.5;">    接着我就想该怎么来实现，虽然当时我躺在床上浑身无力，可是大脑还能正常运转，下面是我的思路：</span></p>
-<p><span style="line-height: 1.5;">1） 根据mdworker这个名字来找到对应的进程<br />
-</span>      关键点：<br />
-<span style="line-height: 1.5;">      可能会有多个进程，注意是起多个进程，不是指多线程。</span></p>
-<p><span style="line-height: 1.5;"><br />
-</span>2） 我需要遍历整个进程链表来进行名字匹配，如果某个进程的名字mdworker，就认为找到了对应的进程。<br />
-<span style="line-height: 1.5;">    关键点：<br />
-</span>    bsd系统维护着两个进程链表，一个是allproc，一个是zomproc。zomproc是bsd的僵死进程链表，非僵死进程都在allproc链表里面。所谓僵死进程是指，这个进程挂掉了，但是它没有通知它的父进程，打个比方就是，你死了但是还没有去民政局里登记你的死亡，此时你就是处在僵死状态。<br />
-要明白allproc和zomproc这两个链表的特性，我们只需要知道他们使用的是什么结构体就好了。他们两个使用的都是bsd系统的通用结构体LIST_ENTRY，于是我们就可以在心里默念一下这个结构体的特点，它是一个双向非循环链表，会使用一个全局变量header来标识这个链表，这个header会指向链表的头部和尾部，在通常情况下我们都是把新元素插入到链表的头部。我们知道系统中进程的PID是按照由小到大递增的，也就是现有PID0，然后是PID1&#8230; 于是我们就知道这个allproc和zomproc链表里的元素（进程）从尾部到头部的PID是逐渐增大的，当然如果fork的进程数超过了PID MAX，那就另说了。</p>
-<p>3） 抓取到这个进程后，我们就可以使用它的pid来控制它了，如何来控制？<br />
-<span style="line-height: 1.5;">    关键点：<br />
-</span>    进程A如何来控制一个毫不相干的进程B？ 也许你一下子想不起来该怎么来实现，但是你再仔细想一想，这不就是GDB干的事嘛！gdb使用的ptrace系统调用来将目标进程变成自己的子进程，然后attach到这个子进程后就可以任意的玩这个子进程了，想必对于我们国人而言这个不太难理解，上司自然是可以控制自己的下属的，或者说，我要想让你听我的话得先把你变成我的下属。人之本性在技术层面也是被体现的淋漓尽致啊！     如果使用ptrace的话，在这里可能就有些大材小用了，我一开始设想是使用ptrace系统调用，后来发现实现起来相对复杂些。 然后我又想到，CTRL＋C不也是可以停止一个进程嘛，它使用的是信号，我可以使用signal来实现我的目的。 即，如果进程老是占用CPU，我就给它发一个stop信号来停止它，过段时间我再给它发个continue信号让它运行。当然前提是它可以接受信号。<br />
-至于说让它停止多长时间和运行多长时间则是一个小学数学问题了。 比如我想让这个进程的CPU占用率不超过10%，那么只要检测到该进程的CPU占用率超过了10%，我就强制让它睡眠。假如我以1S为一个周期，我只要让进程的工作时间不超过100ms就可以了。</p>
-<p>4） 如何计算一个进程的CPU占用率<br />
-<span style="line-height: 1.5;">    关键点：<br />
-</span><span style="line-height: 1.5;">    我的计算方式是，在时间点a我记录下进程执行了多长时间pa，然后在时间点b我再记录进程执行了多长时间pb。那么(pb-pa)/(b-a)就是这段时间进程的CPU占用率。 </span></p>
-<p>5） 我要想控制别人，得比别人拥有更大的权利<br />
-<span style="line-height: 1.5;">    关键点：<br />
-</span><span style="line-height: 1.5;">    这个进程既然是控制进程，那么它得比被控制的进程具有更高的优先级来执行，不然被控制进程都执行完了那这个控制进程也没啥用了。<br />
-</span>    首先，这个控制进程选用什么样的调度策略。当然是选用Normal，如果选用FIFO或者RR不是会更影响整个系统的性能嘛！<br />
-接着，normal进程可以通过调整它的nice值来调整它的优先级，nice的范围是（－20，＋20），－20具有最高优先级，＋20的优先级最低。<br />
-最后，我们可以通过setpriority()这个函数来减小进程的nice值，不过，Only the super-user may lower priorities.（man手册）。也就是说，你要使用root权限。</p>
-<p><span style="line-height: 1.5;">    有了上面的思路之后，我就开始动笔写了，虽然躺在床上浑身乏力，可是手指还算灵活，敲起键盘来也还能噼里啪啦。 </span></p>
-<p><span style="line-height: 1.5;">    然后，我就在github上发现了一个类似的东西，叫做</span><a title="cpulimit" href="https://github.com/laoar/cpulimit"><span style="text-decoration: underline;">cpulimit</span></a><span style="line-height: 1.5;"> 。我看了一下它的代码，发现了很多bug，也想到了解决方案，后来看到这个项目只活跃了半年时间，而且都一年多没有commit了，就没有心思去给这个项目贡献点自己的力量了。 我的代码可以说是这个cpulimit的mini版，虽然短小功能少，可是很强悍，正所谓浓缩的都是精华。 我正在着手将我的代码保存到github上时，忽然卡特打了个电话喊我一起打篮球。大概是写了点代码精神爽吧，虽然感冒没好完，我还是毫不犹豫的披挂上阵了。于是那个周日的下午，我和卡特,姚明一起在中科院电子所和其他几个人3v3了两三个小时，等到周一我起来去上班时感觉整个身子骨都散架了。 </span></p>
-<p><span style="line-height: 1.5;">    在我打算写这篇博客时，也将这个mini版的cpulimit给放到了github上：</span><a title="my-task-manager" href="https://github.com/laoar/my-task-manager"><span style="text-decoration: underline;">my－task－manager</span><span style="line-height: 1.5;"> 。 </span></a></p>
-<p><span style="line-height: 1.5;">    github确实是个好东西，你想写点什么时，总能在上面找到个类似的做参考。 作为一个程序员，如果都不知道github的话，那就太过于不思进取了。</span></p>]]></content>
   </entry>
   
 </feed>

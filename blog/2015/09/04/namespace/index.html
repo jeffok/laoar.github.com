@@ -1,0 +1,280 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Docker背后的技术:Namespaces - One Man's Yammer</title>
+	<meta name="author" content="Yafang Shao">
+
+	
+	<meta name="description" content="Docker背后的技术:Namespaces 背景知识：一句话概括Docker Docker是基于Linux container的一个容器管理工具。它的作用是将应用程序给容器化，以保证在同一个Kernel上运行的应用程序的运行环境相互隔离， &hellip;">
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="" rel="alternate" title="One Man's Yammer" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/favicon.png" rel="shortcut icon">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	<script async="true" src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+	
+</head>
+
+
+<body>
+	<header id="header" class="inner"><h1><a href="/">One Man's Yammer</a></h1>
+<nav id="main-nav"><ul class="main">
+	<li><a href="/read">BookWall</a></li>
+</ul>
+</nav>
+<nav id="mobile-nav"> <ul class="main">
+	<li><a href="/read">BookWall</a></li>
+</ul>
+ </nav>
+<!--	<div class="menu"> --!>
+		<!--<a class="button">Menu</a>
+		<div class="container"><ul class="main">
+	<li><a href="/read">BookWall</a></li>
+</ul>
+</div>--!>
+	<!--</div>--!>
+<!--</nav>--!>
+<!-- @yfshao
+	<div class="alignright search">
+		<a class="button"></a>
+		<div class="container">
+			<form action="false" method="get">
+				<input type="text" name="q" results="0">
+				<input type="hidden" name="q" value="site:laoar.github.io">
+			</form>
+		</div>
+	</div>
+</nav>
+--!>
+<!--
+<nav id="sub-nav" class="alignright">
+	<div class="social">
+		
+		
+		
+		
+    
+		
+		
+		
+		
+		
+    
+	</div>
+	<form class="search" action="false" method="get">
+		<input class="alignright" type="text" name="q" results="0">
+		<input type="hidden" name="q" value="site:laoar.github.io">
+	</form>
+</nav>
+--!>
+<!----!>
+</header>
+	
+		
+	
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">Docker背后的技术:Namespaces</h2>
+	<div class="entry-content"><h3>
+背景知识：一句话概括Docker
+</h3>
+
+
+<p>
+Docker是基于Linux container的一个容器管理工具。它的作用是将应用程序给容器化，以保证在同一个Kernel上运行的应用程序的运行环境相互隔离，让容器内的这些进程觉得在这个系统里只有这些进程而感知不到其他进程的存在。与Docker容易进行比较的一种技术是KVM，KVM的作用是虚拟化，它实现一些硬件的虚拟化，这样来在一个VM里运行其他的Kernel。Docker的优点是可以快速的创建线程，并且以native的速度快速执行，高效的使用系统资源。
+</p>
+
+
+<p>
+Docker的概貌如下图：
+<center><img src="/images/namespace-docker.png"> </center>
+Docker的原生内核是Linux，如果要在非Linux（Windows/Mac OS）上运行Docker还是得需要有VM。
+</p>
+
+
+<h3>
+Docker用到的内核技术
+</h3>
+
+
+<p>
+在Linux Kernel里对资源进行控制的机制是cgroup，实现资源隔离的机制是namespace， cgroup和namespace就是Linux container用到的两个内核机制。
+</p>
+
+
+<h3>
+Namespace背景知识：进程地址空间
+</h3>
+
+
+<p>
+下图是32-bit Linux典型的地址空间分布:
+<center><img src="/images/namespace-space.png"></center>
+如图所示，在User Space(0~3G)各个进程拥有自己独立的地址空间，它们互相看不到对方。这些进程通过Kernel API(syscall/ioctl/socket/trap&#8230;)进入Kenrel Space(3G~4G)，然后使用内核提供的服务，所有的进程共享同一个Kenrel Space。
+</p>
+
+
+<p>
+这样带来的结果就是，虽然在User Space所有的进程都有独立的地址空间，互相看不到对方，然而在Kernel Space，他们是感知到其他进程存在的。
+</p>
+
+
+<p>
+如何让进程在使用内核服务时感知不到其他无关进程的存在，就产生了namespace这个技术。
+</p>
+
+
+<h3>
+Namespace：抽象，封装，多实例
+</h3>
+
+
+<p>
+在内核里面有很多全局变量，比如init进程(1号进程)，比如根目录(/)，比如时钟，比如路由表，这些全局变量就是内核提供的一些全局资源。实现进程的隔离，首先要解决的就是这些全局资源问题，让各个容器内的进程都有自己独立的全局资源，即全局资源的多实例化，每个容器内都有这些全局资源的一个实例。具体到编程角度，就是将这些全局变量给封装。
+</p>
+
+
+<p>
+比如对于根目录(/)的如下封装: (摘自Kernel-3.9)
+<center><img src="/images/namespace-mnt.png"> </center>
+mnt_namespace是mount namespaces的抽象数据结构。mount namespaces是内核里已经实现的namespaces中的一个，它的作用是隔离挂载点(mount point), 这样一个mount namespaces里的这组进程只能看到自己的目录结构，并且把它的挂载点当作根目录，从而看不到它的挂载点之外的目录结构。这有些类似于chroot这个命令的作用。
+</p>
+
+
+<p>
+来看下docker的具体示例。<br>
+下图是在Host OS(我的Macbook的OS)里的目录结构：
+<center><img src="/images/namespace-host.png"></center>
+然后我们在docker machine里启动一个ubuntu container，看下这个container的目录结构：
+
+<center><img src="/images/namespace-container.png"></center>
+ 可以看到这是一个新的目录结构。其中hostname那一项是该container的ID。
+</p>
+
+
+<p>
+为了实现mount namespaces，mount()以及umount()这两个系统调用都要做出相应的改变。他们不再操作对所有进程均可见的全局挂载点，取而代之的是只影响跟该mount space相关的进程。
+</p>
+
+
+
+
+<h3>
+Namespace的过去，现状及未来
+</h3>
+
+
+<p>
+Mount namespaces是Linux Kernel里最先出现的一个namespace，它是为了解决clone()系统调用而增加的，由于当时想不到还会有其他的namespace，所以就给mount namespaces起了一个比较通用的名字，叫做CLONE_NEWNS，即new namespace的意思。那个时候更不要说会预见到有container这种东西了。
+</p>
+
+
+<p>
+伴随着container这个概念的产生，增加了更多的namespaces来满足需要。<br>
+比如Network namespaces用来实现网络资源(网络设备，IP地址，IP路由表，端口号，等等)的隔离。<br>
+比如PID namespaces用来实现PID号这个资源的隔离，这样在不同的PID namespaces中可以使用同一个PID，比如每个namespace都有它自己的init进程(PID 1)，init进程是所有其他进程的祖先进程。<br>
+比如IPC namespaces用来隔离System V IPC标识以及Posix消息队列。<br>
+比如UTS namespaces用来封装uname()这个系统调用。<br>
+比如User namespaces用来隔离用户ID和组ID。那么这样就可以让一个用户在某个container里拥有root权限但是在整个系统里却没有root权限。
+</p>
+
+
+<p>
+我前面提到的这6个namespaces就是目前最新Linux Kernel(Kernel-4.2)里所有已实现的namespaces。由于Linux Kernel里拥有非常多的全局资源，随着越来越多应用场景的出现，每一个全局变量都有可能被封装进namespace，这就不可避免在将来会产生新的namespace，比如甚至系统时间都可能会被封装进namespace这样不同的container就会有不同的时间。由此伴随而来的一个问题就是，如何来组织这些namespaces来避免namespace种类的大爆炸以及系统复杂性的增加，这会是一个挑战。
+</p>
+
+
+
+
+<h3>
+Ref
+</h3>
+
+
+<ol>
+<li><a href="https://docs.docker.com/">Docker Docs</a></li>
+<li><a href="https://lwn.net/Articles/531114/ ">LWN:Namespaces in operation</a></li>
+</ol>
+
+</div>
+
+
+
+<!--
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-09-04T23:04:21+08:00" pubdate data-updated="true">Sep 4<span>th</span>, 2015</time></div>
+	
+</div>
+!-->
+</article>
+
+	<div class="share">
+	<div class="addthis_toolbox addthis_default_style ">
+		
+		
+		
+		
+	</div>
+	
+</div>
+
+
+
+<section id="comment">
+    <h2 class="title">Comments</h2>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+</section>
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2015
+
+    Yafang Shao
+
+</footer>
+	<script src="/javascripts/slash.js"></script>
+<script src="/javascripts/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+	$('.fancybox').fancybox();
+})(jQuery);
+</script> <!-- Delete or comment this line to disable Fancybox -->
+
+
+<script type="text/javascript">
+      var disqus_shortname = 'laoar';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://laoar.github.io/blog/2015/09/04/namespace/';
+        var disqus_url = 'http://laoar.github.io/blog/2015/09/04/namespace/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//go.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+</body>
+</html>
