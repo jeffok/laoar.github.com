@@ -141,7 +141,7 @@ Namespaces：抽象，封装，多实例
 <p>
 比如对于根目录(/)的如下封装: (摘自Kernel-3.9)
 <center><img src="/images/namespace-mnt.png"> </center>
-mnt_namespace是mount namespaces的抽象数据结构。mount namespaces是内核里已经实现的namespaces中的一个，它的作用是隔离挂载点(mount point), 这样一个mount namespaces里的这组进程只能看到自己的目录结构，并且把它的挂载点当作根目录，从而看不到它的挂载点之外的目录结构。这是借助于chroot(2)这个系统调用来实现的。
+mnt_namespace是mount namespaces的抽象数据结构。mount namespaces是内核里已经实现的namespaces中的一个，它的作用是隔离挂载点(mount point), 这样一个mount namespaces里的这组进程只能看到自己的目录结构，并且把它的挂载点当作根目录，从而看不到它的挂载点之外的目录结构。这有些类似于chroot(2)这个系统调用，mount namespaces比chroot好的地方在于，chroot只是将子目录设置为应用程序的根目录(/), 在chroot的根目录下不会有系统根目录下的其他子目录，而mount namespaces则会这些子目录的一个实例。
 </p>
 
 
@@ -195,7 +195,7 @@ Linux的Namespaces，FreeBSD的Jails
 
 <p>
 在FreeBSD上面，与Namespaces类似的机制叫做Jails。Jals具有如下一些功能：<br>
-&nbsp;&nbsp;&nbsp;&nbsp;1. 目录树: 它也是借助于chroot(2)系统调用来实现的，实现效果和Linux的Mount namespaces类似。 <br>
+&nbsp;&nbsp;&nbsp;&nbsp;1. 目录树: 实现效果和Linux的Mount namespaces类似。 <br>
 &nbsp;&nbsp;&nbsp;&nbsp;2. 主机名: 每个jail可以有自己的主机名。这类似于Linux的UTS namespaces。<br>
 &nbsp;&nbsp;&nbsp;&nbsp;3. IP地址: 分配给jail的IP地址，一个jail的IP地址通常是系统里存在的网络接口的IP地址。这类似于Linux的Network namespaces。<br>
 &nbsp;&nbsp;&nbsp;&nbsp;4. 命令: jail内部的执行路径PATH，这个路径是相对于该jail环境的根目录的。<br>
