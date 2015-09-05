@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2015-09-04T23:42:23+08:00</updated>
+  <updated>2015-09-05T15:53:28+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -14,7 +14,7 @@
 
   
   <entry>
-    <title type="html"><![CDATA[Docker背后的技术： Namespace]]></title>
+    <title type="html"><![CDATA[Docker背后的技术： Namespaces]]></title>
     <link href="http://laoar.github.io/blog/2015/09/04/namespace/"/>
     <updated>2015-09-04T23:04:21+08:00</updated>
     <id>http://laoar.github.io/blog/2015/09/04/namespace</id>
@@ -41,12 +41,12 @@ Docker用到的内核技术
 
 
 <p>
-在Linux Kernel里对资源进行控制的机制是cgroup，实现资源隔离的机制是namespace， cgroup和namespace就是Linux container用到的两个内核机制。
+在Linux Kernel里对资源进行控制的机制是cgroup，实现资源隔离的机制是namespaces， cgroup和namespaces就是Linux container用到的两个内核机制。
 </p>
 
 
 <h3>
-Namespace背景知识：进程地址空间
+Namespaces背景知识：进程地址空间
 </h3>
 
 
@@ -63,12 +63,12 @@ Namespace背景知识：进程地址空间
 
 
 <p>
-如何让进程在使用内核服务时感知不到其他无关进程的存在，就产生了namespace这个技术。
+如何让进程在使用内核服务时感知不到其他无关进程的存在，就产生了namespaces这个技术。
 </p>
 
 
 <h3>
-Namespace：抽象，封装，多实例
+Namespaces：抽象，封装，多实例
 </h3>
 
 
@@ -103,7 +103,7 @@ mnt_namespace是mount namespaces的抽象数据结构。mount namespaces是内�
 
 
 <h3>
-Namespace的过去，现状及未来
+Namespaces的过去，现状及未来
 </h3>
 
 

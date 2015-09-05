@@ -3,11 +3,11 @@
 <html>
 <head>
 	<meta charset="utf-8">
-	<title>Docker背后的技术： Namespace - One Man's Yammer</title>
+	<title>Docker背后的技术： Namespaces - One Man's Yammer</title>
 	<meta name="author" content="Yafang Shao">
 
 	
-	<meta name="description" content="Docker背后的技术： Namespace 背景知识：一句话概括Docker Docker是基于Linux container的一个容器管理工具。它的作用是将应用程序给容器化，以保证在同一个Kernel上运行的应用程序的运行环境相互隔离， &hellip;">
+	<meta name="description" content="Docker背后的技术： Namespaces 背景知识：一句话概括Docker Docker是基于Linux container的一个容器管理工具。它的作用是将应用程序给容器化，以保证在同一个Kernel上运行的应用程序的运行环境相互隔离， &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -78,7 +78,7 @@
 		
 	
 	<div id="content" class="inner"><article class="post">
-	<h2 class="title">Docker背后的技术： Namespace</h2>
+	<h2 class="title">Docker背后的技术： Namespaces</h2>
 	<div class="entry-content"><h3>
 背景知识：一句话概括Docker
 </h3>
@@ -102,12 +102,12 @@ Docker用到的内核技术
 
 
 <p>
-在Linux Kernel里对资源进行控制的机制是cgroup，实现资源隔离的机制是namespace， cgroup和namespace就是Linux container用到的两个内核机制。
+在Linux Kernel里对资源进行控制的机制是cgroup，实现资源隔离的机制是namespaces， cgroup和namespaces就是Linux container用到的两个内核机制。
 </p>
 
 
 <h3>
-Namespace背景知识：进程地址空间
+Namespaces背景知识：进程地址空间
 </h3>
 
 
@@ -124,12 +124,12 @@ Namespace背景知识：进程地址空间
 
 
 <p>
-如何让进程在使用内核服务时感知不到其他无关进程的存在，就产生了namespace这个技术。
+如何让进程在使用内核服务时感知不到其他无关进程的存在，就产生了namespaces这个技术。
 </p>
 
 
 <h3>
-Namespace：抽象，封装，多实例
+Namespaces：抽象，封装，多实例
 </h3>
 
 
@@ -164,7 +164,7 @@ mnt_namespace是mount namespaces的抽象数据结构。mount namespaces是内�
 
 
 <h3>
-Namespace的过去，现状及未来
+Namespaces的过去，现状及未来
 </h3>
 
 
