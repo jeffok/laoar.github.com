@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2015-09-05T16:41:08+08:00</updated>
+  <updated>2015-09-05T16:44:49+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -135,10 +135,10 @@ Linux的Namespaces，FreeBSD的Jails
 <p>
 在FreeBSD上面，与Namespaces类似的机制叫做Jails。Jals具有如下一些功能：<br>
 &nbsp;&nbsp;&nbsp;&nbsp;1. 目录树: 它也是借助于chroot(2)系统调用来实现的，实现效果和Linux的Mount namespaces类似。 <br>
-&nbsp;&nbsp;&nbsp;&nbsp;2. 主机名: 每个jail可以有自己的主机名。<br>
-&nbsp;&nbsp;&nbsp;&nbsp;3. IP地址: 分配给jail的IP地址，一个jail的IP地址通常是系统里存在的网络接口的IP地址。<br>
+&nbsp;&nbsp;&nbsp;&nbsp;2. 主机名: 每个jail可以有自己的主机名。这类似于Linux的UTS namespaces。<br>
+&nbsp;&nbsp;&nbsp;&nbsp;3. IP地址: 分配给jail的IP地址，一个jail的IP地址通常是系统里存在的网络接口的IP地址。这类似于Linux的Network namespaces。<br>
 &nbsp;&nbsp;&nbsp;&nbsp;4. 命令: jail内部的执行路径PATH，这个路径是相对于该jail环境的根目录的。<br>
-jail有自己独立的用户组和root用户，并且这些用户都限制在这个jail的内部。
+jail有自己独立的用户组和root用户，并且这些用户都限制在这个jail的内部。这类似于Linux的User namespaces。
 </p>
 
 
