@@ -141,7 +141,7 @@ Namespaces：抽象，封装，多实例
 <p>
 比如对于根目录(/)的如下封装: (摘自Kernel-3.9)
 <center><img src="/images/namespace-mnt.png"> </center>
-mnt_namespace是mount namespaces的抽象数据结构。mount namespaces是内核里已经实现的namespaces中的一个，它的作用是隔离挂载点(mount point), 这样一个mount namespaces里的这组进程只能看到自己的目录结构，并且把它的挂载点当作根目录，从而看不到它的挂载点之外的目录结构。这有些类似于chroot这个命令的作用。
+mnt_namespace是mount namespaces的抽象数据结构。mount namespaces是内核里已经实现的namespaces中的一个，它的作用是隔离挂载点(mount point), 这样一个mount namespaces里的这组进程只能看到自己的目录结构，并且把它的挂载点当作根目录，从而看不到它的挂载点之外的目录结构。这是借助于chroot(2)这个系统调用来实现的。
 </p>
 
 
@@ -175,11 +175,11 @@ Mount namespaces是Linux Kernel里最先出现的一个namespace，它是为了�
 
 <p>
 伴随着container这个概念的产生，增加了更多的namespaces来满足需要。<br>
-比如Network namespaces用来实现网络资源(网络设备，IP地址，IP路由表，端口号，等等)的隔离。<br>
-比如PID namespaces用来实现PID号这个资源的隔离，这样在不同的PID namespaces中可以使用同一个PID，比如每个namespace都有它自己的init进程(PID 1)，init进程是所有其他进程的祖先进程。<br>
-比如IPC namespaces用来隔离System V IPC标识以及Posix消息队列。<br>
-比如UTS namespaces用来封装uname()这个系统调用。<br>
-比如User namespaces用来隔离用户ID和组ID。那么这样就可以让一个用户在某个container里拥有root权限但是在整个系统里却没有root权限。
+&nbsp;&nbsp;&nbsp;&nbsp;Network namespaces: 用来实现网络资源(网络设备，IP地址，IP路由表，端口号，等等)的隔离。<br>
+&nbsp;&nbsp;&nbsp;&nbsp;PID namespaces: 用来实现PID号这个资源的隔离，这样在不同的PID namespaces中可以使用同一个PID，比如每个namespace都有它自己的init进程(PID 1)，init进程是所有其他进程的祖先进程。<br>
+&nbsp;&nbsp;&nbsp;&nbsp;IPC namespaces: 用来隔离System V IPC标识以及Posix消息队列。<br>
+&nbsp;&nbsp;&nbsp;&nbsp;UTS namespaces: 用来封装uname()这个系统调用。<br>
+&nbsp;&nbsp;&nbsp;&nbsp;User namespaces: 用来隔离用户ID和组ID。那么这样就可以让一个用户在某个container里拥有root权限但是在整个系统里却没有root权限。
 </p>
 
 
@@ -188,6 +188,24 @@ Mount namespaces是Linux Kernel里最先出现的一个namespace，它是为了�
 </p>
 
 
+<h3>
+Linux的Namespaces，FreeBSD的Jails
+</h3>
+
+
+<p>
+在FreeBSD上面，与Namespaces类似的机制叫做Jails。Jals具有如下一些功能：<br>
+&nbsp;&nbsp;&nbsp;&nbsp;1. 目录树: 它也是借助于chroot(2)系统调用来实现的，实现效果和Linux的Mount namespaces类似。 <br>
+&nbsp;&nbsp;&nbsp;&nbsp;2. 主机名: 每个jail可以有自己的主机名。<br>
+&nbsp;&nbsp;&nbsp;&nbsp;3. IP地址: 分配给jail的IP地址，一个jail的IP地址通常是系统里存在的网络接口的IP地址。<br>
+&nbsp;&nbsp;&nbsp;&nbsp;4. 命令: jail内部的执行路径PATH，这个路径是相对于该jail环境的根目录的。<br>
+jail有自己独立的用户组和root用户，并且这些用户都限制在这个jail的内部。
+</p>
+
+
+<p>
+所以FreeBSD的Jails和Linux的Namespaces具有类似的功能，都是为了系统虚拟化。因而Docker移植到FreeBSD上面也是有可能的。
+</p>
 
 
 <h3>
@@ -198,6 +216,7 @@ Ref
 <ol>
 <li><a href="https://docs.docker.com/">Docker Docs</a></li>
 <li><a href="https://lwn.net/Articles/531114/ ">LWN:Namespaces in operation</a></li>
+<li><a href="https://www.freebsd.org/doc/handbook/jails.html">FreeBSD Jails</a></li>
 </ol>
 
 </div>
