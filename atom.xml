@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2015-09-05T20:10:34+08:00</updated>
+  <updated>2015-12-06T20:32:42+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -12,6 +12,134 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[性能优化：来龙及去脉]]></title>
+    <link href="http://laoar.github.io/blog/2015/12/05/performance-tuning/"/>
+    <updated>2015-12-05T22:13:55+08:00</updated>
+    <id>http://laoar.github.io/blog/2015/12/05/performance-tuning</id>
+    <content type="html"><![CDATA[<h3>
+背景
+</h3>
+
+
+<p>
+这是我在离开Juniper之前应manager及同事们的要求，给他们做的一个培训。
+因为我是结合Juniper具体产品来写的材料，所以这里就删去了Juniper的关键信息。
+</p>
+
+
+<h3>
+什么是性能优化
+</h3>
+
+
+<p>
+<strong>
+● 性能优化是一个理论体系，然而终究是要去解决实际问题.
+</strong>
+<br>
+- 所以，有效的才是最好的!
+</p>
+
+
+<p>
+<strong>
+● 要去解决实际问题，终归还是得有理论基础
+</strong><br>
+- Profiling Tools<br>
+- 可执行文件<br>
+&nbsp;&nbsp;&nbsp;&nbsp;文件格式<br>
+&nbsp;&nbsp;&nbsp;&nbsp;编译基础：gcc<br>
+&nbsp;&nbsp;&nbsp;&nbsp;加载执行<br>
+- CPU体系结构<br>
+&nbsp;&nbsp;&nbsp;&nbsp;CPU performance counter registers<br>
+&nbsp;&nbsp;&nbsp;&nbsp;Cache<br>
+&nbsp;&nbsp;&nbsp;&nbsp;内存管理<br>
+- 内存管理 <br>
+&nbsp;&nbsp;&nbsp;&nbsp;Kernel：  Page<br>
+&nbsp;&nbsp;&nbsp;&nbsp;多线程： 共享内存<br>
+&nbsp;&nbsp;&nbsp;&nbsp;Glibc：  堆内存管理算法<br>
+- 剩下的，都是编程语言的事了
+</p>
+
+
+
+
+<h3>
+Profiling Tools
+</h3>
+
+
+<p>
+<strong>
+● 开发者在写代码时就意识到了这个函数对性能影响较大
+</strong>
+<br>
+- 所以我们自己在这些函数的入口和出口分别获取一些统计计数，就可以计算出这个函数的执行开销。<br>
+- 这样的缺点也是显而易见，用这种方法只能看这些特定的函数<br>
+</p>
+
+
+<p>
+<strong>
+● 我们还想看其他函数的开销怎么办？
+</strong>
+<br>
+- 第一种策略是受限于编译时，所以只能看特定的函数，那是不是可以在运行时再去决定要profile的函数？<br>
+- 于是就有了另外一种profiling策略：首先这个函数必须得是全局符号就，然后根据这个全局符号来找到它的地址，接着把这个地址里的指令替换为我们自己的指令跳转到统计函数里，统计完后再返回原来的函数继续去执行。<br>
+- 这样做显然也是有局限性的，那就是只能profile全局符号<br>
+</p>
+
+
+<p>
+<strong>
+● 那编译时可不可以做到来profile所有的函数？
+</strong>
+<br>
+- 答案是有的。比如gprof这个工具，它在编译时会对所有全局函数的入口和出口处做统计。
+<br>
+</p>
+
+
+<h3>
+关于profiling tools的一些思考
+</h3>
+
+
+<p>
+<strong>
+● 要不要把profiling tool编译进最终的可执行文件？
+</strong>
+<br>
+- 如果要是编译进去，显然会影响性能 <br>
+- 如果不。那么那么实际上这是两个不同的可执行文件，所以结果并不能真实的反应实际结果
+<br>
+</p>
+
+
+<p>
+<strong>
+● 可不可以退而求其次，把它给编译进去，但是我们通过一个开关来控制它，默认关闭。
+</strong>
+<br>
+- 看起来，这相对于不编译进去，在运行时只是多了一个if的判断指令，一条判断语句也费不了多少时间。<br>
+- 然而，这些代码被编译为二进制后还是要占用地址空间的，从而会影响到指令预取。
+<br>
+- 那么，我们使用unlikely把这部分代码给放在编译到函数的最后面不就可以不影响指令预取了么？是的，但是它只是不影响这个函数内的指令预取，从全局来看，指令预取还是会受到影响。
+<br>
+</p>
+
+
+<p>
+<strong>
+● 结论：鱼与熊掌不可兼得，要么要性能要么要准确性
+</strong>
+<br>
+</p>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Docker背后的技术： Namespaces]]></title>
@@ -116,8 +244,10 @@ Mount namespaces是Linux Kernel里最先出现的一个namespace，它是为了�
 伴随着container这个概念的产生，增加了更多的namespaces来满足需要。<br>
 &nbsp;&nbsp;&nbsp;&nbsp;Network namespaces: 用来实现网络资源(网络设备，IP地址，IP路由表，端口号，等等)的隔离。<br>
 &nbsp;&nbsp;&nbsp;&nbsp;PID namespaces: 用来实现PID号这个资源的隔离，这样在不同的PID namespaces中可以使用同一个PID，比如每个namespace都有它自己的init进程(PID 1)，init进程是所有其他进程的祖先进程。<br>
-&nbsp;&nbsp;&nbsp;&nbsp;IPC namespaces: 用来隔离System V IPC标识以及Posix消息队列。<br>
-&nbsp;&nbsp;&nbsp;&nbsp;UTS namespaces: 用来封装uname()这个系统调用。<br>
+&nbsp;&nbsp;&nbsp;&nbsp;IPC namespaces: 用来隔离System V IPC标识以及Posix消息队列, 这样就使得不同Namespace之间的进程不能直接通信，就像是在不同的系统里一样
+.。<br>
+&nbsp;&nbsp;&nbsp;&nbsp;UTS namespaces: 用来封装uname()这个系统调用。可以虚拟出一个有独立主机名.
+<br>
 &nbsp;&nbsp;&nbsp;&nbsp;User namespaces: 用来隔离用户ID和组ID。那么这样就可以让一个用户在某个container里拥有root权限但是在整个系统里却没有root权限。
 </p>
 
@@ -3843,143 +3973,6 @@ Instruction Fetch Unit用来从memory中取指令到寄存器中，Decode and Is
 <p>想了并研究了这么一段时间，却得出了这么一个结论（对SIGSEGV而言，si_pid没有任何意义也就没处理），表示很失望，Kernel工程师能够再爱岗敬业一些么？ 至少把那句注释“sending process”改称“sending process(if needed)” 也好么，至少不会引起太多的误解。</p>
 <p>&nbsp;</p>
 <p>PS. : 写完一看字数，又是1000字，看来很适合写千字文。不深不浅聊技术，千字文是也。</p>]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[我的2013]]></title>
-    <link href="http://laoar.github.io/blogs/422"/>
-    <updated>2014-01-01T00:00:00+08:00</updated>
-    <id>http://laoar.github.io/blogs/422</id>
-    <content type="html"><![CDATA[<p><span style="line-height: 1.5;">    这一年，翻了很多书，走了很多路，看过不少电影，听过不少音乐。回过头来总结一下自己的2013，只谈风月，不论国是。 </span></p>
-<h3> 一 书 （以阅读时间先后排序）</h3>
-<table>
-<tbody>
-<tr>
-            <th><strong>Name</strong></td>
-            <th><strong>Author</strong></td>
-            <th><strong>Rate</strong></td>
-</tr>
-<tr>
-            <td>看见</td>
-            <td>柴静</td>
-            <td>3星</td>
-</tr>
-<tr>
-			<td>全世界人民都知道</td>
-			<td>李承鹏</td>
-			<td>3星</td>
-</tr>
-<tr>
-			<td>只是孩子</td>
-			<td>帕蒂・史密斯</td>
-			<td>3星</td>
-</tr>
-<tr>
-			<td>梁启超传</td>
-			<td>解玺璋</td>
-			<td>2星</td>
-</tr>
-<tr>
-			<td>夹边沟记事</td>
-			<td>杨显惠</td>
-			<td>5星</td>
-</tr>
-<tr>
-			<td>中国近代史（下）港版</td>
-			<td>徐中约 </td>
-			<td>5星</td>
-</tr>
-<tr>
-			<td>C陷阱与缺陷 </td>
-			<td>凯尼格</td>
-			<td>5星</td>
-</tr>
-<tr>
-			<td>我的人生九局</td>
-			<td>聂卫平</td>
-			<td>3星</td>
-</tr>
-<tr>
-			<td>定西孤儿院记事</td>
-			<td>杨显惠</td>
-			<td>5星</td>
-</tr>
-<tr>
-			<td>Linux/Unix设计思想</td>
-			<td>甘卡兹</td>
-			<td>3星</td>
-</tr>
-<tr>
-			<td>淘宝技术这十年</td>
-			<td>子柳</td>
-			<td>3星</td>
-</tr>
-<tr>
-			<td>Linux内核设计的艺术</td>
-			<td>新设计团队</td>
-			<td>1星</td>
-</tr>
-<tr>
-			<td>叫魂</td>
-			<td>孔飞力</td>
-			<td>3星</td>
-</tr>
-<tr>
-			<td>The Design and Implementation of <br />
-			the FreeBSD Operating System</td>
-			<td>Marshall Kirk Mckusicd</td>
-			<td>5星</td>
-</tr>
-<tr>
-			<td>无非求碗热汤喝</td>
-			<td>张佳玮</td>
-			<td>4星</td>
-</tr>
-<tr>
-			<td>七周七语言</td>
-			<td>Bruce A.Tate</td>
-			<td>4星</td>
-</tr>
-</tbody>
-</table>
-<p><span style="line-height: 1.5;">     总计16本书，平均3.25周看一本书。 其中有10本是非技术类书籍，6本是技术类书籍。13年看的书相比12年增加了3本，一本技术书，二本非技术书。 </span><br />
-<span style="line-height: 1.5;">    每当看到别人总结的”XXXX年我的年度十大好书“之类的东西时，就感觉一阵汗颜，我也想弄这么一个列表，可是回过头一看自己一年也就那10来本书。</span><br />
-<span style="line-height: 1.5;">    在2013年12月初的时候，我买了一个Kindle Paperwhite II。买这个kindle有一个主要原因就是发觉我的阅读量太少了，一年一年的没啥变化，所以索性买个kindle，这样，在地铁上、等公交时、排队中我都可以随手从口袋里掏出来看书了。而且，再也不用担心在拥挤的地铁里别人拿文艺青年的眼神来看你了，被爱书之人称作文艺青年是一种荣耀，被从不看书之人称作文艺青年则是一句笑话。kindle的尺寸恰好能够放在外衣（比如冲锋衣）的口袋里，很是便携，于是之前习惯从口袋里掏出iPhone刷微博也变成了拿出kindle来看书，套用马化腾的一句话就是，取代微博的一定不是另一个微博，是kindle。 </span><br />
-<span style="line-height: 1.5;">    kindle也有很多缺点，比如书太少、技术类书籍跟纸质书差不多贵，不过这丝毫掩盖不了它的优势：1）随手看书 2）书即买即得。</span></p>
-<h3>二 影</h3>
-<table>
-	<tr>
-		<td>电影 </td>
-		<td>23</td>
-		<td> 其中在影院看了9部，占比40%  </td>
-	</tr>
-	<tr>
-		<td>电视剧</td>
-		<td> 15 </td>
-		<td> 其中英剧8部，美剧7部 </td>
-	</tr>
-	<tr>
-		<td>纪录片</td>
-		<td> 1      </td>
-		<td>  BBC纪录片 </td>
-	</tr>
-	<tr>
-		<td>合计</td>
-		<td>49</td>
-		<td> </td>
-</table>
-<span>    今年看的电影数目相比去年大大下降，去年仅在影院就看了20部。13年第三季度由于跳槽至外企工作，所以看了一些美剧和英剧来提高自己的英语。事实上，看美剧还是有助于提高英语的，至少，假如你不幸也在朝阳门被老外闯红灯给撞了，当他用一口流利的北京话对你说“滚你丫妈X的”时， 你也能操着一口伦敦腔优雅的对他说“You, son of a bitch”. </span><p><span>    来到北京后，观影的体验确实发生了用翻天覆地形容也不为过的变化。在深圳看电影一般都是用各个影院的电影兑换券，这些兑换券随处有卖的。假如你跟你女朋友逛街累了想去看场电影，最简便省事又省钱的办法就是，到这个影院最近的报刊亭，然后说“哎，师傅，来两张东海太平洋的兑换券”就可以了。 在深圳，一般是一张兑换券换一张普通电影票，二张换一张3D的，三张换一张iMax的。深圳最好的影院毫无疑问是KKMall，时尚现代又有深圳最大的iMax。但是，如果是情侣看电影的话， 首选毋庸置疑是中影国际，地处欢乐海岸，毗邻红树林，逛、玩、游、憩、吃皆不勿，KKMall除了逛就是逛还是逛。</span></p>
-<p><span>    在北京，FESCO每个季度会为外企员工发6张电影优惠券，不过1张只面值10元。各个影院对FESCO券的要求还不一样，比如，中影电影院4张FESCO券可换一张3D电影票，国安剧院是4张换一张2D的，星美则是6张换一张2D的。 然后就是，我发现北京的影院比较破旧，毫无深圳（关内）影院的时尚大气感。一个文艺美女告诉我说百老汇在北京是较好的影院，但是我感觉它在深圳属于不想去第二次的影院，因为破和旧。地处全宇宙中心的五道口电影院，跟90年代的录像厅一般无二，屏幕巨小，影厅还巨狭长。</span></p>
-<h3>三 音</h3>
-<p><span>    很意外的是，当我查看我的iPod的播放记录时，我发现终于有首歌曲被我单曲循环了超过100遍，它也是我iPod里唯一一首单曲循环过百的歌曲：Depapepe的《风向仪》。我在想，单曲循环超过1000次的歌曲会在什么时候出现？十年以后？</span></p>
-<h3>四 路</h3>
-<p><span>    这一年确实走了很多路，现在我依然走路上下班，假如我一天走5公里，那么一年就是1825公里。深圳到北京的距离是2400公里，也就是，我用了差不多一年半的时间从深圳走到了北京。 </span></p>
-<p>&nbsp;</p>
-<p><span>    2013年过去了，我很怀念它，希望我的每一年都如2013这般精彩。</span></p>
-<p>&nbsp;</p>
-<p>注：<br />
-<sup class="footnote" id="fnr1"><a href="#fn1">1</a></sup>  一开始是写在豆瓣上的<br />
-<sup class="footnote" id="fnr2"><a href="#fn2">2</a></sup> <a href="http://www.laoar.net/blogs/227">我的2012</a></p>]]></content>
   </entry>
   
 </feed>

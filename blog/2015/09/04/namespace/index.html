@@ -177,8 +177,10 @@ Mount namespaces是Linux Kernel里最先出现的一个namespace，它是为了�
 伴随着container这个概念的产生，增加了更多的namespaces来满足需要。<br>
 &nbsp;&nbsp;&nbsp;&nbsp;Network namespaces: 用来实现网络资源(网络设备，IP地址，IP路由表，端口号，等等)的隔离。<br>
 &nbsp;&nbsp;&nbsp;&nbsp;PID namespaces: 用来实现PID号这个资源的隔离，这样在不同的PID namespaces中可以使用同一个PID，比如每个namespace都有它自己的init进程(PID 1)，init进程是所有其他进程的祖先进程。<br>
-&nbsp;&nbsp;&nbsp;&nbsp;IPC namespaces: 用来隔离System V IPC标识以及Posix消息队列。<br>
-&nbsp;&nbsp;&nbsp;&nbsp;UTS namespaces: 用来封装uname()这个系统调用。<br>
+&nbsp;&nbsp;&nbsp;&nbsp;IPC namespaces: 用来隔离System V IPC标识以及Posix消息队列, 这样就使得不同Namespace之间的进程不能直接通信，就像是在不同的系统里一样
+.。<br>
+&nbsp;&nbsp;&nbsp;&nbsp;UTS namespaces: 用来封装uname()这个系统调用。可以虚拟出一个有独立主机名.
+<br>
 &nbsp;&nbsp;&nbsp;&nbsp;User namespaces: 用来隔离用户ID和组ID。那么这样就可以让一个用户在某个container里拥有root权限但是在整个系统里却没有root权限。
 </p>
 
