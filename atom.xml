@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2017-03-26T21:12:17+08:00</updated>
+  <updated>2017-03-26T21:21:25+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -12,6 +12,31 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[总是等到逝去时，才意识到存在]]></title>
+    <link href="http://laoar.github.io/blog/2017/03/26/continue/"/>
+    <updated>2017-03-26T21:17:11+08:00</updated>
+    <id>http://laoar.github.io/blog/2017/03/26/continue</id>
+    <content type="html"><![CDATA[<h2>背景</h2>
+
+<p>前几天我的gmail邮箱收到一封邮件：   <br/>
+“你的域名即将到期，请你及时续费”</p>
+
+<p>然后我才意识到我的博客已经很久没有更新了&hellip;</p>
+
+<p>然后还发现我的博客排版真是惨不忍睹&hellip;</p>
+
+<h2>接下来</h2>
+
+<ul>
+<li>整理下排版</li>
+<li>更新下博客  <br/>
+记录下最近技术方面的一些收获</li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[性能优化：来龙及去脉]]></title>
@@ -3874,36 +3899,6 @@ Instruction Fetch Unit用来从memory中取指令到寄存器中，Decode and Is
     对于应用程序开发人员而言，是没有必要了解这么详细的性能寄存器信息的，或者说在这个上面花费精力意义不大。因而就有了perf、oprofile、systemtap、dtrace这些性能调试工具的应运而生。这些工具提供给程序员更友好的方式来分析程序，借助这些工具能够很直观的找到程序的critical部分。</p>
 <p>注：<br />
 <sup class="footnote" id="fnr1"><a href="#fn1">1</a></sup> 图是用Google Doc画的，第一次使用Google Doc画图，画的不太好:(</p>]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[为什么发送segment fault信号的进程总是PID0 ？]]></title>
-    <link href="http://laoar.github.io/blogs/435"/>
-    <updated>2014-02-15T00:00:00+08:00</updated>
-    <id>http://laoar.github.io/blogs/435</id>
-    <content type="html"><![CDATA[<p>让我们先来看一个小程序。<br />
-<img src="http://laoar.github.io/images/435.jpg"><br />
-这个小程序的大概意思就是，注册了一个segmentation fault的handler， 在该handler里把SIGSEGV信号的一些信息打印出来，我这里打印了两个值，一个是进程自身的PID，另外一个是info-&gt;si_pid, Linux内核里对它的解释是发送信号的进程的PID。</p>
-<p>来看下它的执行结果：<br />
-<img src="http://laoar.github.io/images/435-2.jpg"><br />
-我们可以看到当前进程的PID是1060，info-&gt;si_pid的值则是0。</p>
-<p>我们看下&lt;sys/signal.h&gt;对si_pid的解释，<br />
-<img src="http://laoar.github.io/images/435-3.jpg"><br />
-这里清清楚楚的写的是，sending process，即发送该信号的进程ID。</p>
-<p>于是，问题就来了，为什么SIGSEGV信号的发送进程是PID0 哪？</p>
-<p>我们从头来理一下Kernel对signal的处理机制， 以我们前面这个小程序为例。</p>
-<p>在我们的程序里，Line 17定义了一个指针p并初始化为NULL，接着在Line 22对p指向的内容赋值为1，我们都已经知道对空指针解引用会导致segment fault。那么，segment fault具体是怎么产生的？</p>
-<p>Kernel为了提高App的执行效率采取的是惰性分配机制，即只有在第一次写的时候才会给它分配具体的物理内存。那么在Line 22由于还没有为指针p分配物理内存，所以这里会首先产生一个缺页异常(page fault), 通过缺页异常陷入内核，接着执行内核的缺页异常处理流程。在内核缺页异常处理流程里，它判断出这是一个用户态的缺页异常，于是就尝试该缺页异常是否可以通过一些手段来解决掉。很遗憾的是，由于没给p申请内存空间，所以p不属于合法的vma区域，即所谓的bad area。于是就产生一个SIGSEGV信号给我们的这个进程。于是异常流程就执行完毕了，开始返回用户态。在返回用户态之前，进程会判断是否有信号需要处理。由于在之前产生了一个SIGSEGV信号，所以又去执行SIGSEGV的信号处理流程了，注意此时已然是在user land来执行了。SIGSEGV的默认处理流程是产生一个segment fault，并且生成一个core文件。由于我们这个程序自己注册了一个SIGSEGV的信号处理程序void handler (int sig, siginfo_t *info, void *ctx), 从内核态返回后就开始执行这个handler函数。 在信号处理程序结束后，如果没有让程序退出，即没有那个exit(-1), 那么就返回到我们程序产生异常的地方，即Line 22，继续执行（PS : 这就是为什么如果没有这个exit，该程序就会死循环的原因）。 这就是Line 22这个语言在内核里的一些动作。</p>
-<p>从我们的这个分析可以看出，应该不关PID0鸟事才会。可是事实现实，PID0确实插了一脚，很困惑不是，它到底插在哪儿了哪？</p>
-<p>唯一的可能之处就是SIGSEGV产生的地方。我们打开Kernel代码来看看这里到底发生了什么。<br />
-<img src="http://laoar.github.io/images/435-4.jpg"><br />
-这一小段代码就是SIGSEGV产生的地方。可以看到这里对info的si_signo/si_error/si_addr进行了赋值，在前面还对si_code进行了赋值，即SIGSEGV信号只用到了这四个字段。 也就是说，对于SIGSEGV而言，si_pid啥意义都没有。 </span></p>
-<p>我们可以对比看下SIGKILL这个信号。<br />
-<img src="http://laoar.github.io/images/435-5.jpg"><br />
-可以看到在产生SIGKILL的地方，将当前的活动进程赋值给了si_pid, 这也是我们在终端里按下CRTL+C来杀死一个进程的原理。接受键盘输入的进程(bash进程)给目标进程发送了一个SIGKILL信号，然后就把目标进程干掉了。</p>
-<p>想了并研究了这么一段时间，却得出了这么一个结论（对SIGSEGV而言，si_pid没有任何意义也就没处理），表示很失望，Kernel工程师能够再爱岗敬业一些么？ 至少把那句注释“sending process”改称“sending process(if needed)” 也好么，至少不会引起太多的误解。</p>
-<p>&nbsp;</p>
-<p>PS. : 写完一看字数，又是1000字，看来很适合写千字文。不深不浅聊技术，千字文是也。</p>]]></content>
   </entry>
   
 </feed>
