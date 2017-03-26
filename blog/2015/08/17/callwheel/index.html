@@ -7,7 +7,7 @@
 	<meta name="author" content="Yafang Shao">
 
 	
-	<meta name="description" content="FreeBSD里的callwheel机制(补充前一篇) FreeBSD里的定时器是基于一种callwheel机制，因为前一篇用到了timer，所以这里就简单介绍一下其基本原理。之所以单独成一篇，是由于前一篇篇幅太长了。 一 timer 来看下timer start的时候做了什么事, &hellip;">
+	<meta name="description" content="FreeBSD里的callwheel机制(补充前一篇) FreeBSD里的定时器是基于一种callwheel机制，因为前一篇用到了timer，所以这里就简单介绍一下其基本原理。之所以单独成一篇，是由于前一篇篇幅太长了。 timer 来看下timer start的时候做了什么事, &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -79,28 +79,21 @@
 	
 	<div id="content" class="inner"><article class="post">
 	<h2 class="title">FreeBSD里的callwheel机制(补充前一篇)</h2>
-	<div class="entry-content"><p>
-FreeBSD里的定时器是基于一种callwheel机制，因为前一篇用到了timer，所以这里就简单介绍一下其基本原理。之所以单独成一篇，是由于前一篇篇幅太长了。
-</p>
+	<div class="entry-content"><p>FreeBSD里的定时器是基于一种callwheel机制，因为前一篇用到了timer，所以这里就简单介绍一下其基本原理。之所以单独成一篇，是由于前一篇篇幅太长了。</p>
 
+<h2>timer</h2>
 
-<h3> 一 timer </h3>
+<p>来看下timer start的时候做了什么事, 在FreeBSD里timer是借助于callout API来实现的。callout是FreeBSD提供的一个kernel interface，它可以让一个函数在未来被调用。</p>
 
+<p>在FreeBSD里面和时间有关的一些应用都会用到callout, 它在系统里面的一些应用如下：</p>
 
-<p>
-来看下timer start的时候做了什么事, 在FreeBSD里timer是借助于callout API来实现的。callout是FreeBSD提供的一个kernel interface，它可以让一个函数在未来被调用。
-</p>
-
-
-<p>
-在FreeBSD里面和时间有关的一些应用都会用到callout, 它在系统里面的一些应用如下： 
 <center><img src="/images/callwhell-callout.jpg"></center>
-对于callout的具体细节不在此讨论，只说一下和定时器有关的关键部分。
-</p>
 
 
-<p>
-timer start函数如下所示：
+<p>对于callout的具体细节不在此讨论，只说一下和定时器有关的关键部分。</p>
+
+<p>timer start函数如下所示：</p>
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -122,27 +115,23 @@ timer start函数如下所示：
 </span><span class='line'>     <span class="p">...</span>
 </span><span class='line'><span class="p">}</span>
 </span></code></pre></td></tr></table></div></figure>
-可以看到，该callout是通过一种hash算法(expire & callwheelmask)来被添加到对应的TAILQ里面。callwheelsize是一个实验值，如果值太小的话显然会导致hash冲突比较多；而如果太大也不行，它会预先分配很多内存。所以FreeBSD Kernel Guys就采用了一个实验值，即假定一个进程（注意，在kernel里，进程和线程是没有区别的）以及一个打开的文件描述符都可以有一个callout。所以callout的最大值ncallout就被设置为了:
+
+
+<p>可以看到，该callout是通过一种hash算法(expire &amp; callwheelmask)来被添加到对应的TAILQ里面。callwheelsize是一个实验值，如果值太小的话显然会导致hash冲突比较多；而如果太大也不行，它会预先分配很多内存。所以FreeBSD Kernel Guys就采用了一个实验值，即假定一个进程（注意，在kernel里，进程和线程是没有区别的）以及一个打开的文件描述符都可以有一个callout。所以callout的最大值ncallout就被设置为了:</p>
+
 <center>ncallout = 16 + maxproc + maxfiles; </center>
-callwheelsize是不大于ncallout的最大的2的幂值，比如如果ncallout是2076，那么callwheelsize就是2048。
-</p>
 
 
-<p>
-callout是借助于时钟中断来实现的。
-</p>
+<p>callwheelsize是不大于ncallout的最大的2的幂值，比如如果ncallout是2076，那么callwheelsize就是2048。</p>
 
+<p>callout是借助于时钟中断来实现的。</p>
 
-<h3> 二 hardclock</h3>
+<h2>hardclock</h2>
 
+<p>首先要明白一个概念，什么是时钟中断上半部(hardclock)与时钟中断下半部(softclock).中断的上半部是不可以被打断的，它通常用来处理比较紧急且耗时短的任务；中断的下半部则是可以被打断的，它可以用来处理那些比较耗时的任务。比如timer，它就是在时钟中断的下半部处理的，即softclock里面。</p>
 
-<p>
-首先要明白一个概念，什么是时钟中断上半部(hardclock)与时钟中断下半部(softclock).中断的上半部是不可以被打断的，它通常用来处理比较紧急且耗时短的任务；中断的下半部则是可以被打断的，它可以用来处理那些比较耗时的任务。比如timer，它就是在时钟中断的下半部处理的，即softclock里面。
-</p>
+<p>以下代码皆摘自FreeBSD Kernel。FreeBSD Kernel时钟这部分的代码相对比较稳定，基本没有太大变化。</p>
 
-
-<p>
-以下代码皆摘自FreeBSD Kernel。FreeBSD Kernel时钟这部分的代码相对比较稳定，基本没有太大变化。
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -180,16 +169,14 @@ callout是借助于时钟中断来实现的。
 </span><span class='line'>     <span class="k">if</span> <span class="p">(</span><span class="n">need_softclock</span><span class="p">)</span>
 </span><span class='line'>        <span class="n">swi_sched</span><span class="p">(</span><span class="n">softclock_ih</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
 </span></code></pre></td></tr></table></div></figure>
-Nota bene. 往右拉可以看到全部的注释文字。
-</p>
 
 
-<h3> 三 softclock</h3>
+<p>Nota bene. 往右拉可以看到全部的注释文字。</p>
 
+<h2>softclock</h2>
 
-<p>
+<p>软时钟中断的入口函数是softclock</p>
 
-软时钟中断的入口函数是softclock
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -269,20 +256,19 @@ Nota bene. 往右拉可以看到全部的注释文字。
 </span><span class='line'>               <span class="p">}</span>
 </span><span class='line'>          <span class="p">}</span>
 </span></code></pre></td></tr></table></div></figure>
-一张图来描述callwheel结构体，就是这个样子的：<br>
+
+
+<p>一张图来描述callwheel结构体，就是这个样子的：</p>
+
 <center><img src="/images/callwheel-struct.jpg"> </center>
-</p>
 
 
+<h2>ref</h2>
 
-
-<h3> ref. </h3>
-
-
-<ol>
+<ul>
 <li><a href="http://people.freebsd.org/~davide/asia/callout_paper.pdf">callout paper</a></li>
 <li><a href="http://lists.freebsd.org/pipermail/freebsd-arch/2013-January/013807.html">discussion on callout</a></li>
-</ol>
+</ul>
 
 </div>
 
