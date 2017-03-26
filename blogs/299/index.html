@@ -7,7 +7,8 @@
 	<meta name="author" content="Yafang Shao">
 
 	
-	<meta name="description" content="三言两语聊Kernel：Busy Waiting or Sleeping？      在某些情况下，我们需要将当前线程的执行挂起，直至某一事件发生。这个事件可能是一个有争抢的资源变为可用，时间的流逝，或者锁的释放。这个等待可以通过两种基本的方式来实现：Busy Waiting 和Sleeping &hellip;">
+	<meta name="description" content="三言两语聊Kernel：Busy Waiting or Sleeping？ 在某些情况下，我们需要将当前线程的执行挂起，直至某一事件发生。这个事件可能是一个有争抢的资源变为可用，时间的流逝，或者锁的释放。这个等待可以通过两种基本的方式来实现： Busy Waiting
+Sleeping &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -79,22 +80,49 @@
 	
 	<div id="content" class="inner"><article class="post">
 	<h2 class="title">三言两语聊Kernel：Busy Waiting or Sleeping？</h2>
-	<div class="entry-content"><p style="padding-left: 30px;"></p>
-<p>     在某些情况下，我们需要将当前线程的执行挂起，直至某一事件发生。这个事件可能是一个有争抢的资源变为可用，时间的流逝，或者锁的释放。这个等待可以通过两种基本的方式来实现：Busy Waiting 和Sleeping。<br />
-<p style="padding-left: 30px;"></p><br />
-    系统通过在循环里面旋转并且不停的去检查问题事件是否发生来实现Busy Waiting。   比如，如果我们想要等待5s，可以这样来实现：<br />
-<p style="padding-left: 30px;"><span style="color: #993300;">const int until = get_time() + 5;</span><br />
-<span style="color: #993300;">while(until &gt; get_time())</span><br />
-<span style="color: #993300;">;</span></p><br />
-这样做的好处是，它的实现较简单，并且如果不等太久它在性能上会表现很好，因为避免了切换到其他线程的开销。坏处也很明显：把CPU cycle浪费在执行无任何价值的东西上。<br />
-<p style="padding-left: 30px;"></p><br />
-    Busy Waiting相对于Sleeping比较容易理解。Sleeping通过更复杂的方式来实现：首先构造一个需要等待的线程的链表，叫作等待队列；接着把自己加入到等待队列中，控制权交给内核；然后当问题事件发生时让内核唤醒该链表里的一个（些）进程去执行。举例来说，你可能需要在某一个mutex变得可用时让内核唤醒你，于是把控制权交给内核，让内核去执行除你之外的进程，在该mutex变得可用时内核再去唤醒你。如下：<br />
-<p style="padding-left: 30px;"><span style="color: #993300;">mutex_lock(&amp;m_lock);</span><br />
-<span style="color: #993300;">    list_add_tail(current, &amp;m_lock-&gt;wait_list);</span><br />
-<span style="color: #993300;">    schedule();</span></p><br />
-<p style="padding-left: 30px;"><span style="color: #993300;">mutex_unlock(&amp;m_lock);</span><br />
-<span style="color: #993300;">    wake_up_process(m_lock.wait_list.next-&gt;task);</span></p><br />
-     Sleeping相对于Busy Waiting的好处是，内核可以在等待期间去执行有意义的事情。坏处则是它的开销：维护一个链表，让你自己去睡眠，上下文切换到一个新的进程（再加上切换回你自己）。如果等待的时间较短，显然使用Busy Waiting更合理。</p></div>
+	<div class="entry-content"><p>在某些情况下，我们需要将当前线程的执行挂起，直至某一事件发生。这个事件可能是一个有争抢的资源变为可用，时间的流逝，或者锁的释放。这个等待可以通过两种基本的方式来实现：</p>
+
+<ul>
+<li>Busy Waiting</li>
+<li>Sleeping</li>
+</ul>
+
+
+<p>系统通过在循环里面旋转并且不停的去检查问题事件是否发生来实现Busy Waiting。    <br/>
+比如，如果我们想要等待5s，可以这样来实现：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="k">const</span> <span class="kt">int</span> <span class="n">until</span> <span class="o">=</span> <span class="n">get_time</span><span class="p">()</span> <span class="o">+</span> <span class="mi">5</span><span class="p">;</span>
+</span><span class='line'><span class="k">while</span><span class="p">(</span><span class="n">until</span> <span class="o">&gt;</span> <span class="n">get_time</span><span class="p">())</span>
+</span><span class='line'><span class="p">;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>这样做的好处是，它的实现较简单，并且如果不等太久它在性能上会表现很好，因为避免了切换到其他线程的开销。坏处也很明显：把CPU cycle浪费在执行无任何价值的东西上。       </p>
+
+<p>Busy Waiting相对于Sleeping比较容易理解。</p>
+
+<p>Sleeping通过更复杂的方式来实现：首先构造一个需要等待的线程的链表，叫作等待队列；接着把自己加入到等待队列中，控制权交给内核；然后当问题事件发生时让内核唤醒该链表里的一个（些）进程去执行。举例来说，你可能需要在某一个mutex变得可用时让内核唤醒你，于是把控制权交给内核，让内核去执行除你之外的进程，在该mutex变得可用时内核再去唤醒你。如下：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">mutex_lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">m_lock</span><span class="p">);</span>
+</span><span class='line'>    <span class="n">list_add_tail</span><span class="p">(</span><span class="n">current</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">m_lock</span><span class="o">-&gt;</span><span class="n">wait_list</span><span class="p">);</span>
+</span><span class='line'>    <span class="n">schedule</span><span class="p">();</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">mutex_unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">m_lock</span><span class="p">);</span>
+</span><span class='line'>    <span class="n">wake_up_process</span><span class="p">(</span><span class="n">m_lock</span><span class="p">.</span><span class="n">wait_list</span><span class="p">.</span><span class="n">next</span><span class="o">-&gt;</span><span class="n">task</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p> Sleeping相对于Busy Waiting的好处是，内核可以在等待期间去执行有意义的事情。坏处则是它的开销：维护一个链表，让你自己去睡眠，上下文切换到一个新的进程（再加上切换回你自己）。如果等待的时间较短，显然使用Busy Waiting更合理。</p>
+</div>
 
 
 <!--
