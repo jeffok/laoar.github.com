@@ -7,8 +7,7 @@
 	<meta name="author" content="Yafang Shao">
 
 	
-	<meta name="description" content="三言两语聊kernel：线程栈 Oops! MacOS不支持proc文件系统，这或许是BSD系统最值得吐槽的地方吧。无奈只好到linux机器上写了这篇文章。 下面是一个比较简单的多线程程序。程序如下，
-1
+	<meta name="description" content="三言两语聊kernel：线程栈 Oops! MacOS不支持proc文件系统，这或许是BSD系统最值得吐槽的地方吧。无奈只好到linux机器上写了这篇文章。 下面是一个比较简单的多线程程序。程序如下， 1
 2
 3
 4
@@ -98,12 +97,11 @@
 	
 	<div id="content" class="inner"><article class="post">
 	<h2 class="title">三言两语聊kernel：线程栈</h2>
-	<div class="entry-content"><p>
-<p>Oops! MacOS不支持proc文件系统，这或许是BSD系统最值得吐槽的地方吧。无奈只好到linux机器上写了这篇文章。</p>
-</p>
-<p>
-<p>下面是一个比较简单的多线程程序。程序如下，<br />
-<div class='bogus-wrapper'><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+	<div class="entry-content"><p>Oops! MacOS不支持proc文件系统，这或许是BSD系统最值得吐槽的地方吧。无奈只好到linux机器上写了这篇文章。</p>
+
+<p>下面是一个比较简单的多线程程序。程序如下，</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -149,24 +147,33 @@
 </span><span class='line'>
 </span><span class='line'>    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 </span><span class='line'><span class="p">}</span>
-</span></code></pre></td></tr></table></div></figure></div><br />
-上图是我的测试程序，我创建了3个线程。程序运行以后，我们可以通过/ proc/<span class="caps">PID</span>/task来看该程序有多少线程在运行：<br />
-<center><img src="/images/250-2.jpg"></center><br />
-然后我们来看一下进程的地址空间。 /proc/<span class="caps">PID</span>/maps就是进程的地址空间。如下所示：<br />
-<center><img src="/images/250-3.jpg"></center><br />
-可以看出，进程的地址空间从低到高依次是：进程代码段(标志含有x)、只读数据段、可读写数据段、堆、栈（包括动态库的栈空间）。</p>
-</p>
-<p>
-<p>线程18438的栈：(0xb7570000-0xb6d70000)的值恰好是8M，线程栈默认大小是8M。(0xb6d70000-0xb6d6f000)的值是1K，这1K是保护页。</p>
-</p>
-<p>
-<p>为什么这三个线程的栈都是8M？可以从ulimit命令来得出，这是进程的资源限制:<br />
-<center><img src="/images/250-4.jpg"></center><br />
-使用ulimit -a命令可以看出，进程资源限制中栈大小的限制是8194K，即8M.</p>
-</p>
-<p>
-<p>那么，这个8M大小是不是可以更改的？以及后面会什么会有一个4K大小的保护页？这可以从glibc代码里面来获取答案:<br />
-<div class='bogus-wrapper'><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>上图是我的测试程序，我创建了3个线程。程序运行以后，我们可以通过/ proc/PID/task来看该程序有多少线程在运行：</p>
+
+<center><img src="/images/250-2.jpg"></center>
+
+
+<p>然后我们来看一下进程的地址空间。 /proc/PID/maps就是进程的地址空间。如下所示：</p>
+
+<center><img src="/images/250-3.jpg"></center>
+
+
+<p>可以看出，进程的地址空间从低到高依次是：进程代码段(标志含有x)、只读数据段、可读写数据段、堆、栈（包括动态库的栈空间）。</p>
+
+<p>线程18438的栈：(0xb7570000-0xb6d70000)的值恰好是8M，线程栈默认大小是8M。(0xb6d70000-0xb6d6f000)的值是4K，这4K是保护页。</p>
+
+<p>为什么这三个线程的栈都是8M？可以从ulimit命令来得出，这是进程的资源限制:</p>
+
+<center><img src="/images/250-4.jpg"></center>
+
+
+<p>使用ulimit -a命令可以看出，进程资源限制中栈大小的限制是8194K，即8M.</p>
+
+<p>那么，这个8M大小是不是可以更改的？以及后面会什么会有一个4K大小的保护页？这可以从glibc代码里面来获取答案:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -195,7 +202,7 @@
 </span><span class='line'><span class="n">allocate_stack</span>
 </span><span class='line'>    <span class="cm">/*如果没有设置线程栈大小，就使用默认值*/</span>
 </span><span class='line'>    <span class="n">size</span> <span class="o">=</span> <span class="n">attr</span> <span class="o">&gt;</span> <span class="n">stacksize</span> <span class="o">?:</span> <span class="n">__default_stacksize</span><span class="p">;</span>
-</span><span class='line'>	<span class="cm">/* ... */</span>
+</span><span class='line'>  <span class="cm">/* ... */</span>
 </span><span class='line'> <span class="err">  </span> <span class="cm">/* Try to get a stack from the cache. */</span>
 </span><span class='line'><span class="err"> </span> <span class="err"> </span> <span class="n">pd</span> <span class="o">=</span> <span class="n">get_cached_stack</span> <span class="p">(</span><span class="o">&amp;</span><span class="n">size</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">mem</span><span class="p">);</span>
 </span><span class='line'><span class="err">   </span> <span class="cm">/* 如果没有从cache申请到，就要mmap申请一块内存 */</span>
@@ -204,21 +211,35 @@
 </span><span class='line'><span class="err"> </span> <span class="err"> </span> <span class="err"> </span> <span class="err">  </span><span class="n">mmap</span> <span class="p">(</span><span class="nb">NULL</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">prot</span><span class="p">,</span><span class="err"> </span><span class="n">MAP_PRIVATE</span> <span class="o">|</span> <span class="n">MAP_ANONYMOUS</span> <span class="o">|</span> <span class="n">MAP_STACK</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
 </span><span class='line'><span class="err">      </span>  <span class="cm">/* 接着设置一个保护区,该区域的页表属性是PROT_NONE(Page can not be accessed) */</span>
 </span><span class='line'><span class="err"> </span> <span class="err"> </span> <span class="err">  </span>  <span class="n">mprotect</span><span class="p">(</span><span class="n">guard</span><span class="p">,</span> <span class="n">guardsize</span><span class="p">,</span> <span class="n">PROT_NONE</span><span class="p">);</span>
-</span></code></pre></td></tr></table></div></figure></div><br />
-对于设置为PROT_NONE的页，是不能访问的，那么访问到这个保护区时就出现错误，linux是靠这种机制来实现栈溢出保护的。</p>
-</p>
-<p>
-<p>下面我们来调整线程栈:<br />
-1. 设置pthread_attr属性<br>
-<center><img src="/images/250-5.jpg"></center><br />
-<center><img src="/images/250-6.jpg"></center><br />
-可以看到此时的线程栈大小是: (0xb758f000-0xb756f000) = 128K.</p>
-</p>
-<p>
-<p>2. 通过ulimit来统一设置当前shell下将要执行的程序的线程栈: <br>
-ulimit -s  128<br>
-要注意的是， ulimit -s是针对shell的设置， 即只对当前shell fork的进程有效。如果在另外一个shell上起进程，则是没有效果的。参见 man手册：“Control the resources available to a process started by the shell, on systems that allow such control.”</p>
-</p></div>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>对于设置为PROT_NONE的页，是不能访问的，那么访问到这个保护区时就出现错误，linux是靠这种机制来实现栈溢出保护的。</p>
+
+<p>下面我们来调整线程栈:</p>
+
+<ul>
+<li>设置pthread_attr属性</li>
+</ul>
+
+
+<center><img src="/images/250-5.jpg"></center>
+
+
+<center><img src="/images/250-6.jpg"></center>
+
+
+<p>可以看到此时的线程栈大小是: (0xb758f000-0xb756f000) = 128K.</p>
+
+<ul>
+<li>通过ulimit来统一设置当前shell下将要执行的程序的线程栈:
+
+<blockquote><p>ulimit -s  128</p></blockquote></li>
+</ul>
+
+
+<p>要注意的是， ulimit -s是针对shell的设置， 即只对当前shell fork的进程有效。如果在另外一个shell上起进程，则是没有效果的。参见 man手册：“Control the resources available to a process started by the shell, on systems that allow such control.”</p>
+</div>
 
 
 <!--

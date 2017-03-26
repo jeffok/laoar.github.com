@@ -7,8 +7,7 @@
 	<meta name="author" content="Yafang Shao">
 
 	
-	<meta name="description" content="三言两语聊Kernel：do{…}while(0) 在内核代码里我们会看到很多do{…}while(0)来定义的宏，比如(摘自include/asm-generic/barrier.h)： linux kernel里这么定义自然有其特殊的目的。
-在C语言里，使用do/while(0) &hellip;">
+	<meta name="description" content="三言两语聊Kernel：do{…}while(0) 在内核代码里我们会看到很多do{…}while(0)来定义的宏，比如(摘自include/asm-generic/barrier.h)： linux kernel里这么定义自然有其特殊的目的。 在C语言里，使用do/while(0) &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -80,59 +79,137 @@
 	
 	<div id="content" class="inner"><article class="post">
 	<h2 class="title">三言两语聊Kernel：do{…}while(0)</h2>
-	<div class="entry-content"><p>在内核代码里我们会看到很多do{…}while(0)来定义的宏，比如(摘自include/asm-generic/barrier.h)：<br />
-<img src="/images/289.jpg"><br />
+	<div class="entry-content"><p>在内核代码里我们会看到很多do{…}while(0)来定义的宏，比如(摘自include/asm-generic/barrier.h)：  <br/>
+<img src="/images/289.jpg">  <br/>
 linux kernel里这么定义自然有其特殊的目的。</p>
+
 <p>在C语言里，使用do/while(0)模式来定义的宏在任何情况下都有同样的行为，而且在C语言里面，只有do/while(0)模式来定义的宏才会在任何情况下(比如，在没有“ }”的if语句中)都有同样的行为.</p>
+
 <p>举一些例子。</p>
-<p><span style="line-height: 1.5;">     <span style="color: #993300;">＃define foo(x)  a(x); b(x)</span></span></p>
-<p>对于 <span style="color: #993300;">foo(test);<br />
-</span>会被展开为： <span style="color: #993300;">a(test); b(test);</span></p>
-<p>&nbsp;</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="err">＃</span><span class="n">define</span> <span class="n">foo</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>  <span class="n">a</span><span class="p">(</span><span class="n">x</span><span class="p">);</span> <span class="n">b</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>对于 foo(test);   <br/>
+会被展开为： a(test); b(test);</p>
+
 <p>如果是这样的话，这看起来很正确，没有任何错误，是你原本想要得到的结果。</p>
-<p>但如果这样用：<br />
-<span style="color: #993300;">     if (cond)<br />
-</span><span style="color: #993300;">         foo(test);<br />
-</span>    它就会被展开为：<br />
-<span style="color: #993300;">    if (cond)</span><br />
-<span style="color: #993300;">        a(test); b(test);<br />
-</span>    它的行为就变成了：<br />
-<span style="color: #993300;">    if (cond)          </span><br />
-<span style="color: #993300;">        a(test); </span><br />
-<span style="color: #993300;">     b(test);<br />
-</span>    这并不是你原本想要的。</p>
-<p>然后，我们重新定义该宏，使用do/while(0)来封装：<br />
-<span style="color: #993300;"> ＃define foo(x) do{a(x); b(x)}while(0)</span></p>
-<p>这样定义的宏和前面定义的宏具有同样的作用，只不过，do确保了它的整个逻辑都在大括号里面执行，while(0)确保它只执行一次。所以它跟没有do/while(0) 的宏具有同样的效果。那么，他们有什么不同吗？让我们再来看前面那个例子：<br />
-<span style="color: #993300;">    if (cond)          </span><br />
-<span style="color: #993300;">        foo(test);<br />
-</span>    现在它就变成了：<br />
-<span style="color: #993300;">    if(cond)</span><br />
-<span style="color: #993300;">        do{a(test); b(test)}while(0);<br />
-</span>    实际上就是：<br />
-<span style="color: #993300;">    if(cond){</span><br />
-<span style="color: #993300;">        a(test);</span><br />
-<span style="color: #993300;">        b(test);</span><br />
-<span style="color: #993300;">    }</span></p>
-<p>你可能会疑问，为什么不直接使用“{}”来定义该宏？让我们来看下面这种情况：<br />
-<span style="color: #993300;">#define foo(x) {a(x); b(x);}</span><br />
-那么：<br />
-<span style="color: #993300;">    if(cond)</span><br />
-<span style="color: #993300;">        foo(test);</span><br />
-<span style="color: #993300;">    else</span><br />
-<span style="color: #993300;">        bin(test);</span><br />
-就变成了：<br />
-<span style="color: #993300;">    if(cond){</span><br />
-<span style="color: #993300;">        a(test);</span><br />
-<span style="color: #993300;">        b(test);</span><br />
-<span style="color: #993300;">    };</span><br />
-<span style="color: #993300;">    else</span><br />
-<span style="color: #993300;">        bin(test);<br />
-</span>    显然这是一个语法错误，因为else前面没有if。</p>
-<p>使用这种方式来定义宏，还有个好处是，在&quot;{&#8230;}&quot;里面可以定义自己的局部变量，而不被外面的变量所干扰。</p>
+
+<p>但如果这样用：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'>  <span class="k">if</span> <span class="p">(</span><span class="n">cond</span><span class="p">)</span>
+</span><span class='line'>  <span class="n">foo</span><span class="p">(</span><span class="n">test</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>它就会被展开为:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'>   <span class="k">if</span> <span class="p">(</span><span class="n">cond</span><span class="p">)</span>
+</span><span class='line'>      <span class="n">a</span><span class="p">(</span><span class="n">test</span><span class="p">);</span> <span class="n">b</span><span class="p">(</span><span class="n">test</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>它的行为就变成了:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'>   <span class="k">if</span> <span class="p">(</span><span class="n">cond</span><span class="p">)</span>
+</span><span class='line'>      <span class="n">a</span><span class="p">(</span><span class="n">test</span><span class="p">);</span>
+</span><span class='line'>      <span class="n">b</span><span class="p">(</span><span class="n">test</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>这并不是你原本想要的。</p>
+
+<p>然后，我们重新定义该宏，使用do/while(0)来封装：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="err">＃</span><span class="n">define</span> <span class="n">foo</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">do</span><span class="p">{</span><span class="n">a</span><span class="p">(</span><span class="n">x</span><span class="p">);</span> <span class="n">b</span><span class="p">(</span><span class="n">x</span><span class="p">)}</span><span class="k">while</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>这样定义的宏和前面定义的宏具有同样的作用，只不过，do确保了它的整个逻辑都在大括号里面执行，while(0)确保它只执行一次。所以它跟没有do/while(0) 的宏具有同样的效果。那么，他们有什么不同吗？让我们再来看前面那个例子：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="k">if</span> <span class="p">(</span><span class="n">cond</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">foo</span><span class="p">(</span><span class="n">test</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>现在它就变成了：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="k">if</span><span class="p">(</span><span class="n">cond</span><span class="p">)</span>
+</span><span class='line'>    <span class="k">do</span><span class="p">{</span><span class="n">a</span><span class="p">(</span><span class="n">test</span><span class="p">);</span> <span class="n">b</span><span class="p">(</span><span class="n">test</span><span class="p">)}</span><span class="k">while</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>实际上就是：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="k">if</span><span class="p">(</span><span class="n">cond</span><span class="p">){</span>
+</span><span class='line'>    <span class="n">a</span><span class="p">(</span><span class="n">test</span><span class="p">);</span>
+</span><span class='line'>    <span class="n">b</span><span class="p">(</span><span class="n">test</span><span class="p">);</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>你可能会疑问，为什么不直接使用“{}”来定义该宏？让我们来看下面这种情况：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="cp">#define foo(x) {a(x); b(x);}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>那么:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="k">if</span><span class="p">(</span><span class="n">cond</span><span class="p">)</span>
+</span><span class='line'>    <span class="n">foo</span><span class="p">(</span><span class="n">test</span><span class="p">);</span>
+</span><span class='line'><span class="k">else</span>
+</span><span class='line'>    <span class="nf">bin</span><span class="p">(</span><span class="n">test</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>就变成了：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="k">if</span><span class="p">(</span><span class="n">cond</span><span class="p">){</span>
+</span><span class='line'>    <span class="n">a</span><span class="p">(</span><span class="n">test</span><span class="p">);</span>
+</span><span class='line'>    <span class="n">b</span><span class="p">(</span><span class="n">test</span><span class="p">);</span>
+</span><span class='line'><span class="p">};</span>
+</span><span class='line'><span class="k">else</span>
+</span><span class='line'>    <span class="nf">bin</span><span class="p">(</span><span class="n">test</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>  <br/>
+显然这是一个语法错误，因为else前面没有if。</p>
+
+<p>使用这种方式来定义宏，还有个好处是，在&#8221;{…}&ldquo;里面可以定义自己的局部变量，而不被外面的变量所干扰。</p>
+
 <p>在linux内核代码里，很多宏都是使用do/while(0)来封装的，目的就是为了让它在任何情况下都具有同样的行为。在我们自己的代码里，也要养成这种好习惯。</p>
-<p>&nbsp;</p>
-<p>&nbsp;</p></div>
+</div>
 
 
 <!--
