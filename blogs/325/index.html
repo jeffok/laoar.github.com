@@ -131,10 +131,10 @@ FreeBSD则是将进程分为以下几种调度类型：ITHD／KERN／REALTIME／
 <h2>Memory Management</h2>
 
 <ul>
-<li>主要数据结构
+<li>主要数据结构        <br/>
 Linux kernel使用mm_struct这个结构体（include/linux/mm_types.h）来描述进程的地址空间。  <br/>
 FreeBSD使用vmspace这个结构体（sys/vm/vm_map.h）来描述进程的地址空间。</li>
-<li> 内存管理策略  <br/>
+<li> 内存管理策略   <br/>
 二者并无明显的差异。都是分页机制＋访问权限控制。</li>
 </ul>
 
