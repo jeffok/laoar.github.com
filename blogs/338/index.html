@@ -7,8 +7,8 @@
 	<meta name="author" content="Yafang Shao">
 
 	
-	<meta name="description" content="三言两语聊Kernel：该怎么理解Terminal     对于unix系的操作系统而言，即使是看起来很酷的MacOS，都有Terminal这个东西：
-那么Terminal到底是什么，该怎么来理解它？     Terminal是一种设备，它具备输入输出能力，通常我们在程序里会使用reguler &hellip;">
+	<meta name="description" content="三言两语聊Kernel：该怎么理解Terminal TL;DR 对于unix系的操作系统而言，即使是看起来很酷的MacOS，都有Terminal这个东西. 那么Terminal到底是什么，该怎么来理解它？    
+Terminal是一种设备，它具备输入输出能力， &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -80,47 +80,73 @@
 	
 	<div id="content" class="inner"><article class="post">
 	<h2 class="title">三言两语聊Kernel：该怎么理解Terminal</h2>
-	<div class="entry-content"><p style="padding-left: 30px;"></p>
-<p>    对于unix系的操作系统而言，即使是看起来很酷的MacOS，都有Terminal这个东西：</p>
-<p><a href="http://www.laoar.net/wp-content/uploads/2013/09/b6a1a15ff43df3648ff3883c28a223e0.png"><img class="aligncenter size-full wp-image-339" title="b6a1a15ff43df3648ff3883c28a223e0" src="http://www.laoar.net/wp-content/uploads/2013/09/b6a1a15ff43df3648ff3883c28a223e0.png" alt="" width="172" height="147" /></a>那么Terminal到底是什么，该怎么来理解它？<br />
-<p style="padding-left: 30px;"></p><br />
-    Terminal是一种设备，它具备输入输出能力，通常我们在程序里会使用reguler files，pipe，socket来用作输入输出，但是他们远不具备terminal那么强大的输入输出能力。 Terminal设计的目的是为了让我们与电脑的交互更容易。<br />
-<p style="padding-left: 30px;"></p><br />
-    当你在Terminal里运行一个程序的时候，你可以通过Ctrl-C来给它发送一个interrrupt信号（SIGINT）；如果该程序是从文件里面读的\x03字符，显然它不会收到SIGINT信号。当你在Terminal里运行一个程序，如果它产生了一个^G字符(\x07)，那么，你就会听到一个beep声；如果该程序是从文件里面读取到的该字符，或者将该字符写入到一个文件中，显然不会产生beep声。举个例子，在终端里面运行下面这段代码，你会不停的听到beep声。Yeah,it is so easy,but so funny.And, don&#8217;t forget to ask why.<br />
-<p style="text-align: left; padding-left: 60px;"><span style="color: #808000;">#include &lt;stdio.h&gt;</span><br />
-<span style="color: #808000;">#include &lt;unistd.h&gt;</span></p><br />
-<p style="text-align: left; padding-left: 60px;"><span style="color: #808000;">int main()</span><br />
-<span style="color: #808000;">{</span><br />
-<span style="color: #808000;">    unsigned int usec = 100;</span><br />
-<span style="color: #808000;">    while (1) {</span><br />
-<span style="color: #808000;">        printf(&#8220;\x07&#8221;);</span><br />
-<span style="color: #808000;">        usleep(usec);</span><br />
-<span style="color: #808000;">    }<br />
-</span><span style="color: #808000;">    return 0;<br />
-</span><span style="color: #808000;">}</span></p><br />
-    当你在终端里执行<span style="color: #999999;">ls -G</span>(至少Mac是这样，FreeBSD也这样，SUSE也这样，例外的是Redhat，它是<span style="color: #999999;">ls &#8212;color</span>),你会看到当前目录里的文件和子目录会有颜色的显示。不过，如果该目录里的东西要被写入到一个文件中，well，你不能在一个文本文件中显示出颜色来，can U now？<br />
-<p style="padding-left: 30px;"></p><br />
-    好吧，这到底是怎么一回事，它是怎么个工作原理哪？ 当程序与一个文件交互时，最终会通过kernel driver。如果你在一个ext2分区上open/read/write，ext2 filesystem的drivder就会被调用；如果你open一个FIFO，它会使用pipe driver(Linux:fs/pipe.c;  FreeBSD:<span style="color: #ff0000;"><span class="caps">TBD</span></span>); 如果你open一个terminal设备节点，terminal设备驱动就会处理这个请求。<br />
-<p style="padding-left: 30px;"></p><br />
-    Terminal driver控制的设备稍微多一些。 ext2 driver只需要和磁盘进行通信；pipe driver则不涉及任何硬件；而terminal driver需要监控keyboard／mouse，将字符打印到屏幕上，以及将beep声发送到speaker。从这个角度来看，terminal可以认为是个抽象化的东西，它代表了人机交互所有用到的东西。当然，X系统也是运行在一个terminal上，对linux系统而言，它对应的设备是/dev/tty7, 这也是为什么使用Alt+Ctrl+F7可以切换到X系统的原因。<br />
-<p style="padding-left: 30px;"></p><br />
-    对于一个典型的PC而言，在任何时间，某一个终端会运行在前台，其他的终端则是在后台。 位于前台的终端会接收keyboard／mouse的输入，同样也会独占的访问在monitor上显示的东西。比如，当你按下某个键比如‘K’，terminal driver会将该字符显示到屏幕上，并且将它存在一个buffer里面，因此，当接下来某个进程从终端设备来读取数据的时候会接收到这个字符。 terminal也会对一些功能键作出反应，比如Ctrl-A，terminal将其显示为^A,并且在process获取它之前将其编码为\x01。当一个process往terminal上写字符时，这些字符会被显示到屏幕上;但对于一些控制序列，比如以<a href="http://www.gnu.org/software/screen/manual/html_node/Control-Sequences.html">ESC开始的control sequences</a> ，terminal不会将其显示到屏幕上，而是会作出一些特殊的行为，比如移动cursor，或者改变当前的文本颜色，等等，当然process是不能直接看到这些行为的，它是为了给你看的。另外，BEL字符会产生一个beep音，而不是通常的可视化输出。<br />
-<p style="padding-left: 30px;"></p><br />
-     Terminal也会用来控制任务，比如，Ctrl-C来打断一个process group，Ctrl-Z来挂起一个process group，对于terminal driver而言就是发动SIGINT或者SIGSTP给在前台运行的process group。 任务控制是基于这个原理：运行在一个控制终端（/dev/tty）上的process通常是受该控制终端控制的。例如，terminal driver会纪录它控制了哪些session以及哪个process group在前台。/dev/tty是指向控制终端的一种特殊设备，具体是指向哪个设备可以通过它提供的ioctl接口来获取。<br />
-<p style="padding-left: 30px;"></p><br />
-    所有前面说到的这些很cool的功能都是在terminal driver里面来实现的，可以概括为下图所示：</p>
-<p><a href="http://www.laoar.net/wp-content/uploads/2013/09/1e5e32cb531e354b6f897853e0c49280.png"><img class="aligncenter size-full wp-image-340" title="1e5e32cb531e354b6f897853e0c49280" src="http://www.laoar.net/wp-content/uploads/2013/09/1e5e32cb531e354b6f897853e0c49280.png" alt="" width="732" height="576" /></a><br />
-<p style="padding-left: 30px;"></p><br />
-    与Terminal相关容易把人搞糊涂的一个概念是shell。shell是一个应用程序，它用来提示你输入，并且执行你的命令。shell是不感知到字符显示以及处理按键事件的，这是terminal要为它处理好的，因此terminal是对shell的一个封装，给它提供了一个人机交互的桥梁。 通常我们使用较多的shell是bash。 对应到上图，“foregroud process group”基本上都会有一个shell进程，它要么在读写字符，要么在等待它的子进程（这个子进程在读或者写字符）退出。 这个前台进程组的&quot;stdin&quot;会得到控制终端发送给它的字符，这些字符可能是你输入的，也可能是程序产生的。 这个前台进程组的“stdout”是控制终端输入以显示到屏幕上的ASCII码流。<br />
-<p style="padding-left: 30px;"></p><br />
-    还有个东西叫做console(/dev/console), console是terminal的一种类型。 对于我们而言，console比较直观的一个理解是，它是系统日志输出的地方，那么从这个角度看，console可以认为是用来管理系统的。</p>
-<p><strong><span style="color: #ff0000;"> P.S.：</span></strong></p>
-<p><strong><span style="color: #ff0000;">个人见解，如果觉得写的有不对的地方，请直接喷：）</span></strong></p>
-<p>&nbsp;</p>
-<p>ref：</p>
-<p><sup class="footnote" id="fnr1"><a href="#fn1">1</a></sup> <a href="http://www.linusakesson.net/programming/tty/index.php">The <span class="caps">TTY</span> demystified </a></p>
-<p>&nbsp;</p>
-<p>&nbsp;</p></div>
+	<div class="entry-content"><h2>TL;DR</h2>
+
+<p>对于unix系的操作系统而言，即使是看起来很酷的MacOS，都有Terminal这个东西.</p>
+
+<p>那么Terminal到底是什么，该怎么来理解它？   <br/>
+   
+Terminal是一种设备，它具备输入输出能力，通常我们在程序里会使用reguler files，pipe，socket来用作输入输出，但是他们远不具备terminal那么强大的输入输出能力。 Terminal设计的目的是为了让我们与电脑的交互更容易。</p>
+
+<h2>Terminal</h2>
+
+<p>当你在Terminal里运行一个程序的时候，你可以通过Ctrl-C来给它发送一个interrrupt信号（SIGINT）；如果该程序是从文件里面读的\x03字符，显然它不会收到SIGINT信号。当你在Terminal里运行一个程序，如果它产生了一个<sup>G</sup>字符(\x07)，那么，你就会听到一个beep声；如果该程序是从文件里面读取到的该字符，或者将该字符写入到一个文件中，显然不会产生beep声。举个例子，在终端里面运行下面这段代码，你会不停的听到beep声。Yeah,it is so easy,but so funny.And, don&rsquo;t forget to ask why.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="cp">#include &lt;stdio.h&gt;</span>
+</span><span class='line'><span class="cp">#include &lt;unistd.h&gt;</span>
+</span><span class='line'>
+</span><span class='line'><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span>
+</span><span class='line'><span class="p">{</span>
+</span><span class='line'>    <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">usec</span> <span class="o">=</span> <span class="mi">100</span><span class="p">;</span>
+</span><span class='line'>    <span class="k">while</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>        <span class="n">printf</span><span class="p">(</span><span class="err">“\</span><span class="n">x07</span><span class="err">”</span><span class="p">);</span>
+</span><span class='line'>        <span class="n">usleep</span><span class="p">(</span><span class="n">usec</span><span class="p">);</span>
+</span><span class='line'>    <span class="p">}</span>
+</span><span class='line'>    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>当你在终端里执行<code>ls -G</code> (至少Mac是这样，FreeBSD也这样，SUSE也这样，例外的是Redhat，它是<code>ls --color</code>),你会看到当前目录里的文件和子目录会有颜色的显示。不过，如果该目录里的东西要被写入到一个文件中，well，你不能在一个文本文件中显示出颜色来，can U now？</p>
+
+<p>好吧，这到底是怎么一回事，它是怎么个工作原理哪？ 当程序与一个文件交互时，最终会通过kernel driver。如果你在一个ext2分区上open/read/write，ext2 filesystem的drivder就会被调用；如果你open一个FIFO，它会使用pipe driver(Linux:fs/pipe.c;  FreeBSD: TBD); 如果你open一个terminal设备节点，terminal设备驱动就会处理这个请求。</p>
+
+<p>Terminal driver控制的设备稍微多一些。 ext2 driver只需要和磁盘进行通信；pipe driver则不涉及任何硬件；而terminal driver需要监控keyboard／mouse，将字符打印到屏幕上，以及将beep声发送到speaker。从这个角度来看，terminal可以认为是个抽象化的东西，它代表了人机交互所有用到的东西。当然，X系统也是运行在一个terminal上，对linux系统而言，它对应的设备是/dev/tty7, 这也是为什么使用Alt+Ctrl+F7可以切换到X系统的原因。</p>
+
+<p>对于一个典型的PC而言，在任何时间，某一个终端会运行在前台，其他的终端则是在后台。 位于前台的终端会接收keyboard／mouse的输入，同样也会独占的访问在monitor上显示的东西。比如，当你按下某个键比如‘K’，terminal driver会将该字符显示到屏幕上，并且将它存在一个buffer里面，因此，当接下来某个进程从终端设备来读取数据的时候会接收到这个字符。 terminal也会对一些功能键作出反应，比如Ctrl-A，terminal将其显示为<sup>A</sup>,并且在process获取它之前将其编码为\x01。当一个process往terminal上写字符时，这些字符会被显示到屏幕上;但对于一些控制序列，比如以<a href="http://www.gnu.org/software/screen/manual/html_node/Control-Sequences.html">ESC开始的control sequences</a> ，terminal不会将其显示到屏幕上，而是会作出一些特殊的行为，比如移动cursor，或者改变当前的文本颜色，等等，当然process是不能直接看到这些行为的，它是为了给你看的。另外，BEL字符会产生一个beep音，而不是通常的可视化输出。</p>
+
+<p>Terminal也会用来控制任务，比如，Ctrl-C来打断一个process group，Ctrl-Z来挂起一个process group，对于terminal driver而言就是发动SIGINT或者SIGSTP给在前台运行的process group。 任务控制是基于这个原理：运行在一个控制终端（/dev/tty）上的process通常是受该控制终端控制的。例如，terminal driver会纪录它控制了哪些session以及哪个process group在前台。/dev/tty是指向控制终端的一种特殊设备，具体是指向哪个设备可以通过它提供的ioctl接口来获取。</p>
+
+<p>所有前面说到的这些很cool的功能都是在terminal driver里面来实现的，可以概括为下图所示：     <br/>
+(sorry, I can&rsquo;t find the image now)</p>
+
+<h2>shell</h2>
+
+<p>与Terminal相关容易把人搞糊涂的一个概念是shell。shell是一个应用程序，它用来提示你输入，并且执行你的命令。shell是不感知到字符显示以及处理按键事件的，这是terminal要为它处理好的，因此terminal是对shell的一个封装，给它提供了一个人机交互的桥梁。 通常我们使用较多的shell是bash。 对应到上图，“foregroud process group”基本上都会有一个shell进程，它要么在读写字符，要么在等待它的子进程（这个子进程在读或者写字符）退出。 这个前台进程组的&#8221;stdin&#8221;会得到控制终端发送给它的字符，这些字符可能是你输入的，也可能是程序产生的。 这个前台进程组的“stdout”是控制终端输入以显示到屏幕上的ASCII码流。</p>
+
+<h2>console</h2>
+
+<p>还有个东西叫做console(/dev/console), console是terminal的一种类型。 对于我们而言，console比较直观的一个理解是，它是系统日志输出的地方，那么从这个角度看，console可以认为是用来管理系统的。</p>
+
+<h2>Ref.</h2>
+
+<ul>
+<li><a href="http://www.linusakesson.net/programming/tty/index.ph">The TTY demystified</a></li>
+</ul>
+
+</div>
 
 
 <!--
