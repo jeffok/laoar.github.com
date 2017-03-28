@@ -7,7 +7,7 @@
 	<meta name="author" content="Yafang Shao">
 
 	
-	<meta name="description" content="性能优化，从linux内核里来学习，和一个例子     我对“案例”这个词比较反感，所以标题是“一个例子”。 “案例”这个词，就跟“拉通”、“沟通”、“跟产品PK”、“奋斗者”、“客户”一样，在我眼里属于洗脑文化，所以我比较忌讳使用这些词。使用“例子”、“员工”、“customer”这些词( &hellip;">
+	<meta name="description" content="性能优化，从linux内核里来学习，和一个例子 闲扯 对于性能优化，相信稍微懂点编程的人都能说出个二五六来。比如对于inline的使用，只要是会写C语言，相信你一定能够口若悬河滔滔不绝的说出一大坨一大坨inline的优劣以及对性能的影响，然而这一大坨一大坨的经验都是bullshit， &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -79,28 +79,36 @@
 	
 	<div id="content" class="inner"><article class="post">
 	<h2 class="title">性能优化，从linux内核里来学习，和一个例子</h2>
-	<div class="entry-content"><p style="padding-left: 30px;"></p>
-<p>    我对“案例”这个词比较反感，所以标题是“一个例子”。 “案例”这个词，就跟“拉通”、“沟通”、“跟产品PK”、“奋斗者”、“客户”一样，在我眼里属于洗脑文化，所以我比较忌讳使用这些词。使用“例子”、“员工”、“customer”这些词(很抱歉我不知道“拉通”、“沟通”、“和产品PK”是什么意思，因而找不到对应的词，还好我生活和工作中也不会用到这些词)会让我更舒服一些。<br />
-<p style="padding-left: 30px;"></p><br />
-    对于性能优化，相信稍微懂点编程的人都能说出个二五六来。比如对于inline的使用，只要是会写C语言，相信你一定能够口若悬河滔滔不绝的说出一大坨一大坨inline的优劣以及对性能的影响，然而这一大坨一大坨的经验都是bullshit，一切要看结果怎么样（我心里忽然不由自主的冒出了“以结果为导向”这个词，oh god，愿上帝拯救我）。就像木心在《文学回忆录》说的，“思想过剩的人，行动力往往较差”，关于性能优化这件事也是这样，不要迷信前人的经验，要自己动手去做。注意“迷信”的前提是了解，你要去了解他们的说法，但是不要去相信他们。<span style="line-height: 1.5em;">   </span></p>
-<p><span style="line-height: 1.5em;">    再来看inline这个问题，有个哥哥根据自己的实验发现，</span><span style="text-decoration: underline;"><a href="https://lwn.net/Articles/82494/">在skbbuff里面的一些skb__函数都不应该使用inline，因为去掉这些inline后能够提升3%的性</a>能</span><span style="line-height: 1.5em;">。所以说，这些想当然的经验都是bullshit，一切要看实际结果，写代码时不要傻逼兮兮的一上来就到处加inline，毕竟高司令也说过，“过早优化是万恶之源‘。</span><br />
-<p style="padding-left: 30px;"></p><br />
-    当然我要说的例子不是这个inline的例子。<br />
-<p style="padding-left: 30px;"></p><br />
-    我们知道Linux Kernel跟GNU是密切联系的，所以在Linux Kernel里面到处可见GCC的一些优化手段，比如GCC的attribute这个东西。《GNU/Linux Application Programming》的作者Tim Jones在他的文章《GCC hacks in Linux Kernel》里对GCC的这些手段做了些总结，写的也挺好。不过这个老兄忽略了一个很重要的东西，__attribute__((section(&#8220;name&#8221;))). 如果你要是写过内核驱动或者做过内核启动的话，你应该对__attribute__((section(&#8220;.init.text&#8221;)))不会陌生，没错他就是__init这个宏。__init这个宏的作用是，Gcc会把这个函数放在.init.text的输入段给链接器，这样所有以__init来声明的符号都会放在.init.text这个section里面。然后在初始化完毕，这些初始化代码显然就不会再执行了，那么他们占用的内存就可以被释放掉，所以在kernel初始化结束会调用一个free_initmem()函数来释放所有位于.init这个section的函数。<br />
-<p style="padding-left: 30px;"></p><br />
-    不过可惜的是，由于释放的是代码段的页表，因而必须得在内核里面来做，而且内核也没有提供这样的系统调用给用户态 ，对于用户态而言就没有办法来这样处理。事实上有很多用户态程序的初始化代码也很大，几百KB的初始化代码也是很正常的，释放这部分空间也是很可观。不清楚内核开发者为什么不考虑将这个方法以一个系统调用的形式导出到用户态。即提供这样一个系统调用：<br />
-int free_inittext(unsigned long start, unsigned long end);<br />
-释放页表要求是页对齐，这部分工作可以在内核里面进行检查，并将start向后对齐，以及end向前对齐，该系统调用的返回值是实际释放的page数目，如果没有释放就返回负值。<br />
-<p style="padding-left: 30px;"></p><br />
-    我们已经知道__attribute__((section(“name&quot;)))的作用是将这个函数给放在一起，这样就给我们提供了一个优化思路，我们完全可以将hot function用这种方法给放在一起，来减少icache miss。之所以是将hot function放在一起，而不是将逻辑上顺序执行的代码顺序排放，是因为icache的替换算法是LRU，即最近最少使用。既然是hot function，显然是会经常调用的，那么，我们把经常调用的函数给放在一起，当某一个函数得到执行时就会可能将另外的hot function一并给预取到cache line里面，其实本质上就是利用cpu的指令预取特性，有点类似于likely()；并且由于这个cache line里都是hot instruction，它总是会得到执行，被替换出去的可能性就大大减少，从而提高cache hit rate。这里需要澄清的一点是，当执行到某一个函数的时候，由于cpu不直接跟memory打交道，它会把该函数读取到cache里面再load到寄存器里面去执行，它把函数读取到cache里面时并不是把整个函数给读取到cache里，而是只读取一个cache line。比如我某一个函数它的起始地址是0x40000008, 假设cache line大小是32bytes， 那么我要执行这个函数的时候就会一次性的将0x40000000～0x40000020这部分的指令给读取到cache，某些cpu会有critical设计，即先读取0x40000008开始的4字节（对于32bits的CPU而言，其read path是4字节）读取到cache接下来再读取其余的28bytes。<br />
-<p style="padding-left: 30px;"></p><br />
-    这里就是我要说的一个例子。我在做性能优化的时候，仅仅是将critical path里的2个函数利用这种方法给放在了一起，就将UDP的throughput给提升了&gt;10%.<br />
-<p style="padding-left: 30px;"></p><br />
-    然而，我之所以选择这样做也是迫不得已，我更理想的想法是将另外一个函数给定义成inline，然而无奈另外一个函数有多处调用，如定义成inline可能会得不偿失，因为可执行文件的size就会变大了。结果也恰如我所料，将其定义为inline反而导致性能下降。<br />
-<p style="padding-left: 30px;"></p><br />
-    所以我就想，C语言里面是否应该有这种设计：inline不是用来作为函数定义的限制词，而是作为函数调用的限制词，即我在调用的时候来决定是否将该函数给内嵌过来，而不是在定义该函数的时候限制其为inline。 比如：<br />
-<div class='bogus-wrapper'><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+	<div class="entry-content"><h2>闲扯</h2>
+
+<p>对于性能优化，相信稍微懂点编程的人都能说出个二五六来。比如对于inline的使用，只要是会写C语言，相信你一定能够口若悬河滔滔不绝的说出一大坨一大坨inline的优劣以及对性能的影响，然而这一大坨一大坨的经验都是bullshit，一切要看结果怎么样（我心里忽然不由自主的冒出了“以结果为导向”这个词，oh god，愿上帝拯救我）。就像木心在《文学回忆录》说的，“思想过剩的人，行动力往往较差”，关于性能优化这件事也是这样，不要迷信前人的经验，要自己动手去做。注意“迷信”的前提是了解，你要去了解他们的说法，但是不要去相信他们。</p>
+
+<p>再来看inline这个问题，有个哥哥根据自己的实验发现，</span><span style="text-decoration: underline;"><a href="https://lwn.net/Articles/82494/">在skbbuff里面的一些skb__函数都不应该使用inline，因为去掉这些inline后能够提升3%的性</a>能</span><span style="line-height: 1.5em;">。所以说，这些想当然的经验都是bullshit，一切要看实际结果，写代码时不要傻逼兮兮的一上来就到处加inline，毕竟高司令也说过，“过早优化是万恶之源‘。</span></p>
+
+<p>当然我要说的例子不是这个inline的例子。</p>
+
+<h2>gcc attribute</h2>
+
+<p>我们知道Linux Kernel跟GNU是密切联系的，所以在Linux Kernel里面到处可见GCC的一些优化手段，比如GCC的attribute这个东西。《GNU/Linux Application Programming》的作者Tim Jones在他的文章《GCC hacks in Linux Kernel》里对GCC的这些手段做了些总结，写的也挺好。不过这个老兄忽略了一个很重要的东西，<strong>attribute</strong>((section(&ldquo;name&rdquo;))). 如果你要是写过内核驱动或者做过内核启动的话，你应该对<code>__attribute__((section(".init.text")))</code>不会陌生，没错他就是<strong>init这个宏。</strong>init这个宏的作用是，Gcc会把这个函数放在.init.text的输入段给链接器，这样所有以__init来声明的符号都会放在.init.text这个section里面。然后在初始化完毕，这些初始化代码显然就不会再执行了，那么他们占用的内存就可以被释放掉，所以在kernel初始化结束会调用一个<code>free_initmem()</code>函数来释放所有位于.init这个section的函数。</p>
+
+<p>    不过可惜的是，由于释放的是代码段的页表，因而必须得在内核里面来做，而且内核也没有提供这样的系统调用给用户态 ，对于用户态而言就没有办法来这样处理。事实上有很多用户态程序的初始化代码也很大，几百KB的初始化代码也是很正常的，释放这部分空间也是很可观。不清楚内核开发者为什么不考虑将这个方法以一个系统调用的形式导出到用户态。即提供这样一个系统调用：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="kt">int</span> <span class="nf">free_inittext</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">long</span> <span class="n">start</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">long</span> <span class="n">end</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>释放页表要求是页对齐，这部分工作可以在内核里面进行检查，并将start向后对齐，以及end向前对齐，该系统调用的返回值是实际释放的page数目，如果没有释放就返回负值。</p>
+
+<p>    我们已经知道<code>__attribute__((section(“name")))</code>的作用是将这个函数给放在一起，这样就给我们提供了一个优化思路，我们完全可以将hot function用这种方法给放在一起，来减少icache miss。之所以是将hot function放在一起，而不是将逻辑上顺序执行的代码顺序排放，是因为icache的替换算法是LRU，即最近最少使用。既然是hot function，显然是会经常调用的，那么，我们把经常调用的函数给放在一起，当某一个函数得到执行时就会可能将另外的hot function一并给预取到cache line里面，其实本质上就是利用cpu的指令预取特性，有点类似于likely()；并且由于这个cache line里都是hot instruction，它总是会得到执行，被替换出去的可能性就大大减少，从而提高cache hit rate。这里需要澄清的一点是，当执行到某一个函数的时候，由于cpu不直接跟memory打交道，它会把该函数读取到cache里面再load到寄存器里面去执行，它把函数读取到cache里面时并不是把整个函数给读取到cache里，而是只读取一个cache line。比如我某一个函数它的起始地址是0x40000008, 假设cache line大小是32bytes， 那么我要执行这个函数的时候就会一次性的将0x40000000～0x40000020这部分的指令给读取到cache，某些cpu会有critical设计，即先读取0x40000008开始的4字节（对于32bits的CPU而言，其read path是4字节）读取到cache接下来再读取其余的28bytes。</p>
+
+<p>    这里就是我要说的一个例子。我在做性能优化的时候，仅仅是将critical path里的2个函数利用这种方法给放在了一起，就将UDP的throughput给提升了10%.</p>
+
+<p>    然而，我之所以选择这样做也是迫不得已，我更理想的想法是将另外一个函数给定义成inline，然而无奈另外一个函数有多处调用，如定义成inline可能会得不偿失，因为可执行文件的size就会变大了。结果也恰如我所料，将其定义为inline反而导致性能下降。</p>
+
+<p>    所以我就想，C语言里面是否应该有这种设计：inline不是用来作为函数定义的限制词，而是作为函数调用的限制词，即我在调用的时候来决定是否将该函数给内嵌过来，而不是在定义该函数的时候限制其为inline。 比如：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -116,7 +124,9 @@ int free_inittext(unsigned long start, unsigned long end);<br />
 </span><span class='line'>    <span class="n">c</span> <span class="o">=</span> <span class="n">func_b</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span> <span class="kr">__inline</span><span class="p">;</span>
 </span><span class='line'>    <span class="c1">//...</span>
 </span><span class='line'><span class="p">}</span>
-</span></code></pre></td></tr></table></div></figure></div></p></div>
+</span></code></pre></td></tr></table></div></figure>
+
+</div>
 
 
 <!--
