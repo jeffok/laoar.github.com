@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2017-03-28T13:56:01+08:00</updated>
+  <updated>2017-03-28T22:31:16+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -3666,43 +3666,58 @@ int free_inittext(unsigned long start, unsigned long end);<br />
     <link href="http://laoar.github.io/blogs/466"/>
     <updated>2014-03-20T00:00:00+08:00</updated>
     <id>http://laoar.github.io/blogs/466</id>
-    <content type="html"><![CDATA[<p style="padding-left: 30px;"></p>
-<p>    本来今晚计划去健身的，谁知道正打算去的时候发现背包里只带着运动裤，忘了带跑步鞋了，脚上的Northface鞋实在不适合健身，于是无奈放弃了。然后趁这个机会写点东西。<br />
-<p style="padding-left: 30px;"></p><br />
-    好了，言归正传。<br />
-<p style="padding-left: 60px;"></p><br />
-    我们对于struct stack熟知的是下面这种情况。<br />
-<img src="http://laoar.github.io/images/466.jpg"><br />
-我们定义一个结构体family来记录一个正常家庭的人的年龄，显然对于一个正常家庭来说，爸妈各只有一个，但是孩子有多少就不确定了，所以我们把family的最后一个成员baby定义为了变长数组。对于这种在一个结构体里面最后一个变量是变长数组而且仅有这一个成员是变长数组的情况，我们称之为struct hack。这属于C语言里面的一个trick。<br />
-<p style="padding-left: 30px;"></p><br />
-    我这边博客要讨论的不是这种情况，我要说的是我在FreeBSD内核里面看到的一个很有意思的代码，也是一种struct的trick。它起的名字是struct __hack, 所以我就联想到了前面的struc hack ：）<br />
-<p style="padding-left: 30px;"></p><br />
-    在说FreeBSD内核的struct __hack之前，先来说下Linux内核里的do{ }while(0) 。 在我之前一个<a href="http://www.laoar.net/?p=289">blog</a>里，我说了 do{} while(0) 的目的是为了防止悬挂else问题。之所以会出现悬挂else问题，就是因为代码写的不是太规范。所以说，对于if/else,我们还是要尽量写成<br />
-<p style="text-align: left; padding-left: 150px;"><br />
-if  (…)  {<br />
-&#8230;<br />
-} else {<br />
-&#8230;<br />
-}</p><br />
-即使里面只有一句话。<br />
-<p style="padding-left: 30px;">然后在来看这个struct __hack。</p><br />
-<img src="http://laoar.github.io/images/466-2.jpg"><br />
-<p style="padding-left: 90px;"></p><br />
-<p style="text-align: left;">     任何技术或者技巧的出现都是为了解决一些问题的，那么这里的struct __hack是为了解决什么问题哪？ 其实它是用来告诉程序员这个宏只用作函数声明。我们知道函数声明一般都是下面这个样子：</p><br />
-<p style="text-align: left; padding-left: 150px;"><br />
-void foobar(void);</p><br />
-<p style="text-align: left;">这个宏也是为了模拟这种形式, 当然事实上它仍然是宏定义了一个函数, 这里要模拟，是说，它的函数体在别处。比如：</p><br />
-<p style="text-align: left; padding-left: 150px;">TASKQUEUE_DEFINE_THREAD(kqueue);</p><br />
-<p style="padding-left: 30px;"></p><br />
-    总之，这个小小的细节正体现出了FreeBSD所追求的优雅性.<br />
-<p style="padding-left: 30px;"></p><br />
-    写完发现字数太少了。所以在歪歪唧唧一些。最近写blog经常中英混杂，貌似好像大概可能也许很多人都讨厌这个样子，不过目测讨厌这样的多半都不是计算机这个行业或者工作中和英语打交道较少的。假如英语真的影响到你的薪水，进而又影响到你的生活质量，显然你也会不自觉的变成这样，无他，赚钱糊口而已。正应了那句话，叫做，屌丝的生活高富帅永远都不懂，只有经历了你才会明白：）<br />
-<p style="padding-left: 30px;"></p><br />
-    计算机这个东西本身就是美国的，凡事都是原汁原味的好，而且在绝大多数情况下，你面对的只有英文。比如对于一个C编译器的编译错误信息“discards qualifiers from pointer target type”， 如果你要Google一下才知道这是什么错误的话，那么恭喜你，码农的苦逼生活不适合你：）<br />
-<p style="padding-left: 30px;"></p><br />
-    其实反过来想也是这样。我在的小区附近老外特别多，旁边一个小区住着N多的韩国人。最近楼下新开了一家店，为了招徕老外，显然得起个英文名，它的英文名字叫“Chinese Humberger”，你猜它的中文名叫什么？ 肉夹馍！ 哈哈，很不伦不类，莫名其妙不是。所以说，原汁原味的才是最好的。</p>
-<p>&nbsp;</p>
-<p>&nbsp;</p>]]></content>
+    <content type="html"><![CDATA[<h2>TL;DR</h2>
+
+<p>我们对于struct hack熟知的是下面这种情况。        <br/>
+<img src="http://laoar.github.io/images/466.jpg">
+我们定义一个结构体family来记录一个正常家庭的人的年龄，显然对于一个正常家庭来说，爸妈各只有一个，但是孩子有多少就不确定了，所以我们把family的最后一个成员baby定义为了变长数组。对于这种在一个结构体里面最后一个变量是变长数组而且仅有这一个成员是变长数组的情况，我们称之为struct hack。这属于C语言里面的一个trick。
+    我这边博客要讨论的不是这种情况，我要说的是我在FreeBSD内核里面看到的一个很有意思的代码，也是一种struct的trick。它起的名字是struct __hack, 所以我就联想到了前面的struc hack ：）</p>
+
+<h2>代码的规范性</h2>
+
+<p>在说FreeBSD内核的<code>struct __hack</code>之前，先来说下Linux内核里的<code>do{ }while(0)</code> 。 在我之前一个<a href="http://www.laoar.net/?p=289">blog</a>里，我说了 <code>do{} while(0)</code> 的目的是为了防止悬挂else问题。之所以会出现悬挂else问题，就是因为代码写的不是太规范。所以说，对于if/else,我们还是要尽量写成</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="k">if</span> <span class="err"> </span><span class="p">(</span><span class="err">…</span><span class="p">)</span> <span class="err"> </span><span class="p">{</span>
+</span><span class='line'><span class="p">...</span>
+</span><span class='line'><span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+</span><span class='line'><span class="p">...</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>即使里面只有一句话。</p>
+
+<h2>struct __hack</h2>
+
+<p>然后在来看这个<code>struct __hack</code>      <br/>
+<img src="http://laoar.github.io/images/466-2.jpg"></p>
+
+<p>任何技术或者技巧的出现都是为了解决一些问题的，那么这里的<code>struct __hack</code>是为了解决什么问题哪？ 其实它是用来告诉程序员这个宏只用作函数声明。我们知道函数声明一般都是下面这个样子：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="kt">void</span> <span class="nf">foobar</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>这个宏也是为了模拟这种形式, 当然事实上它仍然是宏定义了一个函数, 这里要模拟，是说，它的函数体在别处。比如：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">TASKQUEUE_DEFINE_THREAD</span><span class="p">(</span><span class="n">kqueue</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>总之，这个小小的细节正体现出了FreeBSD所追求的优雅性.</p>
+
+<h2>闲扯</h2>
+
+<p>计算机这个东西本身就是美国的，凡事都是原汁原味的好，而且在绝大多数情况下，你面对的只有英文。比如对于一个C编译器的编译错误信息“discards qualifiers from pointer target type”， 如果你要Google一下才知道这是什么错误的话，那么恭喜你，码农的苦逼生活不适合你：）      <br/>
+其实反过来想也是这样。我在的小区附近老外特别多，旁边一个小区住着N多的韩国人。最近楼下新开了一家店，为了招徕老外，显然得起个英文名，它的英文名字叫“Chinese Humberger”，你猜它的中文名叫什么？ 肉夹馍！ 哈哈，很不伦不类，莫名其妙不是。所以说，原汁原味的才是最好的。</p>
+]]></content>
   </entry>
   
   <entry>
@@ -3710,18 +3725,24 @@ void foobar(void);</p><br />
     <link href="http://laoar.github.io/blogs/455"/>
     <updated>2014-03-06T00:00:00+08:00</updated>
     <id>http://laoar.github.io/blogs/455</id>
-    <content type="html"><![CDATA[<p style="padding-left: 30px;"></p>
-<p>    对于大型软件系统而言，可维护性是很重要的一个方面，否则到了最后没人能够搞懂全部的代码那就是一个灾难了。这方面的例子可谓比比皆是，比如华为VRP平台的Linux内核，因为模块间耦合太严重很难升级Linux内核版本，搞到最后实在搞不下去，于是团队解散，投奔中软的RTOS。松本行弘在《代码的未来》这本书里说，开发人员的成本越来越高，机器成本则是越来越便宜，所以我们的编程语言应该要侧重于开发效率和维护效率，而不应该太过于关注性能，至于性能这件事，完全可以通过升级更牛逼的硬件来很轻松的搞定。其实Ruby之父的这个观点在很久之前就被Donald Kunth说过了，“premature  optimization is the root of all evil”。两位大师的观点可谓殊途同归。<br />
-<p style="padding-left: 30px;"></p><br />
-    Donald Knuth在大多数软件工程师眼里可谓神一般的存在，它的这句名言也一直被码农们牢记在心。 Donald Knuth前辈并不是反对optimization，它只是反对premature optimization，即盲目无意义的优化，optimization应该要针对critical的东西。如何寻找critical的代码，就是一个profiling系统需要做的事情。当然profiling本身也属于可维护性的一部分。<br />
-<p style="padding-left: 30px;"></p><br />
-    Profiling的本质，是为了充分发挥CPU的能力。现代CPU的体系结构已经很牛逼了，但是相对而言，软件开发语言则没多大进步，再加上软件开发人员水平的良莠不齐，直接的后果就是，CPU的能力没有得到充分利用。虽然说使用更牛逼的CPU更牛逼的内存更牛逼的散热系统可以大幅的提高性能，但是在相同的配置下，比别人有更牛逼的表现不是更好嘛。iPhone和三星Andriod手机的对比不就是很好的证明嘛。<br />
-<p style="padding-left: 30px;">现代CPU的流水线体系结构大概是这个样的。</p><br />
-<img src="http://laoar.github.io/images/455.jpg"><br />
-Instruction Fetch Unit用来从memory中取指令到寄存器中，Decode and Issue Unit则是将指令翻译成CPU能够识别的编码然后发射到Functional Units（比如运算器等等）来执行这些指令，FU的执行结果再放回到寄存器中。 所以一条指令的执行完毕最好的情况下需要4个CPU cycles就可以搞定了。我们都已经知道流水线的原理就是，指令A在FU执行时，指令B在译码准备发射，指令C在被从内存中读取到寄存器中，于是这样就实现了不同指令的并行工作来提高CPU的效率。 CPU的这个设计思想被Unix开发人员学来了，于是就是有了管道（pipe）。再接着Erlang又把管道的原理用在了语言特性上来实现并发编程，最后Golang又把Erlang的管道特性给学了去。这并不是说CPU的设计人员有多么牛逼，而是说，软件开发人员要在CPU设计人员制定的规则下做事才能充分利用CPU的性能。<br />
-<p style="padding-left: 30px;"></p><br />
-    CPU的这种流水线存在的缺点，或者说，要依赖编程人员水平的地方在于，指令A可能是JUMP D，这样就导致指令B和指令C要被从流水线里面刷出去了，就造成CPU cycle的浪费。 要想避免这种浪费，就要要求程序自身具有很好的分支预测特性，即要充分迎合CPU的这种预测执行的特性。 在Linux内核里面随处可见的likely()/unlikely()就是做这个事情的，likely()/unlikely()是告诉编译器把if/while的代码块是紧挨着前面的代码还是放置到整个函数的最后面（因为if／while的汇编实现本来就是一个jump指令，所以可以把它跳转到任意合适的位置，这优点类似于goto）。因为CPU最后执行的是编译器生成的二进制，而不是我们写的代码，所以一个好的编译器对于程序性能的影响是巨大的。现在的编译器要比程序员聪明的多，它往往能够预测出程序接下来要执行的指令是什么，有时候我们加的likely()/unlikely()可能根本就没有意义甚至适得其反，因为程序员相比编译器而言太蠢了。有一个例子就是real-time Linux Kernel的maintainer Steven Rostedt做的一个统计，他发现内核里面有<a href="https://lwn.net/Articles/419102/">大量误用likely()/unlikely()的地方</a>，其中在<a href="https://lwn.net/Articles/420028/">page_mapping()函数里面的一个unlikely()有39%的概率是错误的</a>，然后这位大神就提交了一个patch把这个unlikely()给去掉了。所以，如果你没有十足的把握，就不要随便使用unlikely()/likely()这俩宏。 不过有一个基本准确的经验就是，在错误处理的分支上加unlikely()大致不会是坏事。比如：<br />
-<div class='bogus-wrapper'><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+    <content type="html"><![CDATA[<h2>先贤的教诲</h2>
+
+<p>对于大型软件系统而言，可维护性是很重要的一个方面，否则到了最后没人能够搞懂全部的代码那就是一个灾难了。这方面的例子可谓比比皆是，比如华为VRP平台的Linux内核，因为模块间耦合太严重很难升级Linux内核版本，搞到最后实在搞不下去，于是团队解散，投奔中软的RTOS。松本行弘在《代码的未来》这本书里说，开发人员的成本越来越高，机器成本则是越来越便宜，所以我们的编程语言应该要侧重于开发效率和维护效率，而不应该太过于关注性能，至于性能这件事，完全可以通过升级更牛逼的硬件来很轻松的搞定。其实Ruby之父的这个观点在很久之前就被Donald Kunth说过了，“premature  optimization is the root of all evil”。两位大师的观点可谓殊途同归。      <br/>
+Donald Knuth在大多数软件工程师眼里可谓神一般的存在，它的这句名言也一直被码农们牢记在心。 Donald Knuth前辈并不是反对optimization，它只是反对premature optimization，即盲目无意义的优化，optimization应该要针对critical的东西。如何寻找critical的代码，就是一个profiling系统需要做的事情。当然profiling本身也属于可维护性的一部分。</p>
+
+<h2>CPU体系结构</h2>
+
+<p>Profiling的本质，是为了充分发挥CPU的能力。现代CPU的体系结构已经很牛逼了，但是相对而言，软件开发语言则没多大进步，再加上软件开发人员水平的良莠不齐，直接的后果就是，CPU的能力没有得到充分利用。虽然说使用更牛逼的CPU更牛逼的内存更牛逼的散热系统可以大幅的提高性能，但是在相同的配置下，比别人有更牛逼的表现不是更好嘛。iPhone和三星Andriod手机的对比不就是很好的证明嘛。</p>
+
+<p>现代CPU的流水线体系结构大概是这个样的。  <br/>
+<img src="http://laoar.github.io/images/455.jpg">           <br/>
+Instruction Fetch Unit用来从memory中取指令到寄存器中，Decode and Issue Unit则是将指令翻译成CPU能够识别的编码然后发射到Functional Units（比如运算器等等）来执行这些指令，FU的执行结果再放回到寄存器中。 所以一条指令的执行完毕最好的情况下需要4个CPU cycles就可以搞定了。我们都已经知道流水线的原理就是，指令A在FU执行时，指令B在译码准备发射，指令C在被从内存中读取到寄存器中，于是这样就实现了不同指令的并行工作来提高CPU的效率。 CPU的这个设计思想被Unix开发人员学来了，于是就是有了管道（pipe）。再接着Erlang又把管道的原理用在了语言特性上来实现并发编程，最后Golang又把Erlang的管道特性给学了去。这并不是说CPU的设计人员有多么牛逼，而是说，软件开发人员要在CPU设计人员制定的规则下做事才能充分利用CPU的性能。</p>
+
+<h2>编译器分支预测</h2>
+
+<p>CPU的这种流水线存在的缺点，或者说，要依赖编程人员水平的地方在于，指令A可能是JUMP D，这样就导致指令B和指令C要被从流水线里面刷出去了，就造成CPU cycle的浪费。 要想避免这种浪费，就要要求程序自身具有很好的分支预测特性，即要充分迎合CPU的这种预测执行的特性。 在Linux内核里面随处可见的likely()/unlikely()就是做这个事情的，likely()/unlikely()是告诉编译器把if/while的代码块是紧挨着前面的代码还是放置到整个函数的最后面（因为if／while的汇编实现本来就是一个jump指令，所以可以把它跳转到任意合适的位置，这优点类似于goto）。因为CPU最后执行的是编译器生成的二进制，而不是我们写的代码，所以一个好的编译器对于程序性能的影响是巨大的。现在的编译器要比程序员聪明的多，它往往能够预测出程序接下来要执行的指令是什么，有时候我们加的likely()/unlikely()可能根本就没有意义甚至适得其反，因为程序员相比编译器而言太蠢了。有一个例子就是real-time Linux Kernel的maintainer Steven Rostedt做的一个统计，他发现内核里面有<a href="https://lwn.net/Articles/419102/">大量误用likely()/unlikely()的地方</a>，其中在<a href="https://lwn.net/Articles/420028/">page_mapping()函数里面的一个unlikely()有39%的概率是错误的</a>，然后这位大神就提交了一个patch把这个unlikely()给去掉了。所以，如果你没有十足的把握，就不要随便使用unlikely()/likely()这俩宏。 不过有一个基本准确的经验就是，在错误处理的分支上加unlikely()大致不会是坏事。比如：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -3729,12 +3750,15 @@ Instruction Fetch Unit用来从memory中取指令到寄存器中，Decode and Is
 </span><span class='line'><span class="k">if</span> <span class="p">(</span><span class="n">unlikely</span><span class="p">(</span><span class="o">!</span><span class="n">p</span><span class="p">))</span> <span class="p">{</span>
 </span><span class='line'>    <span class="n">perror</span><span class="p">(</span><span class="s">&quot;malloc&quot;</span><span class="p">);</span> <span class="err"> </span>
 </span><span class='line'><span class="p">}</span>
-</span></code></pre></td></tr></table></div></figure></div></p>
-<p>这里的unlikely()在绝大多数情况下都不是有害的，不过，如果这段代码是non-critical的，那么这个unlikely()就是non-sense的，因为在这种情况下它对性能的提升可能近似为0.0000%。即使这段代码真的是critical的话，这个unlikely()并非就有必要去添加，因为编译器在编译的时候自己也能够判断出来。<br />
-<p>曾有人对linux kernel里面likely／unlikely的使用情况做过统计，发现unlikely()的使用次数大概是likely()的10倍，就是很多错误处理的分支都加了unlikely()的缘故。</p></p>
-<p style="padding-left: 30px;"></p>
-<p>对于likely／unlikely的使用的一个基本原则是，只有在critical path里面，我们才去考虑使用它，是否有必要去使用likely／unlikely还需要借助它的反汇编代码来进一步验证。比如，如下两段反汇编是添加了likely和没有添加likely的的对比：<br />
-<div class='bogus-wrapper'><figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>这里的unlikely()在绝大多数情况下都不是有害的，不过，如果这段代码是non-critical的，那么这个unlikely()就是non-sense的，因为在这种情况下它对性能的提升可能近似为0.0000%。即使这段代码真的是critical的话，这个unlikely()并非就有必要去添加，因为编译器在编译的时候自己也能够判断出来。  <br/>
+曾有人对linux kernel里面likely／unlikely的使用情况做过统计，发现unlikely()的使用次数大概是likely()的10倍，就是很多错误处理的分支都加了unlikely()的缘故。</p>
+
+<p>对于likely／unlikely的使用的一个基本原则是，只有在critical path里面，我们才去考虑使用它，是否有必要去使用likely／unlikely还需要借助它的反汇编代码来进一步验证。比如，如下两段反汇编是添加了likely和没有添加likely的的对比：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -3862,17 +3886,19 @@ Instruction Fetch Unit用来从memory中取指令到寄存器中，Decode and Is
 </span><span class='line'><span class="mi">200160</span><span class="n">bc</span><span class="o">:</span>   <span class="n">e088001c</span>    <span class="n">sc</span>  <span class="n">t0</span><span class="p">,</span><span class="mi">28</span><span class="p">(</span><span class="n">a0</span><span class="p">)</span>
 </span><span class='line'><span class="mi">200160</span><span class="n">c0</span><span class="o">:</span>   <span class="mf">1100ff</span><span class="n">fc</span>    <span class="n">beqz</span>    <span class="n">t0</span><span class="p">,</span><span class="mi">200160</span><span class="n">b4</span> <span class="o">&lt;</span><span class="n">xxxx</span><span class="o">+</span><span class="mh">0xc8</span><span class="o">&gt;</span>
 </span><span class='line'><span class="mi">200160</span><span class="n">c4</span><span class="o">:</span>   <span class="mo">00000000</span>    <span class="n">nop</span>
-</span></code></pre></td></tr></table></div></figure></div><br />
-假设cacheline的大小是128bytes，我们可以看到在第二种情况时，if语句会跳转到另外一个cache line里面，这必然会造成cache miss，如果t1在大多数情况下都是0x7fffffff，那么这里就会有较明显的性能损失。<br />
-   <p> 除了这个分支预测之外，还有一个性质对流水线的影响较大，那就是数据依赖。指令B已经译码完成，准备要发出去的时候，发现它的操作数不可用，有可能别的CPU在使用这个操作数，于是指令B只能在这里傻傻的等待另外的CPU释放这个操作数。</p><br />
-<p style="padding-left: 30px;"></p><br />
-    所以对于流水线型的CPU，主要就这两方面决定着性能的好坏：1）数据依赖 2）分支预测。现在的并发编程也主要是解决的这两件事。<br />
-<p style="padding-left: 30px;"></p><br />
-    CPU的设计人员为了让程序员能够更直观的感受这两件事的表现，就给程序员提供了一些性能统计的寄存器，这些寄存器都在协处理0里面。他们做的事情，就是统计多长时间cpu cycle内，指令的issue/retire的数目，icache/dcache的hit/miss,以及l2 icache/dcache的hit/miss等等。比如说，如果icache的miss较大，那显然是程序的分支预测较差。<br />
-<p style="padding-left: 30px;"></p><br />
-    对于应用程序开发人员而言，是没有必要了解这么详细的性能寄存器信息的，或者说在这个上面花费精力意义不大。因而就有了perf、oprofile、systemtap、dtrace这些性能调试工具的应运而生。这些工具提供给程序员更友好的方式来分析程序，借助这些工具能够很直观的找到程序的critical部分。</p>
-<p>注：<br />
-<sup class="footnote" id="fnr1"><a href="#fn1">1</a></sup> 图是用Google Doc画的，第一次使用Google Doc画图，画的不太好:(</p>]]></content>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>假设cacheline的大小是128bytes，我们可以看到在第二种情况时，if语句会跳转到另外一个cache line里面，这必然会造成cache miss，如果t1在大多数情况下都是0x7fffffff，那么这里就会有较明显的性能损失。
+除了这个分支预测之外，还有一个性质对流水线的影响较大，那就是数据依赖。指令B已经译码完成，准备要发出去的时候，发现它的操作数不可用，有可能别的CPU在使用这个操作数，于是指令B只能在这里傻傻的等待另外的CPU释放这个操作数。  <br/>
+所以对于流水线型的CPU，主要就这两方面决定着性能的好坏：1）数据依赖 2）分支预测。现在的并发编程也主要是解决的这两件事。
+CPU的设计人员为了让程序员能够更直观的感受这两件事的表现，就给程序员提供了一些性能统计的寄存器，这些寄存器都在协处理0里面。他们做的事情，就是统计多长时间cpu cycle内，指令的issue/retire的数目，icache/dcache的hit/miss,以及l2 icache/dcache的hit/miss等等。比如说，如果icache的miss较大，那显然是程序的分支预测较差。
+对于应用程序开发人员而言，是没有必要了解这么详细的性能寄存器信息的，或者说在这个上面花费精力意义不大。因而就有了perf、oprofile、systemtap、dtrace这些性能调试工具的应运而生。这些工具提供给程序员更友好的方式来分析程序，借助这些工具能够很直观的找到程序的critical部分。</p>
+
+<h2>P.S.</h2>
+
+<p>[1] 图是用Google Doc画的，第一次使用Google Doc画图，画的不太好:(</p>
+]]></content>
   </entry>
   
 </feed>
