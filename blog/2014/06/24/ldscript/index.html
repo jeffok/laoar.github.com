@@ -79,38 +79,27 @@
 	
 	<div id="content" class="inner"><article class="post">
 	<h2 class="title">性能优化，要懂点编译原理</h2>
-	<div class="entry-content"><h4><center>前言一</center></h4>
-
+	<div class="entry-content"><h2>前言一</h2>
 
 <p>现在正处在世界杯小组赛的阶段，我通常都是10点钟早早睡觉，然后爬起来看完12点场的比赛再睡觉，或者，早起看6点场的比赛然后冲个澡去上班。今晚为了写这篇文章，就不打算早睡了，直接看完12点场的比赛再睡觉。</p>
 
-<h4><center>前言二</center></h4>
-
+<h2>前言二</h2>
 
 <p>我不是想说gcc的-O选项，诚然它很强大，不过gcc manual已经说的很清楚了<a href="https://gcc.gnu.org/onlinedocs/gcc-4.8.1/gcc/Optimize-Options.html#Optimize-Options" title="Title">
 Gcc-Optimize-Options</a></p>
 
-<h4><center>前言三</center></h4>
-
+<h2>前言三</h2>
 
 <p>在我上大学的时候，我买了本《编译原理》，盗版的，这应该是我这一生买的最后一本盗版书。那本书我翻了几页就没继续往下看，因为纸张看着实在是太不舒服了。后来工作后，我从amazon上买了本正版的，纸张确实好很多，不过还是看不下去，原因嘛，你懂的~</p>
 
-<h4><center>正文</center></h4>
+<h2>正文</h2>
 
+<p>可执行文件的内存布局对程序性能的影响是非常巨大的，因为我最近一直在做性能优化，对这方面感触颇深。要搞明白可执行文件的内存布局，就必须得了解编译原理，当然编译原理实在是太过于高深了，我所知也是皮毛，所以我就从最实用的地方开始入手一点点的分析。  <br/>
+就从我前文里提到的<code>__attribute__((section(".sec_name")))</code>来说起吧，因为我使用这个东西确实给我们的性能带来了一定的提升。   <br/>
+关于attribute section这个东西，你要google的话，能够搜索出来不少前人的分析，不过实在都是大同小异，你抄我来我抄你，毫无营养。在他们的博客里，无非是说，“将作用的函数或者数据放入指定名为‘.sec_name’ 的输入段”，然后再巴拉巴拉一通什么是输入段，说的你云里雾里一头雾水分不清东西南北顿觉高大上。  <br/>
+那我们就来看下attribute section到底是什么。  <br/>
+要知道attribute section, 就要先理解链接脚本。链接脚本即链接器在把.o文件链接成最后的elf文件所遵循的规则，也就是，最终的可执行文件是什么样子的是由这个链接脚本决定的。链接脚本的语法和C语言很类似，我们能够很容易读明白，所以从链接脚本来入手分析这个东西会更清晰一些。对应于 <code>__attribute__((section(".sec_name")))</code>这句话，它在链接的时候采取的默认规则是：</p>
 
-<p>可执行文件的内存布局对程序性能的影响是非常巨大的，因为我最近一直在做性能优化，对这方面感触颇深。要搞明白可执行文件的内存布局，就必须得了解编译原理，当然编译原理实在是太过于高深了，我所知也是皮毛，所以我就从最实用的地方开始入手一点点的分析。</p>
-
-
-<p>就从我前文里提到的__attribute__((section(&#8220;.sec_name&#8221;)))来说起吧，因为我使用这个东西确实给我们的性能带来了一定的提升。 </p>
-
-
-<p>关于attribute section这个东西，你要google的话，能够搜索出来不少前人的分析，不过实在都是大同小异，你抄我来我抄你，毫无营养。在他们的博客里，无非是说，“将作用的函数或者数据放入指定名为‘.sec_name’ 的输入段”，然后再巴拉巴拉一通什么是输入段，说的你云里雾里一头雾水分不清东西南北顿觉高大上。</p>
-
-
-<p>那我们就来看下attribute section到底是什么。</p>
-
-
-<p>要知道attribute section, 就要先理解链接脚本。链接脚本即链接器在把.o文件链接成最后的elf文件所遵循的规则，也就是，最终的可执行文件是什么样子的是由这个链接脚本决定的。链接脚本的语法和C语言很类似，我们能够很容易读明白，所以从链接脚本来入手分析这个东西会更清晰一些。对应于 __attribute__((section(&#8220;.sec_name&#8221;)))这句话，它在链接的时候采取的默认规则是：
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -120,13 +109,19 @@ Gcc-Optimize-Options</a></p>
 </span><span class='line'>     <span class="o">*</span><span class="p">(.</span><span class="n">sec_name</span><span class="p">)</span>
 </span><span class='line'><span class="p">}</span>
 </span></code></pre></td></tr></table></div></figure>
-即把.sec_name指向的内容放在.sec_name这个段里面。我们再来稍微清晰化一些，下面举个例子。
+
+
+<p>即把.sec_name指向的内容放在.sec_name这个段里面。我们再来稍微清晰化一些，下面举个例子。</p>
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 </pre></td><td class='code'><pre><code class='c'><span class='line'><span class="kt">void</span> <span class="nf">foo</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>  <span class="n">__attribute__</span><span class="p">((</span><span class="n">section</span><span class="p">(</span><span class="s">&quot;.in_name&quot;</span><span class="p">)));</span>
 </span><span class='line'><span class="kt">void</span> <span class="nf">bar</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>  <span class="n">__attribute__</span><span class="p">((</span><span class="n">section</span><span class="p">(</span><span class="s">&quot;.in_name&quot;</span><span class="p">)));</span>
 </span></code></pre></td></tr></table></div></figure>
-我们使用attribute section来声明了两个函数，然后我们在链接脚本里面做如下约束：
+
+
+<p>我们使用attribute section来声明了两个函数，然后我们在链接脚本里面做如下约束：</p>
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -136,7 +131,10 @@ Gcc-Optimize-Options</a></p>
 </span><span class='line'>     <span class="o">*</span><span class="p">(.</span><span class="n">in_name</span><span class="p">)</span>
 </span><span class='line'><span class="p">}</span>
 </span></code></pre></td></tr></table></div></figure>
-这样就把foor(),bar()这两个函数给放在了最终elf文件里的.out_name这个section。而如果我们不再链接脚本里做这个约束，那么它在链接过程中就会采用默认规则，即输入段和输出段的名字是一样的：
+
+
+<p>这样就把<code>foor()</code>, <code>bar()</code>这两个函数给放在了最终elf文件里的.out_name这个section。而如果我们不再链接脚本里做这个约束，那么它在链接过程中就会采用默认规则，即输入段和输出段的名字是一样的：</p>
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -146,21 +144,12 @@ Gcc-Optimize-Options</a></p>
 </span><span class='line'>     <span class="o">*</span><span class="p">(.</span><span class="n">in_name</span><span class="p">)</span>
 </span><span class='line'><span class="p">}</span>
 </span></code></pre></td></tr></table></div></figure>
-</p>
 
 
-
-
-<p>总结起来就是，__attribute__((section(&#8220;.in_name&#8221;)))的作用是把.in_name指向的符号给放在一起。</p>
-
-
-<p>唔~ 仍然有点模糊是不？ 那就好好读读《linkers and loaders》或者《程序员的自我修养》这两本书吧。</p>
-
-
-
+<p>总结起来就是，<code>__attribute__((section(".in_name")))</code>的作用是把.in_name指向的符号给放在一起。  <br/>
+唔~ 仍然有点模糊是不？ 那就好好读读《linkers and loaders》或者《程序员的自我修养》这两本书吧。</p>
 
 <p>然后我们来看下linux内核对于attribute section的应用， 以linux kernel的链接脚本vmlinux.lds为例。先来看下linux kernel最终镜像的代码段是如何规划的。</p>
-
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -197,8 +186,15 @@ Gcc-Optimize-Options</a></p>
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>如上就是一个典型的linux kenrel链接脚本的代码段部分。稍微解释下。
-. = VMLINUX_LOAD_ADDRESS;的意思是说，此处的地址是VMLINUX_LOAD_ADDRESS，接着又把该值赋给了_text，也就是内核代码段的其实地址是VMLINUX_LOAD_ADDRESS，就这就开始了代码段。在代码段里面我们可以很明显的看到它划分了TEXT_TEXT、SCHED_TEXT、LOCK_TEXT、KPROBES_TEXT、IRQENTRY_TEXT，这样划分的目的，就是为了合理规划地址空间以提升性能。我们可以看下这几个宏到底表示什么：
+<p>如上就是一个典型的linux kenrel链接脚本的代码段部分。稍微解释下。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="p">.</span>  <span class="o">=</span> <span class="n">VMLINUX_LOAD_ADDRESS</span><span class="p">;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>的意思是说，此处的地址是VMLINUX_LOAD_ADDRESS，接着又把该值赋给了_text，也就是内核代码段的其实地址是VMLINUX_LOAD_ADDRESS，就这就开始了代码段。在代码段里面我们可以很明显的看到它划分了TEXT_TEXT、SCHED_TEXT、LOCK_TEXT、KPROBES_TEXT、IRQENTRY_TEXT，这样划分的目的，就是为了合理规划地址空间以提升性能。我们可以看下这几个宏到底表示什么：</p>
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -264,10 +260,11 @@ Gcc-Optimize-Options</a></p>
 </span><span class='line'><span class="cp">          *(.irqentry.text)                         \</span>
 </span><span class='line'><span class="cp">          VMLINUX_SYMBOL(__irqentry_text_end) = .;</span>
 </span></code></pre></td></tr></table></div></figure>
-这些宏其实就是定义了一些input section， 比如.text.hot等。</p>
 
 
-<p>接着以.sched.text为例来看看到底是怎么用的。
+<p>这些宏其实就是定义了一些input section， 比如.text.hot等。  <br/>
+接着以.sched.text为例来看看到底是怎么用的。</p>
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -289,12 +286,12 @@ Gcc-Optimize-Options</a></p>
 </span><span class='line'><span class="n">asmlinkage</span> <span class="kt">void</span> <span class="n">__sched</span> <span class="nf">preempt_schedule_irq</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
 </span><span class='line'><span class="p">....</span>
 </span></code></pre></td></tr></table></div></figure>
-一目了然了吧？ 就是前面我们说的attribute section这个东西，内核就是使用了这个东西来规划地址空间，将相互关联的代码给放在一起，以达到提升性能并保持稳定的作用。 </p>
 
 
+<p>一目了然了吧？ 就是前面我们说的attribute section这个东西，内核就是使用了这个东西来规划地址空间，将相互关联的代码给放在一起，以达到提升性能并保持稳定的作用。</p>
 
+<p>因为松柏公司的性能受代码check-in影响波动较大，所以我就想到了使用linux kernel的这种做法来规划可执行文件的地址空间，按照不同模块来划分不同的section，这样来避免频繁code check-in对性能波动的影响。</p>
 
-<p>因为松柏公司的性能受代码check-in影响波动较大，所以我就想到了使用linux kernel的这种做法来规划可执行文件的地址空间，按照不同模块来划分不同的section，这样来避免频繁code check-in对性能波动的影响。
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -310,10 +307,10 @@ Gcc-Optimize-Options</a></p>
 </span><span class='line'>     <span class="p">...</span>
 </span><span class='line'><span class="p">}</span>
 </span></code></pre></td></tr></table></div></figure>
-</p>
 
 
-<p>其实，再稍微的深入思考下，我们就能发现一个更细粒度的控制，那就是控制函数在可执行文件里的先后顺序。
+<p>其实，再稍微的深入思考下，我们就能发现一个更细粒度的控制，那就是控制函数在可执行文件里的先后顺序。</p>
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -333,12 +330,12 @@ Gcc-Optimize-Options</a></p>
 </span><span class='line'>     <span class="p">...</span>
 </span><span class='line'><span class="p">}</span>
 </span></code></pre></td></tr></table></div></figure>
-这样做之后，在可执行文件里，foo就会在bar的前面，及foo和bar的地址紧挨着，bar紧跟在foo的后面。</p>
 
 
-<p></p>
+<p>这样做之后，在可执行文件里，foo就会在bar的前面，及foo和bar的地址紧挨着，bar紧跟在foo的后面。</p>
 
-<p>我们在缩小一下我们的视角，从宏观上来看下这个链接脚本。
+<p>我们在缩小一下我们的视角，从宏观上来看下这个链接脚本。</p>
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -364,8 +361,9 @@ Gcc-Optimize-Options</a></p>
 </span><span class='line'>     <span class="p">}</span>
 </span><span class='line'><span class="p">}</span>
 </span></code></pre></td></tr></table></div></figure>
-这也是为什么可执行文件的内存布局先是代码段，接着数据段，再是bss段的原因，即链接脚本决定可执行文件的内存布局。在linux／freebsd机器上运行“ld —verbose”就可以获得ld使用的默认链接脚本。</p>
 
+
+<p>这也是为什么可执行文件的内存布局先是代码段，接着数据段，再是bss段的原因，即链接脚本决定可执行文件的内存布局。在linux／freebsd机器上运行<code>ld —verbose</code>就可以获得ld使用的默认链接脚本。</p>
 </div>
 
 
