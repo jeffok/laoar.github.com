@@ -7,7 +7,7 @@
 	<meta name="author" content="Yafang Shao">
 
 	
-	<meta name="description" content="Loop Unrolling : May or May Not Make the Program Run Faster loop unrolling 是将while/for循环的循环主体多排列几次展开以减少循环次数，从而减少分支指令开销来达到优化性能的目的。我们可以手动的修改while/ &hellip;">
+	<meta name="description" content="Loop Unrolling : May or May Not Make the Program Run Faster TL;DR loop unrolling 是将while/for循环的循环主体多排列几次展开以减少循环次数，从而提高代码的并发度来达到优化性能的目的。 &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -79,19 +79,22 @@
 	
 	<div id="content" class="inner"><article class="post">
 	<h2 class="title">Loop Unrolling : May or May Not Make the Program Run Faster</h2>
-	<div class="entry-content"><p>loop unrolling 是将while/for循环的循环主体多排列几次展开以减少循环次数，从而减少分支指令开销来达到优化性能的目的。我们可以手动的修改while/for循环来展开循环体，也可以使用编译器的自动循环展开功能。gcc的-funroll-loops就是用来自动将循环给展开用的。在gcc的手册里，对于-funroll-loops有一句说明，“This option makes code larger, and may or may not make it run faster.”，其实这句话并不是很准确，确切的说法是，“This option may improves or reduces the performance.”。</p>
+	<div class="entry-content"><h2>TL;DR</h2>
 
+<p>loop unrolling 是将while/for循环的循环主体多排列几次展开以减少循环次数，从而提高代码的并发度来达到优化性能的目的。我们可以手动的修改while/for循环来展开循环体，也可以使用编译器的自动循环展开功能。gcc的-funroll-loops就是用来自动将循环给展开用的。在gcc的手册里，对于-funroll-loops有一句说明，</p>
+
+<blockquote><p>This option makes code larger, and may or may not make it run faster.</p></blockquote>
+
+<p>其实这句话并不是很准确，确切的说法是，“This option may improves or reduces the performance.”。</p>
+
+<h2>backgroud</h2>
 
 <p>在最近我的做的一个项目中，版本做出大幅度升级后，性能下降了30%多，经过各种排查后发现原来是编译器从Gcc-4.1.1升级为Gcc-4.2.1后-funroll-loops的行为发生了变化，使得在循环展开的过程中产生了大量的temp variables，这些temp variables入栈和出栈占用了大量的cpu cycles，从而使得其中一个线程成为bottleneck，性能因此下降了30%多.</p>
 
+<h2>why ?</h2>
 
-<p>在这篇博客里，来分析下loop unrolling为什么会导致性能下降</p>
-
-
-<p>如下是我写的一个测试程序用来描述该问题。</p>
-
-
-
+<p>在这篇博客里，来分析下loop unrolling为什么会导致性能下降  <br/>
+如下是我写的一个测试程序用来描述该问题。</p>
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -172,21 +175,20 @@
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>对该测试程序的一些注释：<br/>
-<1> 该atomic function摘自freebsd source code。<br/>
-<2> 使用的编译器是Gcc-4.2.1，平台是MIPS（该CPU是64bit的CPU），ABI是O32.[1]<br>
-<3> 之所以要new_addr的低3bits要为0，是由于sd指令要求地址必须是8字节对齐。  这里就是O32和N32区别的一个体现，O32的寄存器是32bits，所以它的栈空间是4字节对齐，即指针是4字节对齐的；N32的寄存器是64bits，所以它的栈空间是64bits，即指针是8字节对齐。在N32上就不需要做这种处理。<br/>
-<4> 由于CPU的寄存器是64bits，所以dsll将寄存器左移32bits后会将寄存器内容移到高32bits，实际上这里是变相在使用N32的特性，即64bit寄存器.<br/>
-<5> 为了便于理解反汇编，gcc的优化option使用-O.<br/>
-<6> 之所以初始测试条件是TIMES为2，而不是1，是为了防止for循环被编译器给优化掉。</p>
+<p>对该测试程序的一些注释：</p>
 
-
+<ul>
+<li>该atomic function摘自freebsd source code。</li>
+<li>使用的编译器是Gcc-4.2.1，平台是MIPS（该CPU是64bit的CPU），ABI是O32.[1]</li>
+<li>之所以要new_addr的低3bits要为0，是由于sd指令要求地址必须是8字节对齐。   <br/>
+这里就是O32和N32区别的一个体现，O32的寄存器是32bits，所以它的栈空间是4字节对齐，即指针是4字节对齐的；N32的寄存器是64bits，所以它的栈空间是64bits，即指针是8字节对齐。在N32上就不需要做这种处理。</li>
+<li>由于CPU的寄存器是64bits，所以dsll将寄存器左移32bits后会将寄存器内容移到高32bits，实际上这里是变相在使用N32的特性，即64bit寄存器.</li>
+<li>为了便于理解反汇编，gcc的优化option使用-O.</li>
+<li>之所以初始测试条件是TIMES为2，而不是1，是为了防止for循环被编译器给优化掉。</li>
+</ul>
 
 
 <p>我们编译该程序，然后看反汇编结果：</p>
-
-
-
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -305,10 +307,9 @@
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>可以看出，变量val_hi和val_lo分别存储在24(sp)和28(sp)这部分内存空间.</p>
+<p>可以看出，变量<code>val_hi</code>和<code>val_lo</code>分别存储在24(sp)和28(sp)这部分内存空间.  <br/>
+另外还需要注意的变量x。</p>
 
-
-<p>另外还需要注意的变量x。<br/>
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -318,19 +319,19 @@
 </span><span class='line'>  <span class="mi">6</span><span class="n">c</span><span class="o">:</span>   <span class="mf">8f</span><span class="n">bc0010</span>    <span class="n">lw</span>  <span class="n">gp</span><span class="p">,</span><span class="mi">16</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span>
 </span><span class='line'>  <span class="mi">70</span><span class="o">:</span>   <span class="mo">00401</span><span class="mi">821</span>    <span class="n">move</span>    <span class="n">v1</span><span class="p">,</span><span class="n">v0</span>
 </span></code></pre></td></tr></table></div></figure>
-由于我只是-C来编译，并没有做链接，所以在这里调用random()这个函数是被编译为了”jalr t9”，在MIPS上，函数调用的返回值会放在$v0这个寄存器里面。[2]在这里函数调用的返回值$v0 是直接赋值给了$s0和$v1，而不是放入栈空间，这说明编译器将变量x存储在了寄存器里面而不是内存里面。编译器之所以会这么做，是为了提高性能。变量尽可能的存储在寄存器上，从而减少访问内存所需要消耗的时间。另外再说一句，寄存器数量是有限的，当寄存器无法再存储变量时，就会将临时变量存储到内存上。</p>
 
 
-<p></p>然后我们将TIME 变为3，对比看下有无funroll-loops下的差异。</p>
-1) 无funroll-loops.</p>
+<p>由于我只是-C来编译，并没有做链接，所以在这里调用<code>random()</code>这个函数是被编译为了<code>jalr t9</code>，在MIPS上，函数调用的返回值会放在$v0这个寄存器里面。[2]在这里函数调用的返回值$v0 是直接赋值给了$s0和$v1，而不是放入栈空间，这说明编译器将变量x存储在了寄存器里面而不是内存里面。编译器之所以会这么做，是为了提高性能。变量尽可能的存储在寄存器上，从而减少访问内存所需要消耗的时间。另外再说一句，寄存器数量是有限的，当寄存器无法再存储变量时，就会将临时变量存储到内存上。</p>
+
+<p>然后我们将TIME 变为3，对比看下有无funroll-loops下的差异。</p>
+
+<h4>无funroll-loops.</h4>
 
 <p>结果证明，跟TIMES为2的情况下相比，反汇编结果一样。此处不再拷贝代码</p>
 
+<h4>使用funroll-loops</h4>
 
-<p>2） 使用funroll-loops</p>
-
-<p> 汇编代码较长，闪花了眼，我在后面只解释重点。</p>
-
+<p>汇编代码较长，闪花了眼，我在后面只解释重点。</p>
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -685,10 +686,16 @@
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>可以看到，栈空间一下子由56增加到了168，即增加了112字节这么大的空间！
-我们就来分析下这112字节的空间是怎么产生的。<br/>
-<1>从汇编代码来看，变量val_high和val_lo仍然是存储在24(sp)和28(sp)这部分内存空间。但是同时也生成了大量的临时变量。<br/>
-比如i为1时被展开的循环体：<br/>
+<p>可以看到，栈空间一下子由56增加到了168，即增加了112字节这么大的空间！</p>
+
+<p>我们就来分析下这112字节的空间是怎么产生的。</p>
+
+<ul>
+<li>从汇编代码来看，变量val_high和val_lo仍然是存储在24(sp)和28(sp)这部分内存空间。但是同时也生成了大量的临时变量。  <br/>
+比如i为1时被展开的循环体：</li>
+</ul>
+
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -698,8 +705,11 @@
 </span><span class='line'>  <span class="n">fc</span><span class="o">:</span>   <span class="n">afb30018</span>    <span class="n">sw</span>  <span class="n">s3</span><span class="p">,</span><span class="mi">24</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span>
 </span><span class='line'><span class="mi">100</span><span class="o">:</span>   <span class="n">afb1001c</span>    <span class="n">sw</span>  <span class="n">s1</span><span class="p">,</span><span class="mi">28</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span>
 </span></code></pre></td></tr></table></div></figure>
-可以看到至少新增了44(sp)和40(sp)这两个临时变量。<br/>
-i为2时被展开的循环体：<br/>
+
+
+<p>可以看到至少新增了44(sp)和40(sp)这两个临时变量。  <br/>
+i为2时被展开的循环体：</p>
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -709,8 +719,11 @@ i为2时被展开的循环体：<br/>
 </span><span class='line'><span class="mi">1</span><span class="n">a8</span><span class="o">:</span>   <span class="mf">8f</span><span class="n">b70024</span>    <span class="n">lw</span>  <span class="n">s7</span><span class="p">,</span><span class="mi">36</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span>
 </span><span class='line'> <span class="mi">1</span><span class="n">ac</span><span class="o">:</span>   <span class="n">afb7001c</span>    <span class="n">sw</span>  <span class="n">s7</span><span class="p">,</span><span class="mi">28</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span>
 </span></code></pre></td></tr></table></div></figure>
- 至少新增了36(sp)和92(sp)这两个临时变量。 <br/>
-i为3时被展开的循环体：<br/>
+
+
+<p> 至少新增了36(sp)和92(sp)这两个临时变量。   <br/>
+i为3时被展开的循环体：</p>
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -720,9 +733,16 @@ i为3时被展开的循环体：<br/>
 </span><span class='line'><span class="mi">254</span><span class="o">:</span>   <span class="mf">8f</span><span class="n">a5003c</span>    <span class="n">lw</span>  <span class="n">a1</span><span class="p">,</span><span class="mi">60</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span>
 </span><span class='line'><span class="mi">258</span><span class="o">:</span>   <span class="n">afa5001c</span>    <span class="n">sw</span>  <span class="n">a1</span><span class="p">,</span><span class="mi">28</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span>
 </span></code></pre></td></tr></table></div></figure>
-至少新增了60(sp)和124(sp)这两个临时变量。 <br/>
-注意这里不是参数入栈和出栈，因为这里是inline，不是函数调用。增加的这六个临时变量都是因为atomic_write64这个inline函数里定义了局部变量，他们其实是为了服务于那两个局部变量。<br/>
-<2>再来看变量x <br/>
+
+
+<p>至少新增了60(sp)和124(sp)这两个临时变量。   <br/>
+注意这里不是参数入栈和出栈，因为这里是inline，不是函数调用。增加的这六个临时变量都是因为<code>atomic_write64</code>这个inline函数里定义了局部变量，他们其实是为了服务于那两个局部变量。</p>
+
+<ul>
+<li>再来看变量x</li>
+</ul>
+
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -732,10 +752,17 @@ i为3时被展开的循环体：<br/>
 </span><span class='line'><span class="mi">148</span><span class="o">:</span>   <span class="mf">8f</span><span class="n">bc0010</span>    <span class="n">lw</span>  <span class="n">gp</span><span class="p">,</span><span class="mi">16</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span>
 </span><span class='line'><span class="mi">14</span><span class="n">c</span><span class="o">:</span>   <span class="n">afb00044</span>    <span class="n">sw</span>  <span class="n">s0</span><span class="p">,</span><span class="mi">68</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span>
 </span></code></pre></td></tr></table></div></figure>
-可以看到这里新增加了一个临时变量68(sp)用来存储random()函数的返回值。<br/>
-这也是在前面使用“4:   afa40044    sw  a0,68(sp)”来初始化该临时变量的原因。<br/>
-<3>循环展开后i值不同的循环体使用不同的$sn寄存器 <br/>
-用到这些寄存器，就需要在函数开始将该寄存器压栈，然后在函数结束时出栈。<br/>
+
+
+<p>可以看到这里新增加了一个临时变量68(sp)用来存储<code>random()</code>函数的返回值。  <br/>
+这也是在前面使用<code>4:   afa40044    sw  a0,68(sp)</code>来初始化该临时变量的原因。</p>
+
+<ul>
+<li>循环展开后i值不同的循环体使用不同的$sn寄存器   <br/>
+用到这些寄存器，就需要在函数开始将该寄存器压栈，然后在函数结束时出栈。</li>
+</ul>
+
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -761,17 +788,18 @@ i为3时被展开的循环体：<br/>
 </span><span class='line'><span class="mi">298</span><span class="o">:</span>   <span class="mf">8f</span><span class="n">b50094</span>    <span class="n">lw</span>  <span class="n">s5</span><span class="p">,</span><span class="mi">148</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span>
 </span><span class='line'><span class="mi">29</span><span class="n">c</span><span class="o">:</span>   <span class="mf">8f</span><span class="n">b40090</span>    <span class="n">lw</span>  <span class="n">s4</span><span class="p">,</span><span class="mi">144</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span>
 </span></code></pre></td></tr></table></div></figure>
-新增的这些临时变量和对过多寄存器的使用增加了栈空间，而且入栈出栈也很消耗CPU cycles，因为这涉及到读写内存。 </p>
 
 
-<p>由此我们可以得到一个初步结论，在unroll-loops的过程中，如果产生了额外的临时变量，那么unroll loops就极有可能对性能造成伤害。 </p>
+<p>新增的这些临时变量和对过多寄存器的使用增加了栈空间，而且入栈出栈也很消耗CPU cycles，因为这涉及到读写内存。</p>
 
+<h2>结论</h2>
 
-<p>继续来分析gcc的unroll loops的特性。以下的分析基于gcc的源码loop-unroll.c 。</p>
+<p>由此我们可以得到一个初步结论，在unroll-loops的过程中，如果产生了额外的临时变量，那么unroll loops就极有可能对性能造成伤害。   <br/>
+继续来分析gcc的unroll loops的特性。以下的分析基于gcc的源码loop-unroll.c 。</p>
 
+<h2>gcc的unroll loops</h2>
 
 <p>由于这时TIMES仅为3，gcc可以将其完全展开，即peel_loop_completely，展开方式如下：</p>
-
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -800,14 +828,14 @@ i为3时被展开的循环体：<br/>
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>如果将TIMES增大到100，可以发现gcc并不会将循环体展开100次。循环展开多少次最好，在gcc unroll loops的设计者看来也是一个很难的问题，A great problem is that we don&#8217;t have a good way how to determine how many times we should unroll the loop; the experiments I have made showed that this choice may affect performance in order of several %. 因而unroll loops的设计着就定义了一些parameter来由程序员自行定义unroll规则。</p>
+<p>如果将TIMES增大到100，可以发现gcc并不会将循环体展开100次。循环展开多少次最好，在gcc unroll loops的设计者看来也是一个很难的问题，</p>
 
+<blockquote><p>A great problem is that we don&rsquo;t have a good way how to determine how many times we should unroll the loop; the experiments I have made showed that this choice may affect performance in order of several %.</p></blockquote>
 
-<p>这些参数有max-unrolled-insns，max-unroll-times，max-peeled-insns和max-peel-times等。用法大致如&#8211;param max-unroll-times=N，如果在使能funroll-loops或者fpeel-loops（如果使能了funroll-loops会同时使能fpeel-loops）后没有设置这些参数，就会使用gcc的默认值，具体参考params.def这个文件。 这些参数的具体含义可以去查阅gcc manual，不再赘述。只说下peel和unroll的区别，从英语语义上来讲，peel是剥离，unroll是摊开，在这里也是这个含义，peel是指从循环中给剥离出去，unroll则是仍然在循环体内。我们可以通过gcc的source code来看下这两者的区别。</p>
+<p>因而unroll loops的设计着就定义了一些parameter来由程序员自行定义unroll规则。  <br/>
+这些参数有max-unrolled-insns，max-unroll-times，max-peeled-insns和max-peel-times等。用法大致如&mdash;param max-unroll-times=N，如果在使能funroll-loops或者fpeel-loops（如果使能了funroll-loops会同时使能fpeel-loops）后没有设置这些参数，就会使用gcc的默认值，具体参考params.def这个文件。 这些参数的具体含义可以去查阅gcc manual，不再赘述。只说下peel和unroll的区别，从英语语义上来讲，peel是剥离，unroll是摊开，在这里也是这个含义，peel是指从循环中给剥离出去，unroll则是仍然在循环体内。我们可以通过gcc的source code来看下这两者的区别。</p>
 
-
-<p>gcc unroll-loops的入口函数是rtl_unroll_and_peel_loops，在这里它会去检查funroll-loops,fpeel-loops,funroll-all-loops这些开关。然后就会调用unroll loops的主要函数体unroll_and_peel_loops。</p>
-
+<p>gcc unroll-loops的入口函数是<code>rtl_unroll_and_peel_loops</code>，在这里它会去检查funroll-loops,fpeel-loops,funroll-all-loops这些开关。然后就会调用unroll loops的主要函数体<code>unroll_and_peel_loops</code>。</p>
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -838,7 +866,8 @@ i为3时被展开的循环体：<br/>
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>可以看到它首先做的就是尝试peel completely，如果不行，就再去选择unroll/peel策略，最后从最内侧循环开始unroll。 举个简单的例子，<br/>
+<p>可以看到它首先做的就是尝试peel completely，如果不行，就再去选择unroll/peel策略，最后从最内侧循环开始unroll。 举个简单的例子，</p>
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -868,13 +897,12 @@ i为3时被展开的循环体：<br/>
 </span><span class='line'>       <span class="n">body</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">;</span>
 </span><span class='line'>     <span class="p">}</span>
 </span></code></pre></td></tr></table></div></figure>
-前两个body就是peel，后面while循环体内就是unroll。</p>
 
 
-<p></p>
+<p>前两个body就是peel，后面while循环体内就是unroll。</p>
 
-<p>总之就是，使用gcc的unroll需谨慎，如果循环次数在编译阶段就确定的，完全可以手动的展开，而不用gcc的unroll，当然展开的次数也是一个经验值，需要根据具体情况来定。对于运行时才能决定循环次数的，gcc也可以将其展开，展开方法大致如下：
-<br/>
+<p>总之就是，使用gcc的unroll需谨慎，如果循环次数在编译阶段就确定的，完全可以手动的展开，而不用gcc的unroll，当然展开的次数也是一个经验值，需要根据具体情况来定。对于运行时才能决定循环次数的，gcc也可以将其展开，展开方法大致如下：</p>
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -926,14 +954,15 @@ i为3时被展开的循环体：<br/>
 </span><span class='line'>       <span class="n">body</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">;</span>
 </span><span class='line'>     <span class="p">}</span>
 </span></code></pre></td></tr></table></div></figure>
-另外再说一句，unroll loops要在critical path才能体现出价值来，对于non-critical path，就不应该做unroll loops了。这也是gcc的funroll-loops的一个不足之处，它不知道哪里是critical哪里non-critical，对它而言代码是平等的（程序员主动告知编译器的例外，比如likely/unlikely），它会一视同仁的把所有该展开的都展开。也许编程语言日后的发展方向会是，根据运行时的情况来自动的调整可执行文件的布局，从而每执行一次就可以优化一次来让程序越来越快[3].</p>
 
 
-<p></p>
+<p>另外再说一句，unroll loops要在critical path才能体现出价值来，对于non-critical path，就不应该做unroll loops了。这也是gcc的funroll-loops的一个不足之处，它不知道哪里是critical哪里non-critical，对它而言代码是平等的（程序员主动告知编译器的例外，比如likely/unlikely），它会一视同仁的把所有该展开的都展开。也许编程语言日后的发展方向会是，根据运行时的情况来自动的调整可执行文件的布局，从而每执行一次就可以优化一次来让程序越来越快[3].</p>
 
-<p>[1] MIPS支持3种ABI：O32/N32/N64,O32/N32的数据模型是ILP32，而N64是LP64，N32和O32的区别是N32的寄存器是64bit而O32的是32bit，N32使用64bits寄存器就要求栈要以8字节对齐。具体见<a href="http://math-atlas.sourceforge.net/devel/assembly/007-2816-005.pdf">http://math-atlas.sourceforge.net/devel/assembly/007-2816-005.pdf</a> <br/>
-[2] 如果返回值是64bits,就会用到$v0和$v1这两个寄存器。对于一些高级编程语言比如Ruby，它可以有多个返回值，不过它实际上是返回的一个数组，数组里面有多个值，即本质上还是返回一个值。<br/>
-[3] 支持元编程的语言，比如Ruby，可以在运行时来修改代码，但是它不是来调整代码段的布局。<br/></p>
+<h2>Ref.</h2>
+
+<p>[1] MIPS支持3种ABI：O32/N32/N64,O32/N32的数据模型是ILP32，而N64是LP64，N32和O32的区别是N32的寄存器是64bit而O32的是32bit，N32使用64bits寄存器就要求栈要以8字节对齐。具体见<a href="http://math-atlas.sourceforge.net/devel/assembly/007-2816-005.pdf">http://math-atlas.sourceforge.net/devel/assembly/007-2816-005.pdf</a>   <br/>
+[2] 如果返回值是64bits,就会用到$v0和$v1这两个寄存器。对于一些高级编程语言比如Ruby，它可以有多个返回值，不过它实际上是返回的一个数组，数组里面有多个值，即本质上还是返回一个值。  <br/>
+[3] 支持元编程的语言，比如Ruby，可以在运行时来修改代码，但是它不是来调整代码段的布局。</p>
 </div>
 
 
