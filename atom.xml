@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2017-03-30T21:11:02+08:00</updated>
+  <updated>2017-03-30T21:34:01+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -58,6 +58,28 @@
 <a href="http://www.brendangregg.com">Brendan D. Gregg</a></li>
 </ul>
 
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Linux内核分析：页回收导致的cpu load瞬间飙高的问题分析与思考]]></title>
+    <link href="http://laoar.github.io/blog/2016/02/29/highload/"/>
+    <updated>2016-02-29T21:21:04+08:00</updated>
+    <id>http://laoar.github.io/blog/2016/02/29/highload</id>
+    <content type="html"><![CDATA[<h2>TL;DR</h2>
+
+<p>这是我发表在蘑菇街技术博客(mogu.io)上面的一篇文章。  <br/>
+本来想直接把链接copy过来的，结果发现mogu.io打不开了竟然&hellip;</p>
+
+<p>我就google了下看，看看哪里还能找到，结果，发现了被很多引用：  <br/>
+<img src="http://laoar.github.io/images/highload.png"></p>
+
+<p>等等，混入了一些奇怪的东西，请看最后一个： <br/>
+<img src="http://laoar.github.io/images/highload\_2.png"></p>
+
+<p>竟然被人抄袭为了毕业论文，OMG，顿时感觉自己像个作家似了呢&hellip;</p>
+
+<p>如对这篇文章感兴趣，可以移步<a href="http://www.blogs8.cn/posts/A4qd667">blog8</a>去阅读.</p>
 ]]></content>
   </entry>
   
@@ -3665,65 +3687,6 @@ Gcc-Optimize-Options</a></p>
 </span><span class='line'><span class="p">}</span>
 </span></code></pre></td></tr></table></div></figure>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[关于struct hack, 优雅的FreeBSD]]></title>
-    <link href="http://laoar.github.io/blogs/466"/>
-    <updated>2014-03-20T00:00:00+08:00</updated>
-    <id>http://laoar.github.io/blogs/466</id>
-    <content type="html"><![CDATA[<h2>TL;DR</h2>
-
-<p>我们对于struct hack熟知的是下面这种情况。        <br/>
-<img src="http://laoar.github.io/images/466.jpg">
-我们定义一个结构体family来记录一个正常家庭的人的年龄，显然对于一个正常家庭来说，爸妈各只有一个，但是孩子有多少就不确定了，所以我们把family的最后一个成员baby定义为了变长数组。对于这种在一个结构体里面最后一个变量是变长数组而且仅有这一个成员是变长数组的情况，我们称之为struct hack。这属于C语言里面的一个trick。         <br/>
-我这边博客要讨论的不是这种情况，我要说的是我在FreeBSD内核里面看到的一个很有意思的代码，也是一种struct的trick。它起的名字是struct __hack, 所以我就联想到了前面的struc hack ：）</p>
-
-<h2>代码的规范性</h2>
-
-<p>在说FreeBSD内核的<code>struct __hack</code>之前，先来说下Linux内核里的<code>do{ }while(0)</code> 。 在我之前一个<a href="http://www.laoar.net/?p=289">blog</a>里，我说了 <code>do{} while(0)</code> 的目的是为了防止悬挂else问题。之所以会出现悬挂else问题，就是因为代码写的不是太规范。所以说，对于if/else,我们还是要尽量写成</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="k">if</span> <span class="err"> </span><span class="p">(</span><span class="err">…</span><span class="p">)</span> <span class="err"> </span><span class="p">{</span>
-</span><span class='line'><span class="p">...</span>
-</span><span class='line'><span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-</span><span class='line'><span class="p">...</span>
-</span><span class='line'><span class="p">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>即使里面只有一句话。</p>
-
-<h2>struct __hack</h2>
-
-<p>然后在来看这个<code>struct __hack</code>      <br/>
-<img src="http://laoar.github.io/images/466-2.jpg"></p>
-
-<p>任何技术或者技巧的出现都是为了解决一些问题的，那么这里的<code>struct __hack</code>是为了解决什么问题哪？ 其实它是用来告诉程序员这个宏只用作函数声明。我们知道函数声明一般都是下面这个样子：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="kt">void</span> <span class="nf">foobar</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>这个宏也是为了模拟这种形式, 当然事实上它仍然是宏定义了一个函数, 这里要模拟，是说，它的函数体在别处。比如：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">TASKQUEUE_DEFINE_THREAD</span><span class="p">(</span><span class="n">kqueue</span><span class="p">);</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>总之，这个小小的细节正体现出了FreeBSD所追求的优雅性.</p>
-
-<h2>闲扯</h2>
-
-<p>计算机这个东西本身就是美国的，凡事都是原汁原味的好，而且在绝大多数情况下，你面对的只有英文。比如对于一个C编译器的编译错误信息“discards qualifiers from pointer target type”， 如果你要Google一下才知道这是什么错误的话，那么恭喜你，码农的苦逼生活不适合你：）      <br/>
-其实反过来想也是这样。我在的小区附近老外特别多，旁边一个小区住着N多的韩国人。最近楼下新开了一家店，为了招徕老外，显然得起个英文名，它的英文名字叫“Chinese Humberger”，你猜它的中文名叫什么？ 肉夹馍！ 哈哈，很不伦不类，莫名其妙不是。所以说，原汁原味的才是最好的。</p>
 ]]></content>
   </entry>
   
