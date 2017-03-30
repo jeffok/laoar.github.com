@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2017-03-30T17:14:03+08:00</updated>
+  <updated>2017-03-30T20:58:36+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -894,36 +894,22 @@ static struct timer anycast_delay_timer; /<em> 定义为一个static变量 </em>
     <link href="http://laoar.github.io/blog/2015/06/14/lock-free/"/>
     <updated>2015-06-14T21:57:38+08:00</updated>
     <id>http://laoar.github.io/blog/2015/06/14/lock-free</id>
-    <content type="html"><![CDATA[<p>前段时间尝试更改我们系统里的并发实现，用lockfree来实现了一遍以提升网络吞吐量。在这个过程中遇到了一些很有趣的技术细节，在这里记录一下。</p>
-
-
-<p>公司业务不便多说，我就借助dpdk的packet processing模型来说明一下。下图摘自dpdk.org。</p>
-
+    <content type="html"><![CDATA[<p>前段时间尝试更改我们系统里的并发实现，用lockfree来实现了一遍以提升网络吞吐量。在这个过程中遇到了一些很有趣的技术细节，在这里记录一下。  <br/>
+公司业务不便多说，我就借助dpdk的packet processing模型来说明一下。下图摘自dpdk.org。</p>
 
 <center> <img src="http://laoar.github.io/images/lockfree-dpdk.jpg"> </center>
 
 
-<p>如上图所示，是一个典型的packet processing模型，RX这个线程接受到数据包后送给distributor，然后Worker Lcore这些线程从Distributor那里获取数据包来处理。和本次讨论无关的技术不在此阐述，我将其简化为更加清晰明了的下图。
-</p>
-
+<p>如上图所示，是一个典型的packet processing模型，RX这个线程接受到数据包后送给distributor，然后Worker Lcore这些线程从Distributor那里获取数据包来处理。和本次讨论无关的技术不在此阐述，我将其简化为更加清晰明了的下图。</p>
 
 <center> <img src="http://laoar.github.io/images/lockfree-ring.jpg"> </center>
 
 
-<p>
-我们的问题简化为如下：已知ring buffer是一个大小为2048 * sizeof(long)的数组, 有一个RX线程往ring buffer里面保存mbuf的地址，有N个worker线程来从ring buffer里面获取mbuf的地址。在这种场景下如何来实现一个lock-free的buffer？ 
-</p>
+<p>我们的问题简化为如下：已知ring buffer是一个大小为2048 * sizeof(long)的数组, 有一个RX线程往ring buffer里面保存mbuf的地址，有N个worker线程来从ring buffer里面获取mbuf的地址。在这种场景下如何来实现一个lock-free的buffer？</p>
 
+<p>在<a href="http://www.linuxjournal.com/content/lock-free-multi-producer-multi-consumer-queue-ring-buffer">Linux Journal</a>上有一个现成的实现，不过很可惜，虽然他的方案很巧妙，但是存在一个bug，稍后会解释这个bug。</p>
 
-<p>
-在<a href="http://www.linuxjournal.com/content/lock-free-multi-producer-multi-consumer-queue-ring-buffer">Linux Journal</a>上有一个现成的实现，不过很可惜，虽然他的方案很巧妙，但是存在一个bug，稍后会解释这个bug。
-</p>
-
-
-<p>
-下面是一个简短实现这个lock-free ring的一段代码，我借鉴了linux journal上的那篇文章。具体的实现细节以及原理我不再描述，那篇文章描述的很详细，浅显明了。我在这里只解析它里面的那个bug。
-</p>
-
+<p>下面是一个简短实现这个lock-free ring的一段代码，我借鉴了linux journal上的那篇文章。具体的实现细节以及原理我不再描述，那篇文章描述的很详细，浅显明了。我在这里只解析它里面的那个bug。</p>
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -948,8 +934,8 @@ static struct timer anycast_delay_timer; /<em> 定义为一个static变量 </em>
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>
-上面这两段代码均应该在那两个语句之间添加barrier，即：
+<p>上面这两段代码均应该在那两个语句之间添加barrier，即：</p>
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -987,7 +973,10 @@ static struct timer anycast_delay_timer; /<em> 定义为一个static变量 </em>
 </span><span class='line'>
 </span><span class='line'><span class="p">}</span>
 </span></code></pre></td></tr></table></div></figure>
-否则它就可能会被编译器（gcc）给优化为比如如下：<br>
+
+
+<p>否则它就可能会被编译器（gcc）给优化为比如如下：<br></p>
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -995,13 +984,13 @@ static struct timer anycast_delay_timer; /<em> 定义为一个static变量 </em>
 </span><span class='line'><span class="n">thr_pos</span><span class="p">().</span><span class="n">head</span> <span class="o">=</span> <span class="n">ULONG_MAX</span><span class="p">;</span>
 </span><span class='line'><span class="n">ptr_array_</span><span class="p">[</span><span class="n">tmp</span><span class="p">]</span> <span class="o">=</span> <span class="n">ptr</span><span class="p">;</span>
 </span></code></pre></td></tr></table></div></figure>
-之所以做这个优化，是因为计算机的空间相近性原则，编译器会尽量将临近内存操作给放在一起以提高cache的命中率。
-对于共享内存模型的这种并发，C语言的编译器并不去关心哪些变量是共享的，它只是依据局部最优性原则来做优化。所以对于C程序员而言，在实现基于共享内存模型的这种并发时，C编译器的这种优化是很大的一个挑战， 它可能会引入一些很难以定位的bug。所以，用C来实现并发，尤其是lockfree的并发，是一个非常需要经验的技术活。
-</p>
 
 
-<p>
-好在instruction reordering 这种bug是可见的，我们可以通过反汇编来发现这种bug。如下是有无barrier的一段反汇编代码对比（注：以下反汇编直接引自我在我们系统里的实现，跟上面代码有出入，但这不重要）：
+<p>之所以做这个优化，是因为计算机的空间相近性原则，编译器会尽量将临近内存操作给放在一起以提高cache的命中率。
+对于共享内存模型的这种并发，C语言的编译器并不去关心哪些变量是共享的，它只是依据局部最优性原则来做优化。所以对于C程序员而言，在实现基于共享内存模型的这种并发时，C编译器的这种优化是很大的一个挑战， 它可能会引入一些很难以定位的bug。所以，用C来实现并发，尤其是lockfree的并发，是一个非常需要经验的技术活。</p>
+
+<p>好在instruction reordering 这种bug是可见的，我们可以通过反汇编来发现这种bug。如下是有无barrier的一段反汇编代码对比（注：以下反汇编直接引自我在我们系统里的实现，跟上面代码有出入，但这不重要）：</p>
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -1037,16 +1026,12 @@ static struct timer anycast_delay_timer; /<em> 定义为一个static变量 </em>
 </span><span class='line'>    <span class="mo">004</span><span class="n">a1021</span> <span class="n">addu</span> <span class="n">v0</span><span class="p">,</span><span class="n">v0</span><span class="p">,</span><span class="n">t2</span>
 </span><span class='line'>    <span class="n">ac400044</span> <span class="n">sw</span> <span class="n">zero</span><span class="p">,</span><span class="mi">68</span><span class="p">(</span><span class="n">v0</span><span class="p">)</span>  <span class="err">#</span> <span class="n">ring_buf</span><span class="p">.</span><span class="n">pkt</span><span class="p">[</span><span class="n">tmp</span><span class="p">]</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
 </span></code></pre></td></tr></table></div></figure>
-</p>
 
 
-<p>
-instruction reordering引入的bug虽然挺折磨人，但毕竟是可见的。在并行程序里面还有一类bug则是完全不可见的，那就是memory reordering问题，这一类问题不仅仅是技术活了，更是意识活。在X86上，一般不会有memory reordering问题，因为它是strong order的，cache一致性做的比较好。但是在MIPS／ARM这种weak order的CPU上，memory reordering问题就比较突出，他们的cache一致性做的比较差，所以就需要显示的使用sync指令来保证cache的一致性，即通过软件来弥补硬件的不足。
-</p>
+<p>instruction reordering引入的bug虽然挺折磨人，但毕竟是可见的。在并行程序里面还有一类bug则是完全不可见的，那就是memory reordering问题，这一类问题不仅仅是技术活了，更是意识活。在X86上，一般不会有memory reordering问题，因为它是strong order的，cache一致性做的比较好。但是在MIPS／ARM这种weak order的CPU上，memory reordering问题就比较突出，他们的cache一致性做的比较差，所以就需要显示的使用sync指令来保证cache的一致性，即通过软件来弥补硬件的不足。</p>
 
+<p>同样是上面这个例子：</p>
 
-<p>
-同样是上面这个例子：
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -1058,14 +1043,17 @@ instruction reordering引入的bug虽然挺折磨人，但毕竟是可见的。�
 </span><span class='line'>    <span class="n">thr_pos</span><span class="p">().</span><span class="n">head</span> <span class="o">=</span> <span class="n">ULONG_MAX</span><span class="p">;</span>         <span class="o">&lt;&lt;&lt;&lt;</span> <span class="err">语句</span><span class="n">B</span>
 </span><span class='line'><span class="p">}</span>
 </span></code></pre></td></tr></table></div></figure>
-虽然加了barrier，确保了语句A一定会在语句B之前得到执行，但是如果ptr_array_[]和thr_pos().head不在同一个cache line里面，就有可能存在thr_pos().head先被同步到内存，ptr_array_[]后被同步到内存的情况，那么在这个时间空窗内，thr_pos().head已经被更新，它的previous value就可以被其他CPU使用，就会导致该CPU还没有写入其他CPU就从ptr_array_[thr_pos().head & Q_MASK] 里读数据的情况，这自然会导致错误。如下图所示：<br>
+
+
+<p>虽然加了barrier，确保了语句A一定会在语句B之前得到执行，但是如果<code>ptr_array_[]</code>和<code>thr_pos()</code>.head不在同一个cache line里面，就有可能存在<code>thr_pos()</code>.head先被同步到内存，<code>ptr_array_[]</code>后被同步到内存的情况，那么在这个时间空窗内，<code>thr_pos().head</code>已经被更新，它的previous value就可以被其他CPU使用，就会导致该CPU还没有写入其他CPU就从<code>ptr_array_[thr_pos().head &amp; Q_MASK]</code> 里读数据的情况，这自然会导致错误。如下图所示：<br></p>
+
 <center> <img src="http://laoar.github.io/images/lockfree-cache.jpg"> </center>
-另外，在共享内存模型中关于lockfree算法的必备基本功是对atomic的认识。atomic是针对内存操作而言的，我们可以这样认为，如果一个语句对于同一个内存只访问一次，我们就认为它是atomic的。如果需要访问多次该内存，我们就得借助编译器或者操作系统提供的atomic函数来访问。
-</p>
 
 
-<p>
-以下是一些简单的例子来说明一下：<br>
+<p>另外，在共享内存模型中关于lockfree算法的必备基本功是对atomic的认识。atomic是针对内存操作而言的，我们可以这样认为，如果一个语句对于同一个内存只访问一次，我们就认为它是atomic的。如果需要访问多次该内存，我们就得借助编译器或者操作系统提供的atomic函数来访问。</p>
+
+<p>以下是一些简单的例子来说明一下：<br></p>
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -1075,7 +1063,10 @@ instruction reordering引入的bug虽然挺折磨人，但毕竟是可见的。�
 </span><span class='line'>    <span class="c1">// 之所以用&amp;，是说这是个内存。同时，有了&amp;后，编译器不会将其优化为register变量。</span>
 </span><span class='line'>    <span class="o">*</span><span class="p">(</span><span class="o">&amp;</span><span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="mh">0x12345678</span><span class="p">;</span> <span class="o">&lt;&lt;&lt;</span>
 </span></code></pre></td></tr></table></div></figure>
-对于32-bit CPU而言，它无法用一条语句来操作32bit的立即数，因为机器码只有32bit。所以它会做如下拆分（MIPS）：
+
+
+<p>对于32-bit CPU而言，它无法用一条语句来操作32bit的立即数，因为机器码只有32bit。所以它会做如下拆分（MIPS）：</p>
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -1083,11 +1074,10 @@ instruction reordering引入的bug虽然挺折磨人，但毕竟是可见的。�
 </span><span class='line'><span class="mi">344</span><span class="n">bffff</span>    <span class="n">ori</span> <span class="n">t3</span><span class="p">,</span><span class="n">v0</span><span class="p">,</span><span class="mh">0x5678</span>
 </span><span class='line'><span class="mo">00</span><span class="mi">804821</span>    <span class="n">sc</span>    <span class="n">t3</span><span class="p">,</span><span class="mi">12</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span> <span class="err">#请不要在意为什么这里是</span><span class="mi">12</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span>
 </span></code></pre></td></tr></table></div></figure>
-虽然这条语句被编译为了3条指令，但是它只有一次内存访问，所以这个语句是原子的。即，内存写操作是原子的。同样，内存读操作也是原子的。
-</p>
 
 
-<p>
+<p>虽然这条语句被编译为了3条指令，但是它只有一次内存访问，所以这个语句是原子的。即，内存写操作是原子的。同样，内存读操作也是原子的。</p>
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -1097,17 +1087,19 @@ instruction reordering引入的bug虽然挺折磨人，但毕竟是可见的。�
 </span><span class='line'>    <span class="k">volatile</span> <span class="kt">int</span> <span class="n">y</span><span class="p">;</span>
 </span><span class='line'>    <span class="n">y</span> <span class="o">=</span> <span class="n">x</span><span class="p">;</span>   <span class="o">&lt;&lt;&lt;</span>
 </span></code></pre></td></tr></table></div></figure>
-虽然这里会访问两次内存操作，读x时要访问x所在的内存，写y时要访问y所在内存。但是它只访问一次y，所以对于y内存而言，是原子的。
+
+
+<p>虽然这里会访问两次内存操作，读x时要访问x所在的内存，写y时要访问y所在内存。但是它只访问一次y，所以对于y内存而言，是原子的。</p>
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 </pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">lw</span> <span class="n">v0</span><span class="p">,</span> <span class="mi">12</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span>    <span class="o">&lt;&lt;&lt;&lt;</span> <span class="err">读取变量</span><span class="n">x</span>
 </span><span class='line'><span class="n">sw</span> <span class="n">v0</span><span class="p">,</span> <span class="mi">16</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span>   <span class="o">&lt;&lt;&lt;&lt;</span> <span class="err">存储给</span><span class="n">y</span>
 </span></code></pre></td></tr></table></div></figure>
-12(sp)和16(sp)是不同的内存地址，所以这条语句对于y而言是原子的。PS：如果还需要保证写入y之前x不被改写，那就要借助atomic_write函数了。
-</p>
 
 
-<p>
+<p>12(sp)和16(sp)是不同的内存地址，所以这条语句对于y而言是原子的。PS：如果还需要保证写入y之前x不被改写，那就要借助atomic_write函数了。</p>
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -1115,7 +1107,10 @@ instruction reordering引入的bug虽然挺折磨人，但毕竟是可见的。�
 </span><span class='line'>    <span class="k">volatile</span> <span class="kt">int</span> <span class="n">x</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
 </span><span class='line'>    <span class="n">x</span><span class="o">++</span><span class="p">;</span>   <span class="o">&lt;&lt;&lt;</span>
 </span></code></pre></td></tr></table></div></figure>
-对于这条语句而言，首先它会从内存中取出x，然后做加法运算，最后将运算结果写入到内存。如下汇编：
+
+
+<p>对于这条语句而言，首先它会从内存中取出x，然后做加法运算，最后将运算结果写入到内存。如下汇编：</p>
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -1123,22 +1118,16 @@ instruction reordering引入的bug虽然挺折磨人，但毕竟是可见的。�
 </span><span class='line'><span class="n">add</span> <span class="n">v0</span><span class="p">,</span> <span class="n">v0</span><span class="p">,</span> <span class="mi">1</span>
 </span><span class='line'><span class="n">sw</span> <span class="n">v0</span><span class="p">,</span> <span class="mi">12</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span>  <span class="o">&lt;&lt;&lt;&lt;</span> <span class="err">第二次内存访问</span>
 </span></code></pre></td></tr></table></div></figure>
-那么这条x++这条语句就不是原子的，所以就得使用atomic_add()来操作x。
-</p>
 
 
-<p>
-简单的说，对于所有需要算数运算的操作，它都不是原子的。PS：只指对内存变量做算数运算
-</p>
+<p>那么这条x++这条语句就不是原子的，所以就得使用<code>atomic_add()</code>来操作x。</p>
 
+<p>简单的说，对于所有需要算数运算的操作，它都不是原子的。PS：只指对内存变量做算数运算</p>
 
-
-
-<h3>Ref:</h3>
-
+<h2>Ref.</h2>
 
 <ol>
-<li>我自己写的一个Single-Writer Multi-Reader lockfree的代码 <br>
+<li>我自己写的一个Single-Writer Multi-Reader lockfree的代码   <br/>
 <a href="https://github.com/laoar/Single-Writer-Mul-Reader-lock-free-ring">Single-Writer Multi-Reader lockfree Ring</a></li>
 </ol>
 
@@ -1150,26 +1139,32 @@ instruction reordering引入的bug虽然挺折磨人，但毕竟是可见的。�
     <link href="http://laoar.github.io/blog/2015/04/27/open-vswitch/"/>
     <updated>2015-04-27T21:43:46+08:00</updated>
     <id>http://laoar.github.io/blog/2015/04/27/open-vswitch</id>
-    <content type="html"><![CDATA[<p>下图所示是Open vSwitch的组成(摘自Open vSwitch官网):<br></p>
+    <content type="html"><![CDATA[<p>下图所示是Open vSwitch的组成(摘自Open vSwitch官网):</p>
 
 <center><img src="http://laoar.github.io/images/main-comp.png"></center>
 
 
-<p>它分为Kernel部分和User部分。<br></p>
+<p></p>
 
-<h3>一 安装驱动</h3>
+<p>它分为Kernel部分和User部分。</p>
 
+<h2>安装驱动</h2>
 
-<p>Kerenl部分是从Linux 2.6.32开始何如内核，默认是编译为一个KO，位于/lib/modules/`uname –r`/kernel/net/openvswitch/openvswitch.ko。<br></p>
+<p>Kerenl部分是从Linux 2.6.32开始何如内核，默认是编译为一个KO，位于/lib/modules/`uname –r`/kernel/net/openvswitch/openvswitch.ko。</p>
 
 <center><img src="http://laoar.github.io/images/switch-kernel.png"></center>
 
 
-<p>应用open vswitch首先要做的就是install这个kernel module。需要注意，GRE Tunneling的支持需要gre.ko, VXLAN的支持需要vxlan.ko, 这两个KO都位于/lib/modules/`uname –r`/kernel/路径下。<br></p>
+<p></p>
 
-<p>user部分是有两个daemon，一个是ovs-vswitchd，用来管理datapath，另外一个是ovsdb-server，用来维护一个数据库。<br>
-<h3>二 初始化dbserver </h3>
-在install好openvswitch.ko后，我们接着需要初始化这个ovsdb-server：<br>
+<p>应用open vswitch首先要做的就是install这个kernel module。需要注意，GRE Tunneling的支持需要gre.ko, VXLAN的支持需要vxlan.ko, 这两个KO都位于/lib/modules/`uname –r`/kernel/路径下。</p>
+
+<p>user部分是有两个daemon，一个是ovs-vswitchd，用来管理datapath，另外一个是ovsdb-server，用来维护一个数据库。</p>
+
+<h2>初始化dbserver</h2>
+
+<p>在install好openvswitch.ko后，我们接着需要初始化这个ovsdb-server：</p>
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -1177,72 +1172,84 @@ instruction reordering引入的bug虽然挺折磨人，但毕竟是可见的。�
 </span><span class='line'>            <span class="o">--</span><span class="n">remote</span><span class="o">=</span><span class="n">Open_vSwitch</span><span class="p">,</span><span class="n">Open_vSwitch</span><span class="p">,</span><span class="n">manager_option</span> <span class="err">\</span>
 </span><span class='line'>            <span class="o">--</span><span class="n">pidfile</span> <span class="o">--</span><span class="n">detach</span>
 </span></code></pre></td></tr></table></div></figure>
-              此时会生成一个数据库文件（/usr/local/etc/conf.db）,该dbserver会将网络状态信息给记录到conf.db里面。这些网络状态使得open vswitch能够适应网络的动态变化，比如可以用来追踪VM的迁移。<br>
-这个dbserver还可以通过TCP的6632端口跟远端的openflow server进行通信，这个openflow server可以通过remote这个参数来指定。<br>
-</p>
 
 
+<p>此时会生成一个数据库文件（/usr/local/etc/conf.db）,该dbserver会将网络状态信息给记录到conf.db里面。这些网络状态使得open vswitch能够适应网络的动态变化，比如可以用来追踪VM的迁移。  <br/>
+这个dbserver还可以通过TCP的6632端口跟远端的openflow server进行通信，这个openflow server可以通过remote这个参数来指定。</p>
 
+<h2>启动ovs－vswitchd</h2>
 
-<h3>三 启动ovs－vswitchd</h3>
+<p>接下来就需要启动ovs-vswitchd：</p>
 
+<blockquote><p>ovs-vswitchd &mdash;pidfile &mdash;detach</p></blockquote>
 
-<p>接下来就需要启动ovs-vswitchd：<br>
-<center>ovs-vswitchd &#8211;pidfile &#8211;detach </center>
-整个OVS的核心就是这个ovs-vswitchd。<br>
+<p>整个OVS的核心就是这个ovs-vswitchd。  <br/>
 这样子open vswich就在PC上运行起来了。</p>
 
+<h2>构建网络拓扑</h2>
 
+<p>我们来构建如下图所示的一个网络拓扑：</p>
 
-
-<h3>四 构建网络拓扑</h3>
-
-
-<p>我们来构建如下图所示的一个网络拓扑：<br>
 <center> <img src="http://laoar.github.io/images/switch-topo.png"> </center>
-</p>
 
 
-<h4>1. 首先需要增加一个bridge(br0)</h4>
+<p></p>
+
+<h4>首先需要增加一个bridge(br0)</h4>
+
+<blockquote><p>ovs-vsctl add-br br0</p></blockquote>
+
+<p>执行这个命令后，</p>
+
+<ol>
+<li>将br0记录到ovsdb里面</li>
+<li>ovs-vswitchd创建一个新的bridge</li>
+<li>ovs-vswitchd通过netlink这种方式，发相应的cmd给kernel，执行对应的handler来生成一个datapath以及和其相关的一些结构体。  <br/>
+每个bridge都对应于一个datapath结构体。</li>
+</ol>
 
 
-<p>
-<center>ovs-vsctl add-br br0</center>
-执行这个命令后，<br>
-1.1 将br0记录到ovsdb里面<br>
-1.2 ovs-vswitchd创建一个新的bridge<br>
-1.3 ovs-vswitchd通过netlink这种方式，发相应的cmd给kernel，执行对应的handler来生成一个datapath以及和其相关的一些结构体。<br>
-每个bridge都对应于一个datapath结构体。<br>
-</p>
+<h4>接着来将网络结构设备连接到该bridge</h4>
 
+<blockquote><p>ovs-ctl add-port br0 eth1</p></blockquote>
 
-<h4>2. 接着来将网络结构设备连接到该bridge</h4>
+<p>执行这个命令后，  <br/>
+1.  将该信息记录到ovsdb   <br/>
+2. ovs-vswitchd在bridge上新增一个端口，并将其设置为混杂模式（NETDEV_PROMISC），设置为混杂模式的目的是为了接收非本机MAC地址的包   <br/>
+3. ovs-vswitchd通过netlink调用到kernel端的handler，此时：</p>
 
+<pre><code>1. 找到“eth1”对应的net\_device     
+2.  把该net\_device的handler替换为ovs的handler，这样net\_device的进包就不会进入普通的内核处理流程，而是由OVS接收过来处理。    
+3. 产生一个新的vport结构体    
+</code></pre>
 
-<p>
-<center>ovs-ctl add-port br0 eth1 </center>
-执行这个命令后，<br>
-2.1  将该信息记录到ovsdb <br>
-2.2  ovs-vswitchd在bridge上新增一个端口，并将其设置为混杂模式（NETDEV_PROMISC），设置为混杂模式的目的是为了接收非本机MAC地址的包 <br>
-2.3  ovs-vswitchd通过netlink调用到kernel端的handler，此时：<br>
-i. 找到“eth1”对应的net_device <br>
-ii.  把该net_device的handler替换为ovs的handler，这样net_device的进包就不会进入普通的内核处理流程，而是由OVS接收过来处理。<br>
-iii. 产生一个新的vport结构体<br>
-整个过程如下图所示：<br>
+<p>整个过程如下图所示：</p>
+
 <center><img src="http://laoar.github.io/images/switch-handler.png"></center>
-至此，就初始化完成了kernel module的主要结构体datapath/vport/flow_table。这些主要结构体的关系如下图所示：<br>
+
+
+<p>  <br/>
+至此，就初始化完成了kernel module的主要结构体datapath/vport/flow_table。这些主要结构体的关系如下图所示：</p>
+
 <center><img src="http://laoar.github.io/images/switch-struct.png"> </center>
-</p>
 
 
-<h4>3. 设置openflow server </h4>
+<p></p>
 
+<h4>设置openflow server</h4>
 
-<p>下面这个命令可以用来设置远端用来和ovs-vswitchd通信的openflow server：<br>
-<center>ovs-vsctl set-controller br0 tcp:XXX.XXX.XXX.XXX:6633</center>
-如下图所示：<br>
+<p>下面这个命令可以用来设置远端用来和ovs-vswitchd通信的openflow server：</p>
+
+<blockquote><p>ovs-vsctl set-controller br0 tcp:XXX.XXX.XXX.XXX:6633</p></blockquote>
+
+<p>如下图所示：</p>
+
 <center><img src="http://laoar.github.io/images/switch-controller.png"> </center>
-根据不同的设备类型，ovs实现了不同的vport以作支持。目前OVS共支持了6种vport：<br>
+
+
+<p>  <br/>
+根据不同的设备类型，ovs实现了不同的vport以作支持。目前OVS共支持了6种vport：</p>
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -1258,102 +1265,81 @@ iii. 产生一个新的vport结构体<br>
 </span><span class='line'><span class="n">E</span><span class="p">.</span> <span class="n">VXLAN</span> <span class="n">tunnel</span>
 </span><span class='line'><span class="n">F</span><span class="p">.</span> <span class="n">LISP</span> <span class="n">tunnel</span>
 </span></code></pre></td></tr></table></div></figure>
-</p>
 
 
-<h3>五 以ping为例子来看下包处理流程.</h3>
+<h2>以ping为例子来看下包处理流程</h2>
+
+<p>VM0来ping VM1.   <br/>
+当vm0以ping发送一个ICMP报文给OVS时，OVS会依次进行如下处理：</p>
+
+<ol>
+<li>ping  <br/>
+VM0发送报文到tap0， tap0和br0的一个端口相连。br0的端口对应一个vport结构体。</li>
+<li>ovs receive   <br/>
+ovs执行tap0的receive handler，（即在前面执行ovs-ctl add-port br0 eth1 tag=XXX时注册的那个handler）  <br/>
+tag=XXX就是vlan，通过vlan来实现网络隔离的功能。</li>
+<li>flow key   <br/>
+从sk_buff中解析出来L2～L4的信息生成一个flow_key.   <br/>
+flow可以理解为一个以太网包所包含的头部信息的集合，在一个flow table里面的一个flow必须是唯一的，它是包含L2/L3/L4这些头部的一个细粒度的实体。一个TCP连接由两个flow组成，每个方向上有一个。</li>
+</ol>
 
 
-<p>VM0来ping VM1. </p>
-
-
-<p>当vm0以ping发送一个ICMP报文给OVS时，OVS会依次进行如下处理：</p>
-
-
-<h4>1 ping</h4>
-
-
-<p>VM0发送报文到tap0， tap0和br0的一个端口相连。br0的端口对应一个vport结构体。</p>
-
-
-<p></p>
-
-<h4>2 ovs receive</h4>
-
-
-<p>ovs执行tap0的receive handler，（即在前面执行ovs-ctl add-port br0 eth1 tag=XXX时注册的那个handler）<br>
-     tag=XXX就是vlan，通过vlan来实现网络隔离的功能。</p>
-
-
-<h4>3 flow key</h4>
-
-
-<p>从sk_buff中解析出来L2～L4的信息生成一个flow_key.<br> 
-          flow可以理解为一个以太网包所包含的头部信息的集合，在一个flow table里面的一个flow必须是唯一的，它是包含L2/L3/L4这些头部的一个细粒度的实体。一个TCP连接由两个flow组成，每个方向上有一个。<br>
 <center><img src="http://laoar.github.io/images/switch-flow-key.png"></center>
-</p>
 
 
-<h4>4 flow lookup</h4>
+<p>  <br/>
+4. flow lookup   <br/>
+使用该key来执行flow_lookup, 去跟kernel module里面维护的flow table进行比较。  <br/>
+首先去跟 flow_table里的 mask_cache数组进行比较， mask_cache里面只有 sk_buff的 hash值所以很快速；  <br/>
+接着再去跟 mask_array这个数组进行比较，这个数组里面存放是的 sw_flow_key, 查找相对慢一些。  <br/>
+如果在 mask_array里面匹配到了这个 flow，就会把该 sk_buff的 hash值给放到 mask_cache里面。   <br/>
+在 kenerl里的这部分比较称之为 ovs的 fast path</p>
 
-
-<p>
-使用该key来执行flow_lookup, 去跟kernel module里面维护的flow table进行比较。<br>
-首先去跟 flow_table里的 mask_cache数组进行比较， mask_cache里面只有 sk_buff的 hash值所以很快速；接着再去跟 mask_array这个数组进行比较，这个数组里面存放是的 sw_flow_key, 查找相对慢一些。如果在 mask_array里面匹配到了这个 flow，就会把该 sk_buff的 hash值给放到 mask_cache里面。 在 kenerl里的这部分比较称之为 ovs的 fast path<br>
 <center><img src="http://laoar.github.io/images/switch-path.png"> </center>
-</p>
 
 
-<h4>5 flow action</h4>
+<p>  <br/>
+5. flow action   <br/>
+如果在kernel中查找到了对应的flow entry，就去执行对应的flow action。  <br/>
+这些action是告诉datapath怎么去处理flow里面的这些packets。  <br/>
+action也可以为空，即丢弃这些packets。  <br/>
+datapath的这些action跟openflow定义的action是一致的。  <br/>
+6. send upcall  <br/>
+ 如果没有match到，就执行upcall通过netlink的方式给ovs-vswitchd发送OVS_PACKET_CMD_MISS命令。  <br/>
+UPCALL会包含整个packet，虽然不必要拷贝整个的packet给user space，可以做一些优化，但是由于只是拷贝first packet（比如TCP SYN），所以这种优化意义不大，而且有时候可能真的会用到整个packet。   <br/>
+ovs-vswitch一次只处理一个upcall，为了能够让每一个port产生的upcall都能够得到即使处理，datapath是采用的round robin这种方式来让每个port发送upcall。  <br/>
+UPCALL发送出去后，dadapath的处理就结束了。  <br/>
+一个普通的UPCALL结构如下图所示。</p>
 
-
-<p>
-如果在kernel中查找到了对应的flow entry，就去执行对应的flow action。<br>
-这些action是告诉datapath怎么去处理flow里面的这些packets。<br>
-action也可以为空，即丢弃这些packets。<br>
-datapath的这些action跟openflow定义的action是一致的。<br>
-</p>
-
-
-<h4>6 send upcall</h4>
-
-
-<p> 如果没有match到，就执行upcall通过netlink的方式给ovs-vswitchd发送OVS_PACKET_CMD_MISS命令。<br>
-UPCALL会包含整个packet，虽然不必要拷贝整个的packet给user space，可以做一些优化，但是由于只是拷贝first packet（比如TCP SYN），所以这种优化意义不大，而且有时候可能真的会用到整个packet。 <br>
-ovs-vswitch一次只处理一个upcall，为了能够让每一个port产生的upcall都能够得到即使处理，datapath是采用的round robin这种方式来让每个port发送upcall。<br>
-UPCALL发送出去后，dadapath的处理就结束了。<br>
-一个普通的UPCALL结构如下图所示。<br>
 <center><img src="http://laoar.github.io/images/switch-upcall.png"></center>
-</p>
 
 
-<h4>7 handle upcall </h4>
+<p>  <br/>
+7. handle upcall   <br/>
+ovs-vswitchd执行read_upcalls来读取upcall。  <br/>
+ read_upcalls的主要处理流程如下图所示。</p>
 
-
-<p>
-ovs-vswitchd执行read_upcalls来读取upcall。<br>
- read_upcalls的主要处理流程如下图所示。<br>
 <center><img src="http://laoar.github.io/images/switch-routine.png"> </center>
-Hash bucket的数据结构是hmap，如下图所示<br>
+
+
+<p>  <br/>
+Hash bucket的数据结构是hmap，如下图所示</p>
+
 <center><img src="http://laoar.github.io/images/switch-hmap.png"></center>
-</p>
 
 
-<h4>8 flow table match</h4>
+<p>  <br/>
+8. flow table match
+在userspace维护着openflowtable。对hmap里面的flow以wildcard的方式来与openflowtable匹配。  <br/>
+Openflowtable的匹配过程大致如下图。</p>
 
-
-<p>
-在userspace维护着openflowtable。对hmap里面的flow以wildcard的方式来与openflowtable匹配。<br>
-Openflowtable的匹配过程大致如下图。<br>
 <center><img src="http://laoar.github.io/images/switch-flow-table.png"> </center>
-</p>
 
 
-<h4>9 MAC learning</h4>
+<p>  <br/>
+9. MAC learning   <br/>
+在open vswitch里面配置MAC learning功能</p>
 
-
-<p>
-在open vswitch里面配置MAC learning功能<br>
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -1365,19 +1351,22 @@ Openflowtable的匹配过程大致如下图。<br>
 </span><span class='line'><span class="s">    load:NXM_OF_IN_PORT[]-&gt;NXM_NX_REG0[0..15]), \  </span>
 </span><span class='line'>    <span class="n">resubmit</span><span class="p">(,</span><span class="mi">3</span><span class="p">)</span><span class="err">“</span>
 </span></code></pre></td></tr></table></div></figure>
+
+
 <center><img src="http://laoar.github.io/images/switch-learning.png"> </center>
-</p>
 
 
-<p>Ref：<br>
-•Openflow spec 1.4.0<br>
-<a href="https://www.opennetworking.org/images/stories/downloads/sdn-resources/onf-specifications/openflow/openflow-spec-v1.4.0.pdf">https://www.opennetworking.org/images/stories/downloads/sdn-resources/onf-specifications/openflow/openflow-spec-v1.4.0.pdf</a> <br>
-•Open vswitch 2.3.1<br>
-<a href="http://openvswitch.org/releases/openvswitch-2.3.1.tar.gz">http://openvswitch.org/releases/openvswitch-2.3.1.tar.gz</a><br>
-•Why OVS ?<br>
-<a href="https://github.com/openvswitch/ovs/blob/master/WHY-OVS.md">https://github.com/openvswitch/ovs/blob/master/WHY-OVS.md</a> <br>
-•Example<br>
-<a href="http://openvswitch.org/support/config-cookbooks/">http://openvswitch.org/support/config-cookbooks/</a><br></p>
+<p></p>
+
+<h2>Ref：</h2>
+
+<ul>
+<li><a href="https://www.opennetworking.org/images/stories/downloads/sdn-resources/onf-specifications/openflow/openflow-spec-v1.4.0.pdf">Openflow spec 1.4.0</a></li>
+<li><a href="http://openvswitch.org/releases/openvswitch-2.3.1.tar.gz">Open vswitch 2.3.1</a></li>
+<li><a href="https://github.com/openvswitch/ovs/blob/master/WHY-OVS.md">Why OVS ?</a></li>
+<li><a href="http://openvswitch.org/support/config-cookbooks/">Example</a></li>
+</ul>
+
 ]]></content>
   </entry>
   
@@ -1386,25 +1375,20 @@ Openflowtable的匹配过程大致如下图。<br>
     <link href="http://laoar.github.io/blog/2015/03/31/algorithm/"/>
     <updated>2015-03-31T21:31:53+08:00</updated>
     <id>http://laoar.github.io/blog/2015/03/31/algorithm</id>
-    <content type="html"><![CDATA[<p>对于这个问题的研究也是缘于我们firewall的UDP吞吐量的波动。</p>
+    <content type="html"><![CDATA[<h2>TL;DR</h2>
 
+<p>对于这个问题的研究也是缘于我们firewall的UDP吞吐量的波动。</p>
 
 <p>在之前讨论过通过Makefile，链接脚本和gcc的attribute属性来控制编译器输出函数的顺序。然而在做了这些工作后，依然存在无关代码commit后引起性能波动的诡异现象，在对比了不同版本的二进制文件后发现有些commit会引起函数顺序的重排，这些重排就容易造成性能的波动。于是我就开始了做这个方面的研究，来分析编译器是如何调整函数顺序的以及能否进行优化。</p>
 
+<h2>什么是call-graph</h2>
 
 <p>首先，要明白一个概念：call-graph。</p>
 
+<p>call graph是用来表示函数调用关系的一个有向图。  <br/>
+我们可以通过gprof来获取一个函数的call graph，gprof是在函数运行过程中来获取函数调用关系（所以不会被执行到的函数就不会出现在call graph中）。</p>
 
-<h3>一 什么是call-graph</h3>
-
-
-<p>call graph是用来表示函数调用关系的一个有向图。</p>
-
-
-<p>我们可以通过gprof来获取一个函数的call graph，gprof是在函数运行过程中来获取函数调用关系（所以不会被执行到的函数就不会出现在call graph中）。</p>
-
-
-<p>如下是一个简单的示例：<br></p>
+<p>如下是一个简单的示例：</p>
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -1443,20 +1427,15 @@ Openflowtable的匹配过程大致如下图。<br>
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>那么对应的call graph就是<br>
-<img src="http://laoar.github.io/images/algo.png"><br>
-在call-graph里，函数称为节点（node），比如func/foo/bar就是节点；一个调用称为边（edge），比如func指向foo的那个边。这跟图论是一致的。<br></p>
+<p>那么对应的call graph就是  <br/>
+<img src="http://laoar.github.io/images/algo.png">  <br/>
+在call-graph里，函数称为节点（node），比如func/foo/bar就是节点；一个调用称为边（edge），比如func指向foo的那个边。这跟图论是一致的。</p>
 
-<h3>二 top level function</h3>
-
+<h2>top level function</h2>
 
 <p>还需要明白一个概念：top level function。</p>
 
-
 <p>接着前面的示例代码片段，我们加上main函数组成一个完整的程序。</p>
-
-
-<p></p>
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -1479,19 +1458,17 @@ Openflowtable的匹配过程大致如下图。<br>
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>此时func()这个函数就是一个top level函数，即没有函数直接来调用的函数。<br></p>
+<p>此时<code>func()</code>这个函数就是一个top level函数，即没有函数直接来调用的函数。  <br/>
+对于这一类的函数，由于没有函数来直接调用它，因而在函数的入口处就没有必要保存寄存器信息。 我们可以使用__toplevel这个属性来显示的告诉编译器这是一个top level function。</p>
 
-<p>对于这一类的函数，由于没有函数来直接调用它，因而在函数的入口处就没有必要保存寄存器信息。 我们可以使用__toplevel这个属性来显示的告诉编译器这是一个top level function。</p>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="kt">void</span> <span class="n">func</span><span class="p">()</span> <span class="n">__toplevel</span><span class="p">;</span>
+</span></code></pre></td></tr></table></div></figure>
 
 
-<center>void func() __toplevel; </center>
-
-
-<h3>三 编译器输出函数的顺序是怎么样的</h3>
-
+<h2>编译器输出函数的顺序是怎么样的</h2>
 
 <p>我们来看下gcc的源码</p>
-
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -1506,19 +1483,18 @@ Openflowtable的匹配过程大致如下图。<br>
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>一些解释：<br>
-1. asmstatements function<br>
-   这是Basic Asm (Assembler Instructions Without Operands),比如：<br>
-      #define DebugBreak() asm(&#8220;int $3&#8221;) 
-</p>
+<p>一些解释：  <br/>
+1. asmstatements function  <br/>
+   这是Basic Asm (Assembler Instructions Without Operands),比如：</p>
 
+<pre><code>  #define DebugBreak() asm("int $3") 
+</code></pre>
 
-<p>2. Varpool variables<br>
-     这个是所有的静态变量
-</p>
-
-
-<p>3. expand_all_functions 是输出函数的主体，这个是我们接下来要关注的。</p>
+<ol>
+<li><p>Varpool variables  <br/>
+  这个是所有的静态变量</p></li>
+<li><p><code>expand_all_functions</code> 是输出函数的主体，这个是我们接下来要关注的。</p></li>
+</ol>
 
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
@@ -1546,37 +1522,29 @@ Openflowtable的匹配过程大致如下图。<br>
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>也就是以revserse preodering方式来深度优先遍历call-graph，然后以这个顺序的逆序输出，即以bottom-up的方式来输出call-graph里面的node。<br></p>
+<p>也就是以revserse preodering方式来深度优先遍历call-graph，然后以这个顺序的逆序输出，即以bottom-up的方式来输出call-graph里面的node。</p>
 
-<h3>四 编译器以这个顺序来输出函数的目的是什么</h3>
+<h2>编译器以这个顺序来输出函数的目的是什么</h2>
 
+<p>编译器没有按照函数在文件里面的先后顺序输出，而是基于call graph输出。这样做是因为，子程序和他们的调用者在时间上可能相互接近，因此应当在放置时使得他们在空间上互不冲突，所以将子程序放在他们的调用者附近以减少页交换，并且使得频繁使用的和有关联的子程序在icache中以相互之间冲突较小的方式放置。</p>
 
-<p>编译器没有按照函数在文件里面的先后顺序输出，而是基于call graph输出。这样做是因为，子程序和他们的调用者在时间上可能相互接近，因此应当在放置时使得他们在空间上互不冲突，所以将子程序放在他们的调用者附近以减少页交换，并且使得频繁使用的和有关联的子程序在icache中以相互之间冲突较小的方式放置。 </p>
-
-
-<p>还要注意，它是以bottom-up的顺序输出，而不是按照top-down的顺序输出，这也说明，这样做优化的目的没有考虑函数的先后顺序，为什么不按照函数的调用顺序来输出呢？比如a调用b，那么就把b放在a的后面，这样在执行a的时候就把b给预取到内存不是很好么。事实上，预取是以cache line为单位的，一个cache line的大小是128字节或者64字节或者32字节，而函数的大小远不止这么大，函数调用时会有地址跳转，因而按照调用顺序来放置意义不是太大。
-</p>
-
+<p>还要注意，它是以bottom-up的顺序输出，而不是按照top-down的顺序输出，这也说明，这样做优化的目的没有考虑函数的先后顺序，为什么不按照函数的调用顺序来输出呢？比如a调用b，那么就把b放在a的后面，这样在执行a的时候就把b给预取到内存不是很好么。事实上，预取是以cache line为单位的，一个cache line的大小是128字节或者64字节或者32字节，而函数的大小远不止这么大，函数调用时会有地址跳转，因而按照调用顺序来放置意义不是太大。</p>
 
 <p>以bottom-up的方式来遍历call-graph也是基于一次遍历的考虑，这样可以在遍历call-graph的每一个节点时就可以采用合理的策略来分配寄存器。比如，在main函数里面使用的寄存器，只有在保存后才可以被它的子程序使用；相反，所有leaf functoin可以使用相同的寄存器，因为这些leaf function不会同时执行（单线程情况）。以bottom-up方式输出，那么在函数调用时，callee使用的寄存器是已知的因为callee已经被处理过了，通过避免重复使用这些寄存器就可以避免save/restore。</p>
 
-
 <p>科普一些基本知识。
-在有函数调用时，编译器将寄存器分为三类：<br>
-1> callee-saved registers.<br>
-这些寄存器要求在函数调用时，由被调用者来保存<br>
-2> caller-saved registers.<br>
-这些寄存器要求在函数调用时，由调用者来保存<br>
-3> 4个参数传递寄存器<br>
-在函数调用时用来传递参数<br>
+在有函数调用时，编译器将寄存器分为三类：  <br/>
+&ndash; callee-saved registers.  <br/>
+这些寄存器要求在函数调用时，由被调用者来保存  <br/>
+&ndash; caller-saved registers.  <br/>
+这些寄存器要求在函数调用时，由调用者来保存  <br/>
+&ndash; 4个参数传递寄存器  <br/>
+在函数调用时用来传递参数  <br/>
 比如对于MIPS而言，s0~s7是callee-saved, t0~t9是caller-saved，a0~a3是传递参数的寄存器.</p>
 
-<h3>五 这种输出顺序是否可以控制</h3>
+<h2>这种输出顺序是否可以控制</h2>
 
-
-<p>通过源码我们可以发现在compile()这个函数里，有个flag可以决定是以自然顺序输出函数还是以优化顺序输出函数。
-</p>
-
+<p>通过源码我们可以发现在<code>compile()</code>这个函数里，有个flag可以决定是以自然顺序输出函数还是以优化顺序输出函数。</p>
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -1599,19 +1567,15 @@ Openflowtable的匹配过程大致如下图。<br>
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>这个flag就是通过-fno-toplevel-reorder 来控制的。这个选项是在gcc-4.1加入的，这个选项加入的目的是为了支持以前存在的依赖特定顺序的代码（参见gcc-4.1的release note）。<br></p>
+<p>这个flag就是通过-fno-toplevel-reorder 来控制的。这个选项是在gcc-4.1加入的，这个选项加入的目的是为了支持以前存在的依赖特定顺序的代码（参见gcc-4.1的release note）。</p>
 
-<h3>六 使用-fno-toplevel-reorder的坏处</h3>
-
+<h2>使用-fno-toplevel-reorder的坏处</h2>
 
 <p>使用这个选项后，gcc将按照函数在文件中出现的顺序输出，这可能会降低程序的性能，但是如果我们使用了attribute 来将热点函数给放到了一起，那么gcc的reorder对性能的影响就不是太大了，甚至gcc的reorder可能会降低程序的性能（这也说明gcc在这方面的优化做的还有待改进）。</p>
 
-
 <p>使用这个选项后一个比较明显的坏处是，那些未被使用的static变量将仍然存在于最终生成的程序中，而如果不使用这个选项这些冗余的static变量会自动的被编译器给删除。</p>
 
-
 <p>那些在程序中没有调用的函数，在call-graph中称为不可达的节点，他们跟这个选项无关，不论这个选项使用与否都会被删除。</p>
-
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -1632,11 +1596,9 @@ Openflowtable的匹配过程大致如下图。<br>
 </span></code></pre></td></tr></table></div></figure>
 
 
-<h3>七 未完待续</h3>
-
+<h2>未完待续</h2>
 
 <p>对于编译器分配寄存器这一块，我的研究还不够深入，有些地方也不能很清楚的解释细节，这有些惭愧。</p>
-
 ]]></content>
   </entry>
   

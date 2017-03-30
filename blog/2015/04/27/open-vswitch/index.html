@@ -7,7 +7,7 @@
 	<meta name="author" content="Yafang Shao">
 
 	
-	<meta name="description" content="Open vSwitch Datapath浅析 下图所示是Open vSwitch的组成(摘自Open vSwitch官网): 它分为Kernel部分和User部分。 一 安装驱动 Kerenl部分是从Linux 2.6.32开始何如内核，默认是编译为一个KO，位于/lib/modules/` &hellip;">
+	<meta name="description" content="Open vSwitch Datapath浅析 下图所示是Open vSwitch的组成(摘自Open vSwitch官网): 它分为Kernel部分和User部分。 安装驱动 Kerenl部分是从Linux 2.6.32开始何如内核，默认是编译为一个KO，位于/lib/modules/` &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -79,26 +79,32 @@
 	
 	<div id="content" class="inner"><article class="post">
 	<h2 class="title">Open vSwitch Datapath浅析</h2>
-	<div class="entry-content"><p>下图所示是Open vSwitch的组成(摘自Open vSwitch官网):<br></p>
+	<div class="entry-content"><p>下图所示是Open vSwitch的组成(摘自Open vSwitch官网):</p>
 
 <center><img src="/images/main-comp.png"></center>
 
 
-<p>它分为Kernel部分和User部分。<br></p>
+<p></p>
 
-<h3>一 安装驱动</h3>
+<p>它分为Kernel部分和User部分。</p>
 
+<h2>安装驱动</h2>
 
-<p>Kerenl部分是从Linux 2.6.32开始何如内核，默认是编译为一个KO，位于/lib/modules/`uname –r`/kernel/net/openvswitch/openvswitch.ko。<br></p>
+<p>Kerenl部分是从Linux 2.6.32开始何如内核，默认是编译为一个KO，位于/lib/modules/`uname –r`/kernel/net/openvswitch/openvswitch.ko。</p>
 
 <center><img src="/images/switch-kernel.png"></center>
 
 
-<p>应用open vswitch首先要做的就是install这个kernel module。需要注意，GRE Tunneling的支持需要gre.ko, VXLAN的支持需要vxlan.ko, 这两个KO都位于/lib/modules/`uname –r`/kernel/路径下。<br></p>
+<p></p>
 
-<p>user部分是有两个daemon，一个是ovs-vswitchd，用来管理datapath，另外一个是ovsdb-server，用来维护一个数据库。<br>
-<h3>二 初始化dbserver </h3>
-在install好openvswitch.ko后，我们接着需要初始化这个ovsdb-server：<br>
+<p>应用open vswitch首先要做的就是install这个kernel module。需要注意，GRE Tunneling的支持需要gre.ko, VXLAN的支持需要vxlan.ko, 这两个KO都位于/lib/modules/`uname –r`/kernel/路径下。</p>
+
+<p>user部分是有两个daemon，一个是ovs-vswitchd，用来管理datapath，另外一个是ovsdb-server，用来维护一个数据库。</p>
+
+<h2>初始化dbserver</h2>
+
+<p>在install好openvswitch.ko后，我们接着需要初始化这个ovsdb-server：</p>
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -106,72 +112,84 @@
 </span><span class='line'>            <span class="o">--</span><span class="n">remote</span><span class="o">=</span><span class="n">Open_vSwitch</span><span class="p">,</span><span class="n">Open_vSwitch</span><span class="p">,</span><span class="n">manager_option</span> <span class="err">\</span>
 </span><span class='line'>            <span class="o">--</span><span class="n">pidfile</span> <span class="o">--</span><span class="n">detach</span>
 </span></code></pre></td></tr></table></div></figure>
-              此时会生成一个数据库文件（/usr/local/etc/conf.db）,该dbserver会将网络状态信息给记录到conf.db里面。这些网络状态使得open vswitch能够适应网络的动态变化，比如可以用来追踪VM的迁移。<br>
-这个dbserver还可以通过TCP的6632端口跟远端的openflow server进行通信，这个openflow server可以通过remote这个参数来指定。<br>
-</p>
 
 
+<p>此时会生成一个数据库文件（/usr/local/etc/conf.db）,该dbserver会将网络状态信息给记录到conf.db里面。这些网络状态使得open vswitch能够适应网络的动态变化，比如可以用来追踪VM的迁移。  <br/>
+这个dbserver还可以通过TCP的6632端口跟远端的openflow server进行通信，这个openflow server可以通过remote这个参数来指定。</p>
 
+<h2>启动ovs－vswitchd</h2>
 
-<h3>三 启动ovs－vswitchd</h3>
+<p>接下来就需要启动ovs-vswitchd：</p>
 
+<blockquote><p>ovs-vswitchd &mdash;pidfile &mdash;detach</p></blockquote>
 
-<p>接下来就需要启动ovs-vswitchd：<br>
-<center>ovs-vswitchd &#8211;pidfile &#8211;detach </center>
-整个OVS的核心就是这个ovs-vswitchd。<br>
+<p>整个OVS的核心就是这个ovs-vswitchd。  <br/>
 这样子open vswich就在PC上运行起来了。</p>
 
+<h2>构建网络拓扑</h2>
 
+<p>我们来构建如下图所示的一个网络拓扑：</p>
 
-
-<h3>四 构建网络拓扑</h3>
-
-
-<p>我们来构建如下图所示的一个网络拓扑：<br>
 <center> <img src="/images/switch-topo.png"> </center>
-</p>
 
 
-<h4>1. 首先需要增加一个bridge(br0)</h4>
+<p></p>
+
+<h4>首先需要增加一个bridge(br0)</h4>
+
+<blockquote><p>ovs-vsctl add-br br0</p></blockquote>
+
+<p>执行这个命令后，</p>
+
+<ol>
+<li>将br0记录到ovsdb里面</li>
+<li>ovs-vswitchd创建一个新的bridge</li>
+<li>ovs-vswitchd通过netlink这种方式，发相应的cmd给kernel，执行对应的handler来生成一个datapath以及和其相关的一些结构体。  <br/>
+每个bridge都对应于一个datapath结构体。</li>
+</ol>
 
 
-<p>
-<center>ovs-vsctl add-br br0</center>
-执行这个命令后，<br>
-1.1 将br0记录到ovsdb里面<br>
-1.2 ovs-vswitchd创建一个新的bridge<br>
-1.3 ovs-vswitchd通过netlink这种方式，发相应的cmd给kernel，执行对应的handler来生成一个datapath以及和其相关的一些结构体。<br>
-每个bridge都对应于一个datapath结构体。<br>
-</p>
+<h4>接着来将网络结构设备连接到该bridge</h4>
 
+<blockquote><p>ovs-ctl add-port br0 eth1</p></blockquote>
 
-<h4>2. 接着来将网络结构设备连接到该bridge</h4>
+<p>执行这个命令后，  <br/>
+1.  将该信息记录到ovsdb   <br/>
+2. ovs-vswitchd在bridge上新增一个端口，并将其设置为混杂模式（NETDEV_PROMISC），设置为混杂模式的目的是为了接收非本机MAC地址的包   <br/>
+3. ovs-vswitchd通过netlink调用到kernel端的handler，此时：</p>
 
+<pre><code>1. 找到“eth1”对应的net\_device     
+2.  把该net\_device的handler替换为ovs的handler，这样net\_device的进包就不会进入普通的内核处理流程，而是由OVS接收过来处理。    
+3. 产生一个新的vport结构体    
+</code></pre>
 
-<p>
-<center>ovs-ctl add-port br0 eth1 </center>
-执行这个命令后，<br>
-2.1  将该信息记录到ovsdb <br>
-2.2  ovs-vswitchd在bridge上新增一个端口，并将其设置为混杂模式（NETDEV_PROMISC），设置为混杂模式的目的是为了接收非本机MAC地址的包 <br>
-2.3  ovs-vswitchd通过netlink调用到kernel端的handler，此时：<br>
-i. 找到“eth1”对应的net_device <br>
-ii.  把该net_device的handler替换为ovs的handler，这样net_device的进包就不会进入普通的内核处理流程，而是由OVS接收过来处理。<br>
-iii. 产生一个新的vport结构体<br>
-整个过程如下图所示：<br>
+<p>整个过程如下图所示：</p>
+
 <center><img src="/images/switch-handler.png"></center>
-至此，就初始化完成了kernel module的主要结构体datapath/vport/flow_table。这些主要结构体的关系如下图所示：<br>
+
+
+<p>  <br/>
+至此，就初始化完成了kernel module的主要结构体datapath/vport/flow_table。这些主要结构体的关系如下图所示：</p>
+
 <center><img src="/images/switch-struct.png"> </center>
-</p>
 
 
-<h4>3. 设置openflow server </h4>
+<p></p>
 
+<h4>设置openflow server</h4>
 
-<p>下面这个命令可以用来设置远端用来和ovs-vswitchd通信的openflow server：<br>
-<center>ovs-vsctl set-controller br0 tcp:XXX.XXX.XXX.XXX:6633</center>
-如下图所示：<br>
+<p>下面这个命令可以用来设置远端用来和ovs-vswitchd通信的openflow server：</p>
+
+<blockquote><p>ovs-vsctl set-controller br0 tcp:XXX.XXX.XXX.XXX:6633</p></blockquote>
+
+<p>如下图所示：</p>
+
 <center><img src="/images/switch-controller.png"> </center>
-根据不同的设备类型，ovs实现了不同的vport以作支持。目前OVS共支持了6种vport：<br>
+
+
+<p>  <br/>
+根据不同的设备类型，ovs实现了不同的vport以作支持。目前OVS共支持了6种vport：</p>
+
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -187,102 +205,81 @@ iii. 产生一个新的vport结构体<br>
 </span><span class='line'><span class="n">E</span><span class="p">.</span> <span class="n">VXLAN</span> <span class="n">tunnel</span>
 </span><span class='line'><span class="n">F</span><span class="p">.</span> <span class="n">LISP</span> <span class="n">tunnel</span>
 </span></code></pre></td></tr></table></div></figure>
-</p>
 
 
-<h3>五 以ping为例子来看下包处理流程.</h3>
+<h2>以ping为例子来看下包处理流程</h2>
+
+<p>VM0来ping VM1.   <br/>
+当vm0以ping发送一个ICMP报文给OVS时，OVS会依次进行如下处理：</p>
+
+<ol>
+<li>ping  <br/>
+VM0发送报文到tap0， tap0和br0的一个端口相连。br0的端口对应一个vport结构体。</li>
+<li>ovs receive   <br/>
+ovs执行tap0的receive handler，（即在前面执行ovs-ctl add-port br0 eth1 tag=XXX时注册的那个handler）  <br/>
+tag=XXX就是vlan，通过vlan来实现网络隔离的功能。</li>
+<li>flow key   <br/>
+从sk_buff中解析出来L2～L4的信息生成一个flow_key.   <br/>
+flow可以理解为一个以太网包所包含的头部信息的集合，在一个flow table里面的一个flow必须是唯一的，它是包含L2/L3/L4这些头部的一个细粒度的实体。一个TCP连接由两个flow组成，每个方向上有一个。</li>
+</ol>
 
 
-<p>VM0来ping VM1. </p>
-
-
-<p>当vm0以ping发送一个ICMP报文给OVS时，OVS会依次进行如下处理：</p>
-
-
-<h4>1 ping</h4>
-
-
-<p>VM0发送报文到tap0， tap0和br0的一个端口相连。br0的端口对应一个vport结构体。</p>
-
-
-<p></p>
-
-<h4>2 ovs receive</h4>
-
-
-<p>ovs执行tap0的receive handler，（即在前面执行ovs-ctl add-port br0 eth1 tag=XXX时注册的那个handler）<br>
-     tag=XXX就是vlan，通过vlan来实现网络隔离的功能。</p>
-
-
-<h4>3 flow key</h4>
-
-
-<p>从sk_buff中解析出来L2～L4的信息生成一个flow_key.<br> 
-          flow可以理解为一个以太网包所包含的头部信息的集合，在一个flow table里面的一个flow必须是唯一的，它是包含L2/L3/L4这些头部的一个细粒度的实体。一个TCP连接由两个flow组成，每个方向上有一个。<br>
 <center><img src="/images/switch-flow-key.png"></center>
-</p>
 
 
-<h4>4 flow lookup</h4>
+<p>  <br/>
+4. flow lookup   <br/>
+使用该key来执行flow_lookup, 去跟kernel module里面维护的flow table进行比较。  <br/>
+首先去跟 flow_table里的 mask_cache数组进行比较， mask_cache里面只有 sk_buff的 hash值所以很快速；  <br/>
+接着再去跟 mask_array这个数组进行比较，这个数组里面存放是的 sw_flow_key, 查找相对慢一些。  <br/>
+如果在 mask_array里面匹配到了这个 flow，就会把该 sk_buff的 hash值给放到 mask_cache里面。   <br/>
+在 kenerl里的这部分比较称之为 ovs的 fast path</p>
 
-
-<p>
-使用该key来执行flow_lookup, 去跟kernel module里面维护的flow table进行比较。<br>
-首先去跟 flow_table里的 mask_cache数组进行比较， mask_cache里面只有 sk_buff的 hash值所以很快速；接着再去跟 mask_array这个数组进行比较，这个数组里面存放是的 sw_flow_key, 查找相对慢一些。如果在 mask_array里面匹配到了这个 flow，就会把该 sk_buff的 hash值给放到 mask_cache里面。 在 kenerl里的这部分比较称之为 ovs的 fast path<br>
 <center><img src="/images/switch-path.png"> </center>
-</p>
 
 
-<h4>5 flow action</h4>
+<p>  <br/>
+5. flow action   <br/>
+如果在kernel中查找到了对应的flow entry，就去执行对应的flow action。  <br/>
+这些action是告诉datapath怎么去处理flow里面的这些packets。  <br/>
+action也可以为空，即丢弃这些packets。  <br/>
+datapath的这些action跟openflow定义的action是一致的。  <br/>
+6. send upcall  <br/>
+ 如果没有match到，就执行upcall通过netlink的方式给ovs-vswitchd发送OVS_PACKET_CMD_MISS命令。  <br/>
+UPCALL会包含整个packet，虽然不必要拷贝整个的packet给user space，可以做一些优化，但是由于只是拷贝first packet（比如TCP SYN），所以这种优化意义不大，而且有时候可能真的会用到整个packet。   <br/>
+ovs-vswitch一次只处理一个upcall，为了能够让每一个port产生的upcall都能够得到即使处理，datapath是采用的round robin这种方式来让每个port发送upcall。  <br/>
+UPCALL发送出去后，dadapath的处理就结束了。  <br/>
+一个普通的UPCALL结构如下图所示。</p>
 
-
-<p>
-如果在kernel中查找到了对应的flow entry，就去执行对应的flow action。<br>
-这些action是告诉datapath怎么去处理flow里面的这些packets。<br>
-action也可以为空，即丢弃这些packets。<br>
-datapath的这些action跟openflow定义的action是一致的。<br>
-</p>
-
-
-<h4>6 send upcall</h4>
-
-
-<p> 如果没有match到，就执行upcall通过netlink的方式给ovs-vswitchd发送OVS_PACKET_CMD_MISS命令。<br>
-UPCALL会包含整个packet，虽然不必要拷贝整个的packet给user space，可以做一些优化，但是由于只是拷贝first packet（比如TCP SYN），所以这种优化意义不大，而且有时候可能真的会用到整个packet。 <br>
-ovs-vswitch一次只处理一个upcall，为了能够让每一个port产生的upcall都能够得到即使处理，datapath是采用的round robin这种方式来让每个port发送upcall。<br>
-UPCALL发送出去后，dadapath的处理就结束了。<br>
-一个普通的UPCALL结构如下图所示。<br>
 <center><img src="/images/switch-upcall.png"></center>
-</p>
 
 
-<h4>7 handle upcall </h4>
+<p>  <br/>
+7. handle upcall   <br/>
+ovs-vswitchd执行read_upcalls来读取upcall。  <br/>
+ read_upcalls的主要处理流程如下图所示。</p>
 
-
-<p>
-ovs-vswitchd执行read_upcalls来读取upcall。<br>
- read_upcalls的主要处理流程如下图所示。<br>
 <center><img src="/images/switch-routine.png"> </center>
-Hash bucket的数据结构是hmap，如下图所示<br>
+
+
+<p>  <br/>
+Hash bucket的数据结构是hmap，如下图所示</p>
+
 <center><img src="/images/switch-hmap.png"></center>
-</p>
 
 
-<h4>8 flow table match</h4>
+<p>  <br/>
+8. flow table match
+在userspace维护着openflowtable。对hmap里面的flow以wildcard的方式来与openflowtable匹配。  <br/>
+Openflowtable的匹配过程大致如下图。</p>
 
-
-<p>
-在userspace维护着openflowtable。对hmap里面的flow以wildcard的方式来与openflowtable匹配。<br>
-Openflowtable的匹配过程大致如下图。<br>
 <center><img src="/images/switch-flow-table.png"> </center>
-</p>
 
 
-<h4>9 MAC learning</h4>
+<p>  <br/>
+9. MAC learning   <br/>
+在open vswitch里面配置MAC learning功能</p>
 
-
-<p>
-在open vswitch里面配置MAC learning功能<br>
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
@@ -294,19 +291,22 @@ Openflowtable的匹配过程大致如下图。<br>
 </span><span class='line'><span class="s">    load:NXM_OF_IN_PORT[]-&gt;NXM_NX_REG0[0..15]), \  </span>
 </span><span class='line'>    <span class="n">resubmit</span><span class="p">(,</span><span class="mi">3</span><span class="p">)</span><span class="err">“</span>
 </span></code></pre></td></tr></table></div></figure>
+
+
 <center><img src="/images/switch-learning.png"> </center>
-</p>
 
 
-<p>Ref：<br>
-•Openflow spec 1.4.0<br>
-<a href="https://www.opennetworking.org/images/stories/downloads/sdn-resources/onf-specifications/openflow/openflow-spec-v1.4.0.pdf">https://www.opennetworking.org/images/stories/downloads/sdn-resources/onf-specifications/openflow/openflow-spec-v1.4.0.pdf</a> <br>
-•Open vswitch 2.3.1<br>
-<a href="http://openvswitch.org/releases/openvswitch-2.3.1.tar.gz">http://openvswitch.org/releases/openvswitch-2.3.1.tar.gz</a><br>
-•Why OVS ?<br>
-<a href="https://github.com/openvswitch/ovs/blob/master/WHY-OVS.md">https://github.com/openvswitch/ovs/blob/master/WHY-OVS.md</a> <br>
-•Example<br>
-<a href="http://openvswitch.org/support/config-cookbooks/">http://openvswitch.org/support/config-cookbooks/</a><br></p>
+<p></p>
+
+<h2>Ref：</h2>
+
+<ul>
+<li><a href="https://www.opennetworking.org/images/stories/downloads/sdn-resources/onf-specifications/openflow/openflow-spec-v1.4.0.pdf">Openflow spec 1.4.0</a></li>
+<li><a href="http://openvswitch.org/releases/openvswitch-2.3.1.tar.gz">Open vswitch 2.3.1</a></li>
+<li><a href="https://github.com/openvswitch/ovs/blob/master/WHY-OVS.md">Why OVS ?</a></li>
+<li><a href="http://openvswitch.org/support/config-cookbooks/">Example</a></li>
+</ul>
+
 </div>
 
 
