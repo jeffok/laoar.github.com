@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2017-03-30T21:06:35+08:00</updated>
+  <updated>2017-03-30T21:11:02+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -45,8 +45,11 @@
     <id>http://laoar.github.io/blog/2016/05/14/comments-on-breg</id>
     <content type="html"><![CDATA[<h2>TL;DR</h2>
 
-<p>这是篇对<a href="https://book.douban.com/subject/24840375/">Systems Performance</a> (中文名：性能之巅)的评论，原文在豆瓣：  <br/>
-<a href="https://book.douban.com/review/7894012/">Brendan Gregg: 一个实战派大神</a></p>
+<p>这是我对<a href="https://book.douban.com/subject/24840375/">Systems Performance</a> (中文名：性能之巅)这本书的评论，<br/>
+原文在豆瓣: <a href="https://book.douban.com/review/7894012/">Brendan Gregg: 一个实战派大神</a></p>
+
+<p>在写完这篇评论不久，我发现了这本书里面存在一些错误之处，本来想跟Brendan发封邮件让他出个errata的，一拖再拖
+就懒得弄了。 好在这些错误没有什么本质的影响，瑕不掩瑜。</p>
 
 <h2>Ref.</h2>
 
