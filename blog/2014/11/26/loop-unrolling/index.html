@@ -7,7 +7,7 @@
 	<meta name="author" content="Yafang Shao">
 
 	
-	<meta name="description" content="Loop Unrolling : May or May Not Make the Program Run Faster TL;DR loop unrolling 是将while/for循环的循环主体多排列几次展开以减少循环次数，从而提高代码的并发度来达到优化性能的目的。 &hellip;">
+	<meta name="description" content="Loop Unrolling : May or May Not Make the Program Run Faster TL;DR loop unrolling 是将while/for循环的循环主体多排列几次展开以减少循环次数，从而充分利用SMP的并行处理能力来达到优化性能的目的。 &hellip;">
 	
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -81,7 +81,7 @@
 	<h2 class="title">Loop Unrolling : May or May Not Make the Program Run Faster</h2>
 	<div class="entry-content"><h2>TL;DR</h2>
 
-<p>loop unrolling 是将while/for循环的循环主体多排列几次展开以减少循环次数，从而提高代码的并发度来达到优化性能的目的。我们可以手动的修改while/for循环来展开循环体，也可以使用编译器的自动循环展开功能。gcc的-funroll-loops就是用来自动将循环给展开用的。在gcc的手册里，对于-funroll-loops有一句说明，</p>
+<p>loop unrolling 是将while/for循环的循环主体多排列几次展开以减少循环次数，从而充分利用SMP的并行处理能力来达到优化性能的目的。我们可以手动的修改while/for循环来展开循环体，也可以使用编译器的自动循环展开功能。gcc的-funroll-loops就是用来自动将循环给展开用的。在gcc的手册里，对于-funroll-loops有一句说明，</p>
 
 <blockquote><p>This option makes code larger, and may or may not make it run faster.</p></blockquote>
 
