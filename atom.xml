@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2017-03-30T21:52:20+08:00</updated>
+  <updated>2017-03-31T22:18:09+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -2230,7 +2230,28 @@ TCP/IP快速入门，以及索引。 译者的计算机背景似乎不是很强�
     <id>http://laoar.github.io/blog/2014/11/26/loop-unrolling</id>
     <content type="html"><![CDATA[<h2>TL;DR</h2>
 
-<p>loop unrolling 是将while/for循环的循环主体多排列几次展开以减少循环次数，从而充分利用SMP的并行处理能力来达到优化性能的目的。我们可以手动的修改while/for循环来展开循环体，也可以使用编译器的自动循环展开功能。gcc的-funroll-loops就是用来自动将循环给展开用的。在gcc的手册里，对于-funroll-loops有一句说明，</p>
+<p>前辈@fcicq 看了我这篇blog后，跟我讲，“你虽然描述清楚了状况，但是不知道这是什么”   <br/>
+@fcicq是一个理论大师，她所说的“什么”就是指某一个专业术语。得益于与@fcicq 讨论，使得我的理论知识有了一些进步。特此更新。   <br/>
+关于@fcicq，可移步豆瓣: <a href="https://www.douban.com/people/fcicq/">fcicq on Douban</a></p>
+
+<p>loop unrolling 是将while/for循环的循环主体多排列几次，从而充分利用存储层级来达到优化性能的目的。   <br/>
+存储层级从执行效率递减排序如下：</p>
+
+<ul>
+<li>寄存器／运算器</li>
+<li>L1 D-cache/ L1 I-cache</li>
+<li>L2 cache</li>
+<li>L3 cache (maybe)</li>
+<li>memory</li>
+<li>..</li>
+</ul>
+
+
+<p>关于存储层级上的各个延迟， 具体可参考<a href="https://gist.github.com/jboner/2841832">Latency Numbers Every Programmer Should Know</a></p>
+
+<p>所以循环展开的目的是尽量将数据和指令填满寄存器和运算器，然后再是Cache。</p>
+
+<p>我们可以手动的修改while/for循环来展开循环体，也可以使用编译器的自动循环展开功能。gcc的-funroll-loops就是用来自动将循环给展开用的。在gcc的手册里，对于-funroll-loops有一句说明，</p>
 
 <blockquote><p>This option makes code larger, and may or may not make it run faster.</p></blockquote>
 
@@ -2943,8 +2964,22 @@ i为3时被展开的循环体：</p>
 
 <h2>结论</h2>
 
-<p>由此我们可以得到一个初步结论，在unroll-loops的过程中，如果产生了额外的临时变量，那么unroll loops就极有可能对性能造成伤害。   <br/>
-继续来分析gcc的unroll loops的特性。以下的分析基于gcc的源码loop-unroll.c 。</p>
+<p>由此我们可以得到一个初步结论，在unroll-loops的过程中，如果产生了额外的内存变量，那么unroll loops就极有可能对性能造成伤害。</p>
+
+<ul>
+<li>首先这些额外的临时变量会存储在内存里，执行指令时就会有入栈和出栈，这些多出来的入栈和出栈的指令，就会导致I-cache miss的增大</li>
+<li>这些变量会占用D-cache空间，从而又导致D-cache miss的增大</li>
+</ul>
+
+
+<p>关键路径上I-cache和D-cache miss的增大，自然会导致性能的下降。</p>
+
+<p>所以我们可以得到一个基本的结论：   <br/>
+<strong>循环展开的目的，是为了充分的使用当前的存储层级。所以循环展开一定要适度展开，过度展开就可能会导致寄存器和运算器不够用，这些数据和指令就会掉入到L1 cache里面；cache的大小不够用，就会继续往下掉入内存；从而使得访问延迟变大</strong></p>
+
+<p>另外，适度展开如果变成SIMD，就会变成数据并行，但是这跟结论无关。</p>
+
+<p>继续来分析gcc的unroll loops的特性。以下的分析基于gcc的源码loop-unroll.c 。</p>
 
 <h2>gcc的unroll loops</h2>
 
@@ -3109,9 +3144,12 @@ i为3时被展开的循环体：</p>
 
 <h2>Ref.</h2>
 
-<p>[1] MIPS支持3种ABI：O32/N32/N64,O32/N32的数据模型是ILP32，而N64是LP64，N32和O32的区别是N32的寄存器是64bit而O32的是32bit，N32使用64bits寄存器就要求栈要以8字节对齐。具体见<a href="http://math-atlas.sourceforge.net/devel/assembly/007-2816-005.pdf">http://math-atlas.sourceforge.net/devel/assembly/007-2816-005.pdf</a>   <br/>
-[2] 如果返回值是64bits,就会用到$v0和$v1这两个寄存器。对于一些高级编程语言比如Ruby，它可以有多个返回值，不过它实际上是返回的一个数组，数组里面有多个值，即本质上还是返回一个值。  <br/>
-[3] 支持元编程的语言，比如Ruby，可以在运行时来修改代码，但是它不是来调整代码段的布局。</p>
+<ul>
+<li>MIPS支持3种ABI：O32/N32/N64,O32/N32的数据模型是ILP32，而N64是LP64，N32和O32的区别是N32的寄存器是64bit而O32的是32bit，N32使用64bits寄存器就要求栈要以8字节对齐。具体见<a href="http://math-atlas.sourceforge.net/devel/assembly/007-2816-005.pdf">MIPS ABI</a></li>
+<li>如果返回值是64bits,就会用到$v0和$v1这两个寄存器。对于一些高级编程语言比如Ruby，它可以有多个返回值，不过它实际上是返回的一个数组，数组里面有多个值，即本质上还是返回一个值。</li>
+<li>支持元编程的语言，比如Ruby，可以在运行时来修改代码，但是它不是来调整代码段的布局。</li>
+</ul>
+
 ]]></content>
   </entry>
   
@@ -3609,8 +3647,7 @@ Gcc-Optimize-Options</a></p>
     <link href="http://laoar.github.io/blogs/501"/>
     <updated>2014-05-24T00:00:00+08:00</updated>
     <id>http://laoar.github.io/blogs/501</id>
-    <content type="html"><![CDATA[<p>Cliff跟我说，做性能优化就得花时间去琢磨，你要天天琢磨这个事，慢慢的就能找到办法了。 Boss的相对宽容，就给了我足够的时间来做一些琢磨（一开始写的是研究，想着自己也不是啥科学家，研究这个词还是太高大上了），我也得以能够做一些实验来证明自己的想法。  <br/>
-我在前一篇博客里也说过，关于性能优化的经验文章可谓汗牛充栋数不胜数，然而这一类的文章大多数都是纸上谈兵，纯理论派，实际操作性太差。所以我就说下我的实际操作经验，这些操作经验在理论派达人眼里可能是小儿科，远不及他们指点江山挥斥方遒的派头，然而实用的终究要比花拳绣腿好。</p>
+    <content type="html"><![CDATA[<p>我在前一篇博客里也说过，关于性能优化的经验文章可谓汗牛充栋数不胜数，然而这一类的文章大多数都是纸上谈兵，纯理论派，实际操作性太差。所以我就说下我的实际操作经验，这些操作经验在理论派达人眼里可能是小儿科，远不及他们指点江山挥斥方遒的派头，然而实用的终究要比花拳绣腿好。</p>
 
 <p>因为有些东西我还没有想明白，所以这篇博客可能最终没有真正的结论，只有实际的效果。仅举几个有趣的例子。  <br/>
 某松柏公司的版本管理方案大致是下面这个这个样子，首先有一个主线版本，在每个迭代的开始会拉出一个开发分支，开发分支开发完毕再sync到主线，然后再从主线拉出一个发布分支做版本发布。注：开发分支主要是针对一些大的特性的改动，一些bug fix可能只是commit到主线，而不会commit到开发分支。      <br/>
