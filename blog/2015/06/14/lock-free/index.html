@@ -235,6 +235,9 @@
 <center> <img src="/images/lockfree-cache.jpg"> </center>
 
 
+<p>      <br/>
+PS: 这个图的L1 cache和L2 cache画反了，哇咔咔</p>
+
 <p>另外，在共享内存模型中关于lockfree算法的必备基本功是对atomic的认识。atomic是针对内存操作而言的，我们可以这样认为，如果一个语句对于同一个内存只访问一次，我们就认为它是atomic的。如果需要访问多次该内存，我们就得借助编译器或者操作系统提供的atomic函数来访问。</p>
 
 <p>以下是一些简单的例子来说明一下：<br></p>
