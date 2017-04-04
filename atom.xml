@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2017-04-02T00:18:43+08:00</updated>
+  <updated>2017-04-04T21:24:01+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -3151,6 +3151,7 @@ i为3时被展开的循环体：</p>
 <li>MIPS支持3种ABI：O32/N32/N64,O32/N32的数据模型是ILP32，而N64是LP64，N32和O32的区别是N32的寄存器是64bit而O32的是32bit，N32使用64bits寄存器就要求栈要以8字节对齐。具体见<a href="http://math-atlas.sourceforge.net/devel/assembly/007-2816-005.pdf">MIPS ABI</a></li>
 <li>如果返回值是64bits,就会用到$v0和$v1这两个寄存器。对于一些高级编程语言比如Ruby，它可以有多个返回值，不过它实际上是返回的一个数组，数组里面有多个值，即本质上还是返回一个值。</li>
 <li>支持元编程的语言，比如Ruby，可以在运行时来修改代码，但是它不是来调整代码段的布局。</li>
+<li><a href="https://www.douban.com/note/575214110/">并行有五种</a></li>
 </ul>
 
 ]]></content>
