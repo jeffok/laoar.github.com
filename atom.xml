@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2017-04-06T23:22:09+08:00</updated>
+  <updated>2017-04-09T16:10:19+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -2237,24 +2237,7 @@ TCP/IP快速入门，以及索引。 译者的计算机背景似乎不是很强�
 @fcicq是一个理论大师，她所说的“什么”就是指某一个专业术语。得益于与@fcicq 的讨论，使得我的理论知识有了一些进步。特此更新。   <br/>
 关于@fcicq，可移步豆瓣: <a href="https://www.douban.com/people/fcicq/">fcicq on Douban</a></p>
 
-<p>loop unrolling 是将while/for循环的循环主体多排列几次，从而可以将更多的数组元素保存在寄存器中存储，以加快访问速度。</p>
-
-<p>存储层级决定了不同层级的访问速度是不一样的。
-存储层级从执行效率递减排序如下：</p>
-
-<ul>
-<li>寄存器／运算器</li>
-<li>L1 D-cache/ L1 I-cache</li>
-<li>L2 cache</li>
-<li>L3 cache (maybe)</li>
-<li>memory</li>
-<li>..</li>
-</ul>
-
-
-<p>关于存储层级上的各个延迟， 具体可参考<a href="https://gist.github.com/jboner/2841832">Latency Numbers Every Programmer Should Know</a></p>
-
-<p>所以循环展开的目的是尽量将数据和指令填满寄存器和运算器，然后再是Cache。</p>
+<p>loop unrolling 是将while/for循环的循环主体多排列几次，从而在一次迭代中执行更多的数据操作，他的本质意义是CPU的运算器和内存数据带宽的trade off，即计算机中经典的空间与时间的trade off。具体解释请直接跳到结论那一节。</p>
 
 <p>我们可以手动的修改while/for循环来展开循环体，也可以使用编译器的自动循环展开功能。gcc的-funroll-loops就是用来自动将循环给展开用的。在gcc的手册里，对于-funroll-loops有一句说明，</p>
 
@@ -2967,7 +2950,7 @@ i为3时被展开的循环体：</p>
 
 <p>新增的这些临时变量和对过多寄存器的使用增加了栈空间，而且入栈出栈也很消耗CPU cycles，因为这涉及到读写内存。</p>
 
-<h2>结论</h2>
+<h2>问题初步结论</h2>
 
 <p>由此我们可以得到一个初步结论，在unroll-loops的过程中，如果产生了额外的内存变量，那么unroll loops就极有可能对性能造成伤害。</p>
 
@@ -2977,10 +2960,57 @@ i为3时被展开的循环体：</p>
 </ul>
 
 
-<p>关键路径上I-cache和D-cache miss的增大，自然会导致性能的下降。</p>
+<p>关键路径上I-cache和D-cache miss的增大，自然会导致性能的下降, 这是因为不同存储层级的访问速度是不一样的。</p>
 
-<p>所以我们可以得到一个基本的结论：   <br/>
-<strong>循环展开的目的，是为了充分的使用CPU的寄存器和运算器，以加快对数组元素的访问速度，但是由于寄存器和运算器个数是有限的，所以过度展开并不会有什么好处。所以循环展开一定要适度展开，过度展开就可能会导致寄存器和运算器不够用，这些数据和指令就会掉入到L1 cache里面；cache的大小不够用，就会继续往下掉入内存；从而使得访问延迟变大</strong></p>
+<p>存储层级的访问速度从快到慢的排序如下：</p>
+
+<ul>
+<li>寄存器／运算器</li>
+<li>L1 D-cache/ L1 I-cache</li>
+<li>L2 cache</li>
+<li>L3 cache (maybe)</li>
+<li>memory</li>
+<li>..</li>
+</ul>
+
+
+<p>关于存储层级上的各个延迟， 具体可参考<a href="https://gist.github.com/jboner/2841832">Latency Numbers Every Programmer Should Know</a></p>
+
+<h2>循环展开的意义</h2>
+
+<p>以简化的代码来解释。</p>
+
+<h4>原始代码</h4>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">N</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="n">sum</span> <span class="o">+=</span> <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h4>循环展开后的代码</h4>
+
+<p>假设N是4的倍数（这个不是关键）。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">N</span><span class="p">;</span> <span class="n">i</span> <span class="o">+=</span> <span class="mi">4</span> <span class="p">)</span> <span class="p">{</span>
+</span><span class='line'>    <span class="n">sum</span> <span class="o">+=</span> <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">a</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">a</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">a</span> <span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">3</span><span class="p">];</span>
+</span><span class='line'><span class="p">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>如上代码所示，循环展开后，在一次迭代中完成了4个数组元素的运算。      <br/>
+我们知道，在编译时以常量索引的数组元素通常位于寄存器中，但是以变量索引的数组元素只能放在栈空间。所以a[i]..a[i + 3]这四个数组元素要首先被从栈（内存）中读取到寄存器中，这就带来了更多的寄存器消耗；同时，相比于展开前，展开后的代码需要一次性的消耗4个加法器，即这会消耗更多的运算器。通过消耗更多的寄存器和运算器，节省了对内存的访问次数，从而提升了速度。       <br/>
+更加深入的解释是，对于每份来自内存的数据而言，必须被若干次调用后才能节省内存带宽。即通过增加运算器来提升内存带宽。对于intel CPU而言，以及ARM／MIPS 这种RSIC CPU而言，设计的都是内存带宽过剩但是运算器不足。</p>
+
+<p>对于循环展开而言，如果展开过度，就会导致运算器／寄存器不够用，这些数据和指令就被迫掉入L1 cache，cache的大小不够用，就会继续掉入内存。对于存储层级而言，每次数据被迫掉入下一个存储阶层，带宽大概率要减半或者更多了。</p>
+
+<p>所以展开的次数多少最合适，是有CPU的运算器／寄存器来决定的。</p>
 
 <p>另外，适度展开如果变成SIMD，就会变成数据并行，但是这跟结论无关。</p>
 
