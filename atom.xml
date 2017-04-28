@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2017-04-28T22:31:04+08:00</updated>
+  <updated>2017-04-28T22:32:25+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -18,9 +18,7 @@
     <link href="http://laoar.github.io/blog/2017/04/28/directio/"/>
     <updated>2017-04-28T22:21:25+08:00</updated>
     <id>http://laoar.github.io/blog/2017/04/28/directio</id>
-    <content type="html"><![CDATA[<p>@(kernel)[IO]</p>
-
-<h1>Linus: Direct IO是个很脑残的设计</h1>
+    <content type="html"><![CDATA[<h1>Linus: Direct IO是个很脑残的设计</h1>
 
 <h2>TL;DR</h2>
 
