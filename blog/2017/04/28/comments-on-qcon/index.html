@@ -1,0 +1,385 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Qcon北京2017参会总结 - One Man's Yammer</title>
+	<meta name="author" content="Yafang Shao">
+
+	
+	<meta name="description" content="Qcon北京2017参会总结 Qcon北京2017参会总结 TL;DR 这是我在Qcon北京站听的一些分享。速记性质，给大家一个简略的索引，看看业界的某些趋势，各个演讲具体细节可去Qcon北京2017, 有些有ppt，有些没有。 持续集成之Why, What and How 第一场演讲。 &hellip;">
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="" rel="alternate" title="One Man's Yammer" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/favicon.png" rel="shortcut icon">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	<script async="true" src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+	
+</head>
+
+
+<body>
+	<header id="header" class="inner"><h1><a href="/">One Man's Yammer</a></h1>
+<nav id="main-nav"><ul class="main">
+	<li><a href="/read">BookWall</a></li>
+</ul>
+</nav>
+<nav id="mobile-nav"> <ul class="main">
+	<li><a href="/read">BookWall</a></li>
+</ul>
+ </nav>
+<!--	<div class="menu"> --!>
+		<!--<a class="button">Menu</a>
+		<div class="container"><ul class="main">
+	<li><a href="/read">BookWall</a></li>
+</ul>
+</div>--!>
+	<!--</div>--!>
+<!--</nav>--!>
+<!-- @yfshao
+	<div class="alignright search">
+		<a class="button"></a>
+		<div class="container">
+			<form action="false" method="get">
+				<input type="text" name="q" results="0">
+				<input type="hidden" name="q" value="site:laoar.github.io">
+			</form>
+		</div>
+	</div>
+</nav>
+--!>
+<!--
+<nav id="sub-nav" class="alignright">
+	<div class="social">
+		
+		
+		
+		
+    
+		
+		
+		
+		
+		
+    
+	</div>
+	<form class="search" action="false" method="get">
+		<input class="alignright" type="text" name="q" results="0">
+		<input type="hidden" name="q" value="site:laoar.github.io">
+	</form>
+</nav>
+--!>
+<!----!>
+</header>
+	
+		
+	
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">Qcon北京2017参会总结</h2>
+	<div class="entry-content"><h1>Qcon北京2017参会总结</h1>
+
+<h2>TL;DR</h2>
+
+<p>这是我在Qcon北京站听的一些分享。速记性质，给大家一个简略的索引，看看业界的某些趋势，各个演讲具体细节可去<a href="http://2017.qconbeijing.com/schedule">Qcon北京2017</a>, 有些有ppt，有些没有。</p>
+
+<h2>持续集成之Why, What and How</h2>
+
+<p>第一场演讲。   <br/>
+Jenkins的创始人过来布道，主要是说软件在一点点的统治世界，越来越重要，软件的版本更新／发布也越来越多，所以CI/CD很重要，然后就是Jenkins在CI／CD上做的多好，有多少牛逼企业都在用，大家赶紧用起来把。  <br/>
+实在话，Jenkins确实很好。</p>
+
+<h2>Maglev网络负载平衡系统</h2>
+
+<p>Google的Maglev作者过来演讲的。 <br/>
+事后跟他交流时，他说因为恰好小孩放春假（美国的一个假期），所以就带着小孩回老家重庆去看看，顺便来Qcon演讲下。  <br/>
+Google的技术都是自带光环的，确实也是有他光环的地方。   <br/>
+在易成演讲结束后，我跟做了一些深入的交流，收获挺多。  <br/>
+&ndash; 为什么不用lvs ?
+lvs是在内核态的，这样子灵活性就很差，更新一个功能得需要替换内核重启机器，google想在用户态实现四层负载均衡，这样子只需要重启应用就可以了。
+另外lvs的一致性问题也不满足google的要求。</p>
+
+<ul>
+<li><p>关于Maglev的kernel bypass：
+有一个专门的cpu去不停的poll网卡，看是否有包，然后分发给数据处理的cpu，主要也是解决网卡中断的问题。这跟很多kernel bypass模型也是一致的。
+如果数据包不是发往用户态程序的，会通过一个inteface重新注入内核，google一个专门的组来做这个interface。</p></li>
+<li><p>kernel bypass为什么不使用dpdk ?
+绑定在了特定网卡上 不想这个束缚 （@亚方 注：言外之意，我们google能力很强，看不上dpdk，我们搞得比他还要好）   <br/>
+dpdk也可以实现他们的功能</p></li>
+<li><p>关于用户态协议栈
+maglev是在四层做负载均衡，google有专门的组来去实现协议栈的功能。</p></li>
+<li><p>生产环境调试为什么不用tcpdump ?
+tcpdump是在内核里来实现的，如果使用它，就得把包重新注入内核，另外适应它比较消耗性能</p></li>
+<li><p>生产环境网络问题分析
+网络出了问题后就把调试信息拉去出来实时分析 这些调试信息记录在payload开始的地方以及在出问题时这个调试信息发往的IP 99.9%的包都不会用到这个payload，所以不会引入问题。
+这些调试信息不会去做存储做事后分析，google认为这样的意义不大。在环境不变的情况下，问题大部分都可以去复现的，如果不可以复现，就没有必要花精力去分析。</p></li>
+<li><p>关于一致性hash
+一致性hash主要解决的是集群中服务器增加/减少的问题。
+使用的一致性hash（maglev各个服务器间使用相同的hash算法，这样子tcp连接就会被hash到同样的GFE），以及网路跟踪表（一个五元组），来确保maglev中某个服务器挂掉或者GFE（对应lvs的rs）挂掉后已存在的tcp连接依然hash到相同的GFE上，确保连接不会重置。</p></li>
+<li><p>关于maglev后面的GFE（即lvs的rs）
+maglev会周期性的去探测后面的GFE，使用http/udp/ping都可以，来确保GFE能</p></li>
+<li><p>maglev会开源么 ？
+这个肯定不会，以后也不会。 <br/>
+因为maglev是跟google的整个代码耦合在一起的，并不是一个独立的模块，如果开源的话，google的所有代码都要开源了。</p></li>
+</ul>
+
+
+<h2>百度外卖从IDC到云端服务迁移过程</h2>
+
+<p>百度的一个运维总监。  <br/>
+女的。    <br/>
+2010年研究生毕业加入百度。</p>
+
+<p>她提到了一个网络监控可视化。  <br/>
+大致意思是，每个服务器上都有一个agent，然后nmap去扫描其他机器（nmap要比ping的效率高），然后把这些实时扫描信息放到redis中。再把这些数据做一个可视化，能够实时的去看内网中哪台交换机下面的哪台服务器出了故障。   <br/>
+另外她还提到了针对外网的健康监控系统。 <br/>
+大意是，有专门的server来专门去做外网的健康监控，根据当前商户／客户端IP来去做扫描，看看哪里的商户／客户端可能会存在问题。    <br/>
+这个外网健康监控系统是对APM的一个补充，它也只是部分场景下能够发挥作用。</p>
+
+<h2>阿里DevOps转型实践</h2>
+
+<p>比较能说，讲的也有点形而上。</p>
+
+<p>他提到的一些东西也是目前的一个趋势： 开发要具备运维能力，运维需要具备开发能力。</p>
+
+<p>还有就是自助化运维： <br/>
+在问题分析时对人的依赖转变为对工具的依赖，工具满足不了要求就反馈去改进这个工具，形成这样一个闭环。  <br/>
+自助化运维他比较推荐使用docker，因为docker固化了很多标准，提升了运维的力度。</p>
+
+<h2>云网分析与可视化——发掘网络数据的真正价值</h2>
+
+<p>偏技术，偏实战派。</p>
+
+<p>采集数据的方法也是在各个地方去加探针：从物理网络／逻辑网络／网络资源／应用这四个层面去加探针做采集。   <br/>
+然后就是对这些采集的数据做压缩聚合分析。 <br/>
+最后实现实时报警，发现毫秒级的毛刺。 <br/>
+看着很强悍。  <br/>
+来看下技术细节。  <br/>
+怎么样来采集虚拟网络的数据 ？ <br/>
+在每个物理机上会起一个专门的虚拟机，来把其他虚拟机的流量给镜像到这个虚拟机上去做分析。然后把这些流量做一些过滤／压缩之类的再把分析结果导出。 <br/>
+物理网络的采集也是用的流量镜像：会做一个过滤，有些流量不关心，有些流量只采集部分信息，有些流量采集全部信息。</p>
+
+<p>这些资源的消耗，对于我们，可能就是不能承受之重。</p>
+
+<h2>百度Matrix集群管理系统</h2>
+
+<p>个人感觉这个不错，技术上有难度，重要的是解决的很有价值的问题。</p>
+
+<p>百度做这个东西的背景是：他们机器的CPU利用率太低，需要去用技术手段来提升资源利用率。      <br/>
+（@亚方 事后补充：alibaba的一个首席科学家在下一天的主题分享上提到，twitter的平均CPU利用率是20%，google的平均CPU利用率是30%，这是前些年的数据，现在应该相差也不大）</p>
+
+<p>他提到的一个点是业务混布： 在线业务和离线业务混布在一起。  <br/>
+对于在线业务而言，我们知道，都是按照峰值来估计的，必须得预留足够的空间来预防突发张状况，所以在线业务天生就是CPU利用率低。      <br/>
+那么能不能在在线业务闲时把离线业务给布上去，在业务忙时再把这些离线业务杀掉／退掉／控制执行速率。 <br/>
+这就涉及到超发问题，这里面一个重要的逻辑就是合理调度，调度就涉及到任务的优先级。
+然后就需要对业务的优化级别去做一个区分：
+&ndash; 在任何情况下都得保证运行的业务 <br/>
+&ndash; 能够正常运行的业务 <br/>
+&ndash; 有资源就运行没资源可以不运行的业务</p>
+
+<p>前两种任务本质上是单机上的调度：是否可抢占。   <br/>
+最后一种则是集群级别的调度：集群内是否还有quota可用。</p>
+
+<p>在资源不够时对任务的杀／退／控制速率这个逻辑是在单机里面来实现的，目的是为了确保他能够及时快速的生效，以避免影响线上业务。</p>
+
+<p>关于quota，这也是他们很重要的一个概念。  <br/>
+百度现在在业务需要部署时不再以机器为维度来申请，而是以资源为维度， 即分配给它多少quota。</p>
+
+<p>matrix在虚拟化过程中，用的是自研的container，本质也是对cgroup／namespace的封装，他的container支持docker image。</p>
+
+<p>百度有很多不同的集群，openstack集群啊等等，如何把这些集群的离线资源打通来统一调度也是一个难题。</p>
+
+<h2>京东： 人工智能驱动零售</h2>
+
+<p>PPT做的不错，视频做的不错。演讲的较差。</p>
+
+<p>给人描述了人工智能在零售业务上的应用场景。
+比如智慧物流，比如客户知识图谱。</p>
+
+<p>建议大家都看下这个ppt。</p>
+
+<h2>应用开发的未来</h2>
+
+<p>Oracle VP的演讲。  <br/>
+标题是中文的，演讲是英文的。</p>
+
+<p>他这里面主要提的一个概念是FaaS(function as a service).</p>
+
+<p>之所以产生这个概念，是因为现在的微服务／容器化还是存在一些问题：  <br/>
+微服务和容器都还是以机器为粒度的，这些服务首先是要去部署到一个机器上去，部署的服务就可能会导致网络问题，进而导致所在机器下线，进而影响到这个机器上的其他服务。</p>
+
+<p>所以就有了serverless(无服务器化)这个概念：  <br/>
+&ndash; 把function（函数）作为部署和扩展的基本单位
+&ndash; 开发模型里再也看不到server，vm，container这些东西  <br/>
+&ndash; 等等</p>
+
+<p>大致意思是说，我们的业务模型再也不用去关注资源，只关注具体的函数实现即可，你想要完成什么功能会有一个eventhub（事件中心）给你做分发。也就是把资源再给做一层抽象，你不再直接给资源打交道，而是跟这个抽象层直接打交道。         <br/>
+举一个比较浅显的例子：     <br/>
+比如你的模块想要获取别的服务器上的一些数据，你肯定不会通过IP来去获取，应该是要通过域名或者主机名之类的。这种方式就是把IP这个资源给做了一层抽象，你不再关注具体的IP资源。    <br/>
+serverless也是类似的概念。</p>
+
+<p>VP说，未来一定会是微服务以及FaaS相结合的天下。    <br/>
+那么在微服务以及FaaS的这个趋势下，什么会越来越重要？  <br/>
+VP给的答案是Docker + Java最适合微服务以及FaaS，所以你们都赶紧去好好学java。       <br/>
+至于是不是这样子，还是说Oracle在吹捧自己的java，每个人就见仁见智了。</p>
+
+<p>另外再说一句， *aaS这个东西似乎层出不穷，前几天看到华为实时操作系统部门的一个分享，提到了一个LaaS，latency as service. 延迟怎么成了服务了，不清楚细节。 华为的内部资料也没有share给外面。</p>
+
+<p>[yafang注：阿里云最近实现的函数计算，就是一种FaaS]</p>
+
+<h2>新时代下工程师的发展和选择</h2>
+
+<p>顶天的演讲     <br/>
+我就不做解读了</p>
+
+<h2>Software Performance Analytics: Past, Present and Future</h2>
+
+<p>alibaba首席科学家的演讲。  <br/>
+这个人一毕业就工作于intel，在intel一工作就是20年，然后2016年加入了alibaba。      <br/>
+他主要专注于如何让软硬件更合的结合，以让Java程序充分利用计算机硬件的性能。</p>
+
+<p>他的演讲非常偏理论。     <br/>
+一些很朴素的理论，也是我们很容易忽略的理论。  <br/>
+他举的案例，非常简单的一个案例，吧啦吧啦的还说了半天。其实就是想说，对于单机的性能优化而言，其本质，万变不离其宗，无非就是去掉某一个功能或者调整功能的系数，让CPU专注在重要的事情上面。   <br/>
+至于具体的优化方法，相信每一个稍微有点经验的人都能吧啦吧啦说半天，重要的是这些优化方法本质上到底是在做什么。    <br/>
+他演讲里面提到一些papar感觉还不错。</p>
+
+<h2>性能优化面面观</h2>
+
+<p>听了腾讯视频，以及facebook instagram的优化。    <br/>
+优化方法没有什么特别值得说的地方，这也是性能优化的一个特征，单机上的性能优化方法也就那些，没有什么新鲜的，关键是如何去找到在哪里做优化。 即profile才是最重要的，要有强悍的profile tools。   <br/>
+facebook的profile工具给大家参考下：</p>
+
+<ul>
+<li>dynostats</li>
+<li>cprofile  （因为他们的主要开发语言是python）</li>
+<li>instalab</li>
+</ul>
+
+
+<p>值得说的是，他们在性能压测是，是以cpu cycles为主要指标，而不是cpu times。   <br/>
+dynostats会去采集CPI以及其他一些信息，cprofile则是函数维度的分析，instalab是流量回放分析。如何在采集信息时对业务性能影响小，这里面需要很精细的设计，他们对cprofile也做了大量的改进，还未开源，有开源的计划。</p>
+
+<h2>高可用实践：从淘宝到上云的差异</h2>
+
+<p>淘宝的人过来讲的，感觉跟我们的做法比较一致。</p>
+
+<p>高可用性关键的部分也是限流（对上限流，对下限流），开关（出问题时的快速恢复），弹性（无状态服务的容器化，来实现水平扩展）。</p>
+
+<h2>新浪微博混合云架构应用实践之路</h2>
+
+<p>新浪微博的业务有一个比较明显的特征： 在有热点事件是，流量会暴增，然后持续短时间就又降下来，这些热点事件往往很突发不可预测。     <br/>
+所以，如何在有热点事件时来快速的扩容就很关键。</p>
+
+<p>新浪微博在2014年开始docker化，15年开始部署混合云（基于openstack的私有云+阿里云组成的混合云），借助阿里云来实现快速的弹性扩容。</p>
+
+<ul>
+<li><p>容器的调度为什么用openstack ？  <br/>
+新浪微博在一开始的时候用的swarm，并且对swarm做了很多的改造，但是随着规模的扩大，swarm暴漏了一些缺陷，所以就开始转用了openstack。之所以用openstack主要是因为他对网络支持的较好，比如跟OVS的天然结合。同时新浪自研了自己的容器编排工具。</p></li>
+<li><p>容器调度为什么不考虑k8s ？
+k8s在小规模上比较有优势，新浪微博的规模较大，k8s不适用，而且k8s对网络的支持也不是很好。</p></li>
+<li><p>关于容器的资源评估   <br/>
+现有的容器调度框架，比如k8s，openstack，他们都没有去考虑容器的资源利用率问题。google的borg是个例外，他在调度时会比较看重容器的资源利用率。  <br/>
+新浪微博也在自研自己的容器资源评估框架，这里面最重要是去建立一个合适的指标体系。</p></li>
+<li><p>关于容器的配置管理    <br/>
+适用ansible（新浪微博做了一些优化）来做配置管理，一个重要原因是它跟阿里云天然结合。</p></li>
+</ul>
+
+
+<p>新浪微博的混合云管理平台opendcp已经开源在github上:<a href="https://github.com/weibocom/opendcp">opendcp</a>。</p>
+
+<p>新浪微博现在在做缓存的服务化，具体细节不清楚。</p>
+
+<h2>超大规模性能测试的云端解决方案及案例分享</h2>
+
+<p>说个小插曲。  <br/>
+在第一天的讲师欢迎晚宴上，正在吃着饭，旁边一个人凑过来说，“你是哪个公司的，加一下微信吧”，聊了下他的公司是Xmeter的。那个人相貌平平（借用一下古天乐的此人相貌平平），没有去深入交流，只是加了下微信，简单聊了几句。当时我还想着Xmeter又是哪一个美国公司。</p>
+
+<p>Qcon最后一场，也有点疲惫，感觉也没啥好听的，就来听了这场。  <br/>
+然后演讲者上台说“我是Xmeter的&hellip;”, 忽然想到前几天好像遇到过一个Xmeter的人，然后仔细看发现不就是那个人么！竟然还是创始人。</p>
+
+<p>他主要的做法是对Jmeter做改造，因为Jmeter是典型的master-slave模型，不能水平扩展。所以需要做一些改造，将master／slave之间的控制流和数据流做分离，同时master／slave之间的控制流加一个消息中间件，从而实现了水平扩展。消息中间件是通过rabbitmq，使用zookeeper来服务发现；数据流是典型的流式处理：storm+kafka。</p>
+
+<p>一个人从头到尾将这个东西搞出来还是挺不容易的。
+技术创业的可能性，也许这个人明天就把公司给IPO了呢。</p>
+</div>
+
+
+<!--
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2017-04-28T21:15:19+08:00" pubdate data-updated="true">Apr 28<span>th</span>, 2017</time></div>
+	
+	<div class="comments"><a href="#disqus_thread">Comments</a></div>
+	
+</div>
+--!>
+</article>
+
+	<div class="share">
+	<div class="addthis_toolbox addthis_default_style ">
+		
+		
+		
+		
+	</div>
+	
+</div>
+
+
+
+<section id="comment">
+    <h2 class="title">Comments</h2>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+</section>
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2017
+
+    Yafang Shao
+
+</footer>
+	<script src="/javascripts/slash.js"></script>
+<script src="/javascripts/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+	$('.fancybox').fancybox();
+})(jQuery);
+</script> <!-- Delete or comment this line to disable Fancybox -->
+
+
+<script type="text/javascript">
+      var disqus_shortname = 'laoar';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://laoar.github.io/blog/2017/04/28/comments-on-qcon/';
+        var disqus_url = 'http://laoar.github.io/blog/2017/04/28/comments-on-qcon/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//go.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+</body>
+</html>
