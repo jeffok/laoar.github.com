@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2017-04-28T21:24:12+08:00</updated>
+  <updated>2017-04-28T22:31:04+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -12,6 +12,226 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Linus: Direct IO是个很脑残的设计]]></title>
+    <link href="http://laoar.github.io/blog/2017/04/28/directio/"/>
+    <updated>2017-04-28T22:21:25+08:00</updated>
+    <id>http://laoar.github.io/blog/2017/04/28/directio</id>
+    <content type="html"><![CDATA[<p>@(kernel)[IO]</p>
+
+<h1>Linus: Direct IO是个很脑残的设计</h1>
+
+<h2>TL;DR</h2>
+
+<p>在Qcon演讲的时候提到了Direct IO，演讲完很多人对这个话题感兴趣，还有人特意通过他在场的同事加了我微信跟我讨论。  <br/>
+他们的观点是：</p>
+
+<ul>
+<li>Direct IO可以实现IO平滑控制</li>
+<li>非Direct IO消耗了大量内存，很多场景下尤其是视频领域，这些缓存的内存是个灾难，有限的内存还有更大的用处。</li>
+<li>跟我提到说阿里有个实现是，为了解决pagecache产生的突发时延，采用了DMA绕过pagecache的方式。</li>
+<li>application更清楚自己数据组织形式，所以自己来管理会更加的高效</li>
+<li>在一些场景下，application需要确认的是数据已经落盘，而不是写操作成功返回</li>
+</ul>
+
+
+<p>所以我把Linus很多年之前在邮件列表里的讨论给翻译了出来，供大家参考。     <br/>
+Linus究竟说的对不对，大家各自有自己的判断；Bypass kernel究竟好不好，每个人也都有自己的判断（特别是网络IO这块，不把kernel给bypass掉，你都不好意思说你是低延迟）；随着容器化／微服务化的潮流，微内核越来越流行，内核的一个趋势就是控制越来越少的资源，交给用户程序更好的自由度来管理资源。   <br/>
+我只是给大家翻译出来，让大家明白一个设计的初衷，以及一些基本的原理。</p>
+
+<p>因为整个篇幅较长，周日在家躺尸顺便翻译了一下很头大，就捡最重要的部分翻译了。  <br/>
+如果你的英文足够好，请直接阅读原文:  <a href="http://yarchive.net/comp/linux/o_direct.html">Discussion on O_DIRECT</a></p>
+
+<p>这些OS的设计者们在邮件列表里任性的讨论对于我们理解整个的底层机制是很有帮助的，甚至是我们反复去读代码都了解不到的。</p>
+
+<h2>乱翻译</h2>
+
+<p>路人甲对O_DIRECT做性能测试时发现，相比于非O_DIRECT的方式，它的性能下降了55%。 <br/>
+<font color=blue>[@yafang注： performance hit是很专业的一个词汇，在硅谷的科技公司中使用较多，意指性能损失，我们通常说的performance drop并不是很专业]</font></p>
+
+<p>于是路人甲就跑出了一个问题：</p>
+
+<ul>
+<li>路人甲：   <br/>
+在2.4.18的内核上，O_DIRECT仍然表现出来55%的性能下降，有人知道这是为什么吗 ？</li>
+</ul>
+
+
+<p>这个问题激起了很多的讨论，于是Linus冒出来了。</p>
+
+<ul>
+<li>Linus回应：  <br/>
+是的，因为O_DIRECT没有做任何预读取。  <br/>
+如果想让O_DIRECT产生效果,需要以异步的方式来使用它。</li>
+</ul>
+
+
+<p>然后路人乙跳出来质疑Linus，</p>
+
+<ul>
+<li>路人乙：  <br/>
+O_DIRECT对于那些维护自己缓存的应用特别有用，比如数据库。   <br/>
+在这个基础上再加上异步，会有更加明显的效果。     <br/>
+不需要预读取，也不用试着把它给缓存在内存中直到内存有压力时把它给踢出去。这对于处理随机IO是非常好的一个方式。</li>
+</ul>
+
+
+<p>瞬间这就激怒了Linus，</p>
+
+<ul>
+<li>Linus回应：<br/>
+O_DIRECT一直困扰我的事情是，它的整个接口非常的愚蠢，很可能是被磕了药的神经病猴子拍脑袋设计出来的。</li>
+</ul>
+
+
+<p>Linux的二号人物Alan Cox跳出来了，</p>
+
+<ul>
+<li>Alan Con插话：   <br/>
+O_DIRECT跟AIO一起用还是非常好的，没有aio的话它就有点欠缺了，此时readahead就有用了。</li>
+<li>Linus回应：  <br/>
+O_DIRECT之所以需要AIO，是为了掩盖它自己设计的本质性的愚蠢，如果这个接口设计的好的话，是不需要AIO的。</li>
+</ul>
+
+
+<p>然后Linus继续阐述自己详细的设计方案，他提出了下面一组新的系统调用：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='cpp'><span class='line'><span class="o">-</span> <span class="n">readahead</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
+</span><span class='line'><span class="err">它的作用很明显</span>
+</span><span class='line'><span class="p">[</span><span class="err">@</span><span class="n">yafang</span><span class="err">注：具体可以</span><span class="n">man</span> <span class="mi">2</span> <span class="n">readahead</span><span class="p">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">-</span> <span class="n">mmap</span><span class="p">(</span><span class="n">MAP_UNCACHED</span><span class="p">)</span>
+</span><span class='line'><span class="err">这个接口只去设置</span><span class="n">vma</span><span class="err">的描述符（跟其他所有的</span><span class="n">mmap</span><span class="err">一样）。它跟一个常规的私有映射有点类似，区别是在读数据到内存时它不会去给页引用计数加一，而是去查看这个页是否可以直接从</span><span class="n">pagecache</span><span class="err">里给删除，然后再把以私用页的方式插入到映射里（即从</span><span class="n">pagecache</span><span class="err">里面偷一个页，只是修改页表就可以了）</span>
+</span><span class='line'><span class="p">[</span><span class="err">@</span><span class="n">yafang</span><span class="err">注：很遗憾，</span><span class="n">Linus</span><span class="err">的这个设想并没有实现</span><span class="p">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">-</span> <span class="n">fdatasync_area</span><span class="p">(</span> <span class="n">fd</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">len</span><span class="p">)</span>
+</span><span class='line'><span class="p">[</span><span class="err">@</span><span class="n">yafang</span><span class="err">注：即</span><span class="n">msync</span><span class="p">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">-</span> <span class="n">mwrite</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">addr</span><span class="p">,</span> <span class="n">len</span><span class="p">)</span>
+</span><span class='line'><span class="err">这个是</span><span class="n">mmap</span><span class="p">(</span><span class="n">MAP_UNCACHED</span><span class="p">)</span><span class="err">相反的实现，他会去遍历页表看这个映射是否已存在了，如果已经存在，就把它从页表里面删除；如果不存在，就会从后备存储设备里直接读取出来这个页从而避免污染页表。</span>
+</span><span class='line'><span class="err">然后再把这个</span><span class="n">page</span><span class="err">移动到</span><span class="n">pagecache</span><span class="err">里。</span>
+</span><span class='line'><span class="p">[</span><span class="err">@</span><span class="n">yafang</span><span class="err">注：很遗憾，</span><span class="n">Linus</span><span class="err">的这个设想也没有实现</span><span class="p">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>利用这组系统调用接口，就可以真正的实现从内核态到用户态的零拷贝，并且避免了缺页异常：</p>
+
+<ul>
+<li>为了实现零拷贝，mwrite需要去遍历页表（就跟O_DIRECT一样）</li>
+<li>如果用户空间不会去touch这个page，就不会去建立这个页表，也不会影响TLB    <br/>
+<font color=blue>[@yafang注：TLB是页表的缓存，在访问页表的时候会首先去访问TLB，如果TLB里面没有再去内存里面查找] </font></li>
+<li>mmap(MAP_UNCACHED)也不会去touch页表或者TLB</li>
+</ul>
+
+
+<p>总结起来就是，数据从pagecache到用户空间不会经历拷贝，它只是一次移动，通过修改这个page的页表来实现。</p>
+
+<p>路人丙跳出来问Linus对disk-based数据库怎么看。</p>
+
+<ul>
+<li><p>Linux回应： <br/>
+我希望in-memory database(内存数据库)能够完全替代disk-based数据库，这就解决了所有的IO问题。唯一需要被写入磁盘的是日志和备份数据，这两个都是线性的被写入到磁盘的，除非设计者是个疯子。   <br/>
+我不太懂db，但是如果有足够内存的话，再把数据写入到磁盘就很不合理了。</p></li>
+<li><p>路人丙说：
+我没有任何需要去更改O_DIRECT。如果你的app维护着自己的cache，那干嘛还需要内核的pagecache呢？</p></li>
+<li><p>Linus回应：   <br/>
+pagecache的设计目的是：</p>
+
+<ol>
+<li> 它是一个暂存区，以确保文件系统的块特性。让常规的读写操作不需要再去关心对齐。</li>
+<li> 一个同步的实体，确保读写互不干扰，这样子mmap的数据总是一致的。</li>
+<li> cache的作用，提高访问速度</li>
+</ol>
+
+
+<p>  O_DIRECT抛弃了第三点（即O_DIRECT也实现了前两点），但是这样子就破坏了其他部分。比如它破坏了磁盘的调度机制：设想一下读写磁盘的同一个区域。     <br/>
+你们这些人太过于关注“数据直达磁盘”了。</p></li>
+<li>路人丙继续质疑：  <br/>
+但是内存真的太贵了而且又小，不可能把整个数据库都放到内存里啊。如果你想买一个10TB内存的机器，那价格真是会上天了；而且，等到内存达到10TB的时候，数据库就会100TB了。</li>
+<li>Linux回应：  <br/>
+你看看这个趋势：大型机的市场在逐渐的微缩，所以如果小型机器占用了99%的市场份额的话会是件一点也不奇怪的事情。   <br/>
+Microsoft和Linux之所以能够干掉其他OS，就是因为它们的“小即时美”哲学。 <br/>
+我是在暗示说，数据量的大小是不可能赶得上内存大小的发展的。内存不仅仅可以不停的增长，而且应付数据量也会绰绰有余。
+<font color=blue>[@yafang注： Linus说对了么？ ]</font></li>
+</ul>
+
+
+<p>路人XYZ也趁机问Linux各种问题。</p>
+
+<ul>
+<li><p>关于mmap：   <br/>
+mmap最大的好处是你不用去关心你的访问方式，以及你的数据具有很好的局部性。   <br/>
+但是在其他场景下mmap就会带来一些弊端了，因为他会遍历页表，这代价就很高了，甚至比memcpy()还要高。</p></li>
+<li><p>关于memcpy：   <br/>
+memcpy()主要是因为名字起的太差了。memcpy是很慢，但是如果你拷贝的是最近在用的内存，实际上memcpy都是由cache来完成的。   <br/>
+而且拷贝通常意味着你不用去关心锁的问题以及同步的问题。   <br/>
+这也是为什么read()/write()常常比mmap()要快的原因。而且最好不要太大的buffer，因为buffer会影响到你的cache。  <br/>
+就现在而言，最快的拷贝文件的方式是做8KB每次的read/write，不用去担心系统调用的开销，确保L1 cache有足够的剩余空间来存储这8KB的数据，以及避免了mmap带来的page faults开销是更大的收益。</p></li>
+</ul>
+
+
+<p>路人丁提出了一些质疑：</p>
+
+<ul>
+<li>路人丁：   <br/>
+数据库管理自己的cache还有其他的原因，因为application比kernel更清楚自己的数据使用以及将来会怎么样用这些数据</li>
+<li>Linus回应：   <br/>
+你尽管告诉kernel你要怎么样用你的数据就好了</li>
+<li>路人丁：  <br/>
+更糟糕的是，没有办法来暗示正在做的这个IO是优先级非常低的IO。 这对于IO密集型的服务器而言，会有危害。</li>
+<li>Linus回应：  <br/>
+IO优先级是个非常无用的东西。 其他的进程能够得到更好的对待其实一点也不重要，真正的消耗在于seeking带来的延迟。 你真正需要的并不是IO优先级，而是IO batching。</li>
+</ul>
+
+
+<p>路人戊又问了一个问题：</p>
+
+<ul>
+<li>路人戊：    <br/>
+在mount文件系统的时候是否可以加上O_DIRECT这个标记 ？ 这样子我就不需要更改我的代码来实现O_DIRECT了</li>
+<li>Linus回应：   <br/>
+O_DIRECT存在的唯一原因是数据库人员太习惯于用它了，因为其他的OS并没有告诉他们有更好的实现方式，所以它们就直接的hack了它们的OS来按照自己的方式来。   <br/>
+O_DIRECT不仅仅是一个糟糕的设计，它还间接的破坏了接口的完整性。</li>
+</ul>
+
+
+<p>路人己提了一个问题：</p>
+
+<ul>
+<li>路人己：  <br/>
+madvise+mmap，可以实现从文件里面数据时的kernel／user零拷贝，并且不会污染cache。那么write呢？如果不使用O_DIRECT，怎么保证不污染cache呢？</li>
+<li>Linus回应：  <br/>
+mmap()+msync()可以实现。   <br/>
+而且，常规的用户态页对齐数据，也是可以很简单的移到page cache里面去（yafang注：即不是通过copy的方式）。 我们有很多基础设置可以实现这个功能，比如说splice()这个系统调用。 它被使用的不是很广泛。   <br/>
+<font color=blue>[@yafang注：我也不是很清楚splice，接下来会研究下] </font>    <br/>
+你们通常认为借助O_DIRECT只是bypass了OS的IO层，以及实现了直接写，这听起来很简单清晰。但是bypass kernel会对安全以及最基本的正确性会有一些细微的影响。   <br/>
+OS的本质是资源的管理器，让资源的使用合理并且不产生冲突。   <br/>
+O_DIRECT,通过bypass了真正的OS，从根本上破坏了OS设计的基本观点。</li>
+</ul>
+
+
+<h2>Ref.</h2>
+
+<p><a href="http://yarchive.net/comp/linux/o_direct.html">Discussion on O_DIRECT</a> <br/>
+<a href="https://lkml.org/lkml/2002/5/10/37">original mail</a></p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Qcon北京2017参会总结]]></title>
@@ -3609,299 +3829,6 @@ Amazon上卖的书，书的编号（比如_B00CS74W6Q）是直接放在文件名
 
 <p>写完了这个<a href="https://github.com/laoar/bookwall"ll”>爬虫程序</a>，然后把自己读过的书的封面放在博客的<a href="http://laoar.net/read/"ll”>一个页面</a>里面，就像一个照片墙，所以我给自己的这个程序取了个名字叫做BookWall。虽然做的过程很折腾，可是花点心思毕竟也做出来了，当然这对于web程序员而言是小菜一碟。然后我就在想，接下来我再折腾点啥？学习下html5/css3，把自己的博客弄的酷炫狂拽屌炸天一些，或者，搞个WebApp，一键来统计自己在所有网站（比如豆瓣，微博，知乎，github，linkedin，goodreads，quaro，last.fm）上的活动记录，跟大数据一样。首先我得想想用什么语言合适，然后开始慢悠悠的看上几本书，再开始动笔&hellip;  <br/>
 从13年元旦开始有这个想法，到14年中旬才完成。这实在难以称得上是进击，所以标题叫做“患有拖延症的C程序员，Ruby，豆瓣读书”更合适一些。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[性能优化，要懂点编译原理]]></title>
-    <link href="http://laoar.github.io/blog/2014/06/24/ldscript/"/>
-    <updated>2014-06-24T22:08:21+08:00</updated>
-    <id>http://laoar.github.io/blog/2014/06/24/ldscript</id>
-    <content type="html"><![CDATA[<h2>前言一</h2>
-
-<p>现在正处在世界杯小组赛的阶段，我通常都是10点钟早早睡觉，然后爬起来看完12点场的比赛再睡觉，或者，早起看6点场的比赛然后冲个澡去上班。今晚为了写这篇文章，就不打算早睡了，直接看完12点场的比赛再睡觉。</p>
-
-<h2>前言二</h2>
-
-<p>我不是想说gcc的-O选项，诚然它很强大，不过gcc manual已经说的很清楚了<a href="https://gcc.gnu.org/onlinedocs/gcc-4.8.1/gcc/Optimize-Options.html#Optimize-Options" title="Title">
-Gcc-Optimize-Options</a></p>
-
-<h2>前言三</h2>
-
-<p>在我上大学的时候，我买了本《编译原理》，盗版的，这应该是我这一生买的最后一本盗版书。那本书我翻了几页就没继续往下看，因为纸张看着实在是太不舒服了。后来工作后，我从amazon上买了本正版的，纸张确实好很多，不过还是看不下去，原因嘛，你懂的~</p>
-
-<h2>正文</h2>
-
-<p>可执行文件的内存布局对程序性能的影响是非常巨大的，因为我最近一直在做性能优化，对这方面感触颇深。要搞明白可执行文件的内存布局，就必须得了解编译原理，当然编译原理实在是太过于高深了，我所知也是皮毛，所以我就从最实用的地方开始入手一点点的分析。  <br/>
-就从我前文里提到的<code>__attribute__((section(".sec_name")))</code>来说起吧，因为我使用这个东西确实给我们的性能带来了一定的提升。   <br/>
-关于attribute section这个东西，你要google的话，能够搜索出来不少前人的分析，不过实在都是大同小异，你抄我来我抄你，毫无营养。在他们的博客里，无非是说，“将作用的函数或者数据放入指定名为‘.sec_name’ 的输入段”，然后再巴拉巴拉一通什么是输入段，说的你云里雾里一头雾水分不清东西南北顿觉高大上。  <br/>
-那我们就来看下attribute section到底是什么。  <br/>
-要知道attribute section, 就要先理解链接脚本。链接脚本即链接器在把.o文件链接成最后的elf文件所遵循的规则，也就是，最终的可执行文件是什么样子的是由这个链接脚本决定的。链接脚本的语法和C语言很类似，我们能够很容易读明白，所以从链接脚本来入手分析这个东西会更清晰一些。对应于 <code>__attribute__((section(".sec_name")))</code>这句话，它在链接的时候采取的默认规则是：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="p">.</span><span class="n">sec_name</span>
-</span><span class='line'><span class="p">{</span>
-</span><span class='line'>     <span class="o">*</span><span class="p">(.</span><span class="n">sec_name</span><span class="p">)</span>
-</span><span class='line'><span class="p">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>即把.sec_name指向的内容放在.sec_name这个段里面。我们再来稍微清晰化一些，下面举个例子。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="kt">void</span> <span class="nf">foo</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>  <span class="n">__attribute__</span><span class="p">((</span><span class="n">section</span><span class="p">(</span><span class="s">&quot;.in_name&quot;</span><span class="p">)));</span>
-</span><span class='line'><span class="kt">void</span> <span class="nf">bar</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>  <span class="n">__attribute__</span><span class="p">((</span><span class="n">section</span><span class="p">(</span><span class="s">&quot;.in_name&quot;</span><span class="p">)));</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>我们使用attribute section来声明了两个函数，然后我们在链接脚本里面做如下约束：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="p">.</span><span class="n">out_name</span>
-</span><span class='line'><span class="p">{</span>
-</span><span class='line'>     <span class="o">*</span><span class="p">(.</span><span class="n">in_name</span><span class="p">)</span>
-</span><span class='line'><span class="p">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>这样就把<code>foor()</code>, <code>bar()</code>这两个函数给放在了最终elf文件里的.out_name这个section。而如果我们不再链接脚本里做这个约束，那么它在链接过程中就会采用默认规则，即输入段和输出段的名字是一样的：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="p">.</span><span class="n">in_name</span>
-</span><span class='line'><span class="p">{</span>
-</span><span class='line'>     <span class="o">*</span><span class="p">(.</span><span class="n">in_name</span><span class="p">)</span>
-</span><span class='line'><span class="p">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>总结起来就是，<code>__attribute__((section(".in_name")))</code>的作用是把.in_name指向的符号给放在一起。  <br/>
-唔~ 仍然有点模糊是不？ 那就好好读读《linkers and loaders》或者《程序员的自我修养》这两本书吧。</p>
-
-<p>然后我们来看下linux内核对于attribute section的应用， 以linux kernel的链接脚本vmlinux.lds为例。先来看下linux kernel最终镜像的代码段是如何规划的。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">SECTIONS</span>
-</span><span class='line'><span class="p">{</span>
-</span><span class='line'>     <span class="p">.</span> <span class="o">=</span> <span class="n">VMLINUX_LOAD_ADDRESS</span><span class="p">;</span>
-</span><span class='line'>     <span class="cm">/* read-only */</span>
-</span><span class='line'>     <span class="n">_text</span> <span class="o">=</span> <span class="p">.;</span>     <span class="cm">/* Text and read-only data */</span>
-</span><span class='line'>     <span class="p">.</span><span class="n">text</span> <span class="o">:</span> <span class="p">{</span>
-</span><span class='line'>          <span class="n">TEXT_TEXT</span>
-</span><span class='line'>          <span class="n">SCHED_TEXT</span>
-</span><span class='line'>          <span class="n">LOCK_TEXT</span>
-</span><span class='line'>          <span class="n">KPROBES_TEXT</span>
-</span><span class='line'>          <span class="n">IRQENTRY_TEXT</span>
-</span><span class='line'>          <span class="o">*</span><span class="p">(.</span><span class="n">text</span><span class="p">.</span><span class="o">*</span><span class="p">)</span>
-</span><span class='line'>          <span class="o">*</span><span class="p">(.</span><span class="n">fixup</span><span class="p">)</span>
-</span><span class='line'>          <span class="o">*</span><span class="p">(.</span><span class="n">gnu</span><span class="p">.</span><span class="n">warning</span><span class="p">)</span>
-</span><span class='line'>     <span class="p">}</span> <span class="o">:</span><span class="n">text</span> <span class="o">=</span> <span class="mi">0</span>
-</span><span class='line'><span class="p">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>如上就是一个典型的linux kenrel链接脚本的代码段部分。稍微解释下。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="p">.</span>  <span class="o">=</span> <span class="n">VMLINUX_LOAD_ADDRESS</span><span class="p">;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>的意思是说，此处的地址是VMLINUX_LOAD_ADDRESS，接着又把该值赋给了_text，也就是内核代码段的其实地址是VMLINUX_LOAD_ADDRESS，就这就开始了代码段。在代码段里面我们可以很明显的看到它划分了TEXT_TEXT、SCHED_TEXT、LOCK_TEXT、KPROBES_TEXT、IRQENTRY_TEXT，这样划分的目的，就是为了合理规划地址空间以提升性能。我们可以看下这几个宏到底表示什么：</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="cp">#define TEXT_TEXT                                   \</span>
-</span><span class='line'><span class="cp">          ALIGN_FUNCTION();                         \</span>
-</span><span class='line'><span class="cp">          *(.text.hot)                              \</span>
-</span><span class='line'><span class="cp">          *(.text)                              \</span>
-</span><span class='line'><span class="cp">          *(.ref.text)                              \</span>
-</span><span class='line'><span class="cp">     MEM_KEEP(init.text)                              \</span>
-</span><span class='line'><span class="cp">     MEM_KEEP(exit.text)                              \</span>
-</span><span class='line'><span class="cp">          *(.text.unlikely)</span>
-</span><span class='line'>
-</span><span class='line'><span class="cp">#define SCHED_TEXT                                   \</span>
-</span><span class='line'><span class="cp">          ALIGN_FUNCTION();                         \</span>
-</span><span class='line'><span class="cp">          VMLINUX_SYMBOL(__sched_text_start) = .;               \</span>
-</span><span class='line'><span class="cp">          *(.sched.text)                              \</span>
-</span><span class='line'><span class="cp">          VMLINUX_SYMBOL(__sched_text_end) = .;</span>
-</span><span class='line'>
-</span><span class='line'><span class="cp">#define LOCK_TEXT                                   \</span>
-</span><span class='line'><span class="cp">          ALIGN_FUNCTION();                         \</span>
-</span><span class='line'><span class="cp">          VMLINUX_SYMBOL(__lock_text_start) = .;               \</span>
-</span><span class='line'><span class="cp">          *(.spinlock.text)                         \</span>
-</span><span class='line'><span class="cp">          VMLINUX_SYMBOL(__lock_text_end) = .;</span>
-</span><span class='line'>
-</span><span class='line'><span class="cp">#define KPROBES_TEXT                                   \</span>
-</span><span class='line'><span class="cp">          ALIGN_FUNCTION();                         \</span>
-</span><span class='line'><span class="cp">          VMLINUX_SYMBOL(__kprobes_text_start) = .;          \</span>
-</span><span class='line'><span class="cp">          *(.kprobes.text)                         \</span>
-</span><span class='line'><span class="cp">          VMLINUX_SYMBOL(__kprobes_text_end) = .;</span>
-</span><span class='line'>
-</span><span class='line'><span class="cp">#define IRQENTRY_TEXT                                   \</span>
-</span><span class='line'><span class="cp">          ALIGN_FUNCTION();                         \</span>
-</span><span class='line'><span class="cp">          VMLINUX_SYMBOL(__irqentry_text_start) = .;          \</span>
-</span><span class='line'><span class="cp">          *(.irqentry.text)                         \</span>
-</span><span class='line'><span class="cp">          VMLINUX_SYMBOL(__irqentry_text_end) = .;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>这些宏其实就是定义了一些input section， 比如.text.hot等。  <br/>
-接着以.sched.text为例来看看到底是怎么用的。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="cp">#define __sched          __attribute__((__section__(&quot;.sched.text&quot;)))</span>
-</span><span class='line'>
-</span><span class='line'><span class="kt">void</span> <span class="n">__sched</span> <span class="n">notrace</span> <span class="nf">preempt_schedule_context</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
-</span><span class='line'><span class="k">static</span> <span class="kt">void</span> <span class="n">__sched</span> <span class="nf">__schedule</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
-</span><span class='line'><span class="n">asmlinkage</span> <span class="kt">void</span> <span class="n">__sched</span> <span class="nf">schedule</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
-</span><span class='line'><span class="n">asmlinkage</span> <span class="kt">void</span> <span class="n">__sched</span> <span class="nf">schedule_user</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
-</span><span class='line'><span class="kt">void</span> <span class="n">__sched</span> <span class="nf">schedule_preempt_disabled</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
-</span><span class='line'><span class="n">asmlinkage</span> <span class="kt">void</span> <span class="n">__sched</span> <span class="n">notrace</span> <span class="nf">preempt_schedule</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
-</span><span class='line'><span class="n">asmlinkage</span> <span class="kt">void</span> <span class="n">__sched</span> <span class="nf">preempt_schedule_irq</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
-</span><span class='line'><span class="p">....</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>一目了然了吧？ 就是前面我们说的attribute section这个东西，内核就是使用了这个东西来规划地址空间，将相互关联的代码给放在一起，以达到提升性能并保持稳定的作用。</p>
-
-<p>因为松柏公司的性能受代码check-in影响波动较大，所以我就想到了使用linux kernel的这种做法来规划可执行文件的地址空间，按照不同模块来划分不同的section，这样来避免频繁code check-in对性能波动的影响。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="p">.</span><span class="n">text</span>
-</span><span class='line'><span class="p">{</span>
-</span><span class='line'>     <span class="o">*</span><span class="p">(.</span><span class="n">module_a</span><span class="p">.</span><span class="n">text</span><span class="p">)</span>
-</span><span class='line'>     <span class="o">*</span><span class="p">(.</span><span class="n">module_b</span><span class="p">.</span><span class="n">text</span><span class="p">)</span>
-</span><span class='line'>     <span class="o">*</span><span class="p">(.</span><span class="n">module_c</span><span class="p">.</span><span class="n">text</span><span class="p">)</span>
-</span><span class='line'>     <span class="p">...</span>
-</span><span class='line'><span class="p">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>其实，再稍微的深入思考下，我们就能发现一个更细粒度的控制，那就是控制函数在可执行文件里的先后顺序。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="kt">void</span> <span class="nf">foo</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>  <span class="n">__attribute__</span><span class="p">((</span><span class="n">section</span><span class="p">(</span><span class="s">&quot;.in_name.1&quot;</span><span class="p">)));</span>
-</span><span class='line'><span class="kt">void</span> <span class="nf">bar</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>  <span class="n">__attribute__</span><span class="p">((</span><span class="n">section</span><span class="p">(</span><span class="s">&quot;.in_name.2&quot;</span><span class="p">)));</span>
-</span><span class='line'>
-</span><span class='line'> <span class="p">.</span><span class="n">text</span>
-</span><span class='line'><span class="p">{</span>
-</span><span class='line'>     <span class="o">*</span><span class="p">(.</span><span class="n">in_name</span><span class="mf">.1</span><span class="p">)</span>
-</span><span class='line'>     <span class="o">*</span><span class="p">(.</span><span class="n">in_name</span><span class="mf">.2</span><span class="p">)</span>
-</span><span class='line'>     <span class="p">...</span>
-</span><span class='line'><span class="p">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>这样做之后，在可执行文件里，foo就会在bar的前面，及foo和bar的地址紧挨着，bar紧跟在foo的后面。</p>
-
-<p>我们在缩小一下我们的视角，从宏观上来看下这个链接脚本。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-</pre></td><td class='code'><pre><code class='c'><span class='line'><span class="n">SECTIONS</span>
-</span><span class='line'><span class="p">{</span>
-</span><span class='line'>     <span class="p">.</span><span class="n">text</span> <span class="o">:</span> <span class="p">{</span>
-</span><span class='line'>          <span class="p">...</span>
-</span><span class='line'>     <span class="p">}</span>
-</span><span class='line'>     <span class="p">.</span><span class="n">data</span> <span class="o">:</span> <span class="p">{</span>
-</span><span class='line'>          <span class="p">...</span>
-</span><span class='line'>     <span class="p">}</span>
-</span><span class='line'>     <span class="p">.</span><span class="n">bss</span><span class="o">:</span><span class="p">{</span>
-</span><span class='line'>          <span class="p">...</span>
-</span><span class='line'>     <span class="p">}</span>
-</span><span class='line'><span class="p">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>这也是为什么可执行文件的内存布局先是代码段，接着数据段，再是bss段的原因，即链接脚本决定可执行文件的内存布局。在linux／freebsd机器上运行<code>ld —verbose</code>就可以获得ld使用的默认链接脚本。</p>
 ]]></content>
   </entry>
   

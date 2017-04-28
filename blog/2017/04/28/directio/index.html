@@ -1,0 +1,372 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Linus: Direct IO是个很脑残的设计 - One Man's Yammer</title>
+	<meta name="author" content="Yafang Shao">
+
+	
+	<meta name="description" content="Linus: Direct IO是个很脑残的设计 @(kernel)[IO] Linus: Direct IO是个很脑残的设计 TL;DR 在Qcon演讲的时候提到了Direct IO，演讲完很多人对这个话题感兴趣，还有人特意通过他在场的同事加了我微信跟我讨论。 他们的观点是： Direct &hellip;">
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="" rel="alternate" title="One Man's Yammer" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/favicon.png" rel="shortcut icon">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	<script async="true" src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+	
+</head>
+
+
+<body>
+	<header id="header" class="inner"><h1><a href="/">One Man's Yammer</a></h1>
+<nav id="main-nav"><ul class="main">
+	<li><a href="/read">BookWall</a></li>
+</ul>
+</nav>
+<nav id="mobile-nav"> <ul class="main">
+	<li><a href="/read">BookWall</a></li>
+</ul>
+ </nav>
+<!--	<div class="menu"> --!>
+		<!--<a class="button">Menu</a>
+		<div class="container"><ul class="main">
+	<li><a href="/read">BookWall</a></li>
+</ul>
+</div>--!>
+	<!--</div>--!>
+<!--</nav>--!>
+<!-- @yfshao
+	<div class="alignright search">
+		<a class="button"></a>
+		<div class="container">
+			<form action="false" method="get">
+				<input type="text" name="q" results="0">
+				<input type="hidden" name="q" value="site:laoar.github.io">
+			</form>
+		</div>
+	</div>
+</nav>
+--!>
+<!--
+<nav id="sub-nav" class="alignright">
+	<div class="social">
+		
+		
+		
+		
+    
+		
+		
+		
+		
+		
+    
+	</div>
+	<form class="search" action="false" method="get">
+		<input class="alignright" type="text" name="q" results="0">
+		<input type="hidden" name="q" value="site:laoar.github.io">
+	</form>
+</nav>
+--!>
+<!----!>
+</header>
+	
+		
+	
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">Linus: Direct IO是个很脑残的设计</h2>
+	<div class="entry-content"><p>@(kernel)[IO]</p>
+
+<h1>Linus: Direct IO是个很脑残的设计</h1>
+
+<h2>TL;DR</h2>
+
+<p>在Qcon演讲的时候提到了Direct IO，演讲完很多人对这个话题感兴趣，还有人特意通过他在场的同事加了我微信跟我讨论。  <br/>
+他们的观点是：</p>
+
+<ul>
+<li>Direct IO可以实现IO平滑控制</li>
+<li>非Direct IO消耗了大量内存，很多场景下尤其是视频领域，这些缓存的内存是个灾难，有限的内存还有更大的用处。</li>
+<li>跟我提到说阿里有个实现是，为了解决pagecache产生的突发时延，采用了DMA绕过pagecache的方式。</li>
+<li>application更清楚自己数据组织形式，所以自己来管理会更加的高效</li>
+<li>在一些场景下，application需要确认的是数据已经落盘，而不是写操作成功返回</li>
+</ul>
+
+
+<p>所以我把Linus很多年之前在邮件列表里的讨论给翻译了出来，供大家参考。     <br/>
+Linus究竟说的对不对，大家各自有自己的判断；Bypass kernel究竟好不好，每个人也都有自己的判断（特别是网络IO这块，不把kernel给bypass掉，你都不好意思说你是低延迟）；随着容器化／微服务化的潮流，微内核越来越流行，内核的一个趋势就是控制越来越少的资源，交给用户程序更好的自由度来管理资源。   <br/>
+我只是给大家翻译出来，让大家明白一个设计的初衷，以及一些基本的原理。</p>
+
+<p>因为整个篇幅较长，周日在家躺尸顺便翻译了一下很头大，就捡最重要的部分翻译了。  <br/>
+如果你的英文足够好，请直接阅读原文:  <a href="http://yarchive.net/comp/linux/o_direct.html">Discussion on O_DIRECT</a></p>
+
+<p>这些OS的设计者们在邮件列表里任性的讨论对于我们理解整个的底层机制是很有帮助的，甚至是我们反复去读代码都了解不到的。</p>
+
+<h2>乱翻译</h2>
+
+<p>路人甲对O_DIRECT做性能测试时发现，相比于非O_DIRECT的方式，它的性能下降了55%。 <br/>
+<font color=blue>[@yafang注： performance hit是很专业的一个词汇，在硅谷的科技公司中使用较多，意指性能损失，我们通常说的performance drop并不是很专业]</font></p>
+
+<p>于是路人甲就跑出了一个问题：</p>
+
+<ul>
+<li>路人甲：   <br/>
+在2.4.18的内核上，O_DIRECT仍然表现出来55%的性能下降，有人知道这是为什么吗 ？</li>
+</ul>
+
+
+<p>这个问题激起了很多的讨论，于是Linus冒出来了。</p>
+
+<ul>
+<li>Linus回应：  <br/>
+是的，因为O_DIRECT没有做任何预读取。  <br/>
+如果想让O_DIRECT产生效果,需要以异步的方式来使用它。</li>
+</ul>
+
+
+<p>然后路人乙跳出来质疑Linus，</p>
+
+<ul>
+<li>路人乙：  <br/>
+O_DIRECT对于那些维护自己缓存的应用特别有用，比如数据库。   <br/>
+在这个基础上再加上异步，会有更加明显的效果。     <br/>
+不需要预读取，也不用试着把它给缓存在内存中直到内存有压力时把它给踢出去。这对于处理随机IO是非常好的一个方式。</li>
+</ul>
+
+
+<p>瞬间这就激怒了Linus，</p>
+
+<ul>
+<li>Linus回应：<br/>
+O_DIRECT一直困扰我的事情是，它的整个接口非常的愚蠢，很可能是被磕了药的神经病猴子拍脑袋设计出来的。</li>
+</ul>
+
+
+<p>Linux的二号人物Alan Cox跳出来了，</p>
+
+<ul>
+<li>Alan Con插话：   <br/>
+O_DIRECT跟AIO一起用还是非常好的，没有aio的话它就有点欠缺了，此时readahead就有用了。</li>
+<li>Linus回应：  <br/>
+O_DIRECT之所以需要AIO，是为了掩盖它自己设计的本质性的愚蠢，如果这个接口设计的好的话，是不需要AIO的。</li>
+</ul>
+
+
+<p>然后Linus继续阐述自己详细的设计方案，他提出了下面一组新的系统调用：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='cpp'><span class='line'><span class="o">-</span> <span class="n">readahead</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
+</span><span class='line'><span class="err">它的作用很明显</span>
+</span><span class='line'><span class="p">[</span><span class="err">@</span><span class="n">yafang</span><span class="err">注：具体可以</span><span class="n">man</span> <span class="mi">2</span> <span class="n">readahead</span><span class="p">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">-</span> <span class="n">mmap</span><span class="p">(</span><span class="n">MAP_UNCACHED</span><span class="p">)</span>
+</span><span class='line'><span class="err">这个接口只去设置</span><span class="n">vma</span><span class="err">的描述符（跟其他所有的</span><span class="n">mmap</span><span class="err">一样）。它跟一个常规的私有映射有点类似，区别是在读数据到内存时它不会去给页引用计数加一，而是去查看这个页是否可以直接从</span><span class="n">pagecache</span><span class="err">里给删除，然后再把以私用页的方式插入到映射里（即从</span><span class="n">pagecache</span><span class="err">里面偷一个页，只是修改页表就可以了）</span>
+</span><span class='line'><span class="p">[</span><span class="err">@</span><span class="n">yafang</span><span class="err">注：很遗憾，</span><span class="n">Linus</span><span class="err">的这个设想并没有实现</span><span class="p">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">-</span> <span class="n">fdatasync_area</span><span class="p">(</span> <span class="n">fd</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">len</span><span class="p">)</span>
+</span><span class='line'><span class="p">[</span><span class="err">@</span><span class="n">yafang</span><span class="err">注：即</span><span class="n">msync</span><span class="p">]</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">-</span> <span class="n">mwrite</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">addr</span><span class="p">,</span> <span class="n">len</span><span class="p">)</span>
+</span><span class='line'><span class="err">这个是</span><span class="n">mmap</span><span class="p">(</span><span class="n">MAP_UNCACHED</span><span class="p">)</span><span class="err">相反的实现，他会去遍历页表看这个映射是否已存在了，如果已经存在，就把它从页表里面删除；如果不存在，就会从后备存储设备里直接读取出来这个页从而避免污染页表。</span>
+</span><span class='line'><span class="err">然后再把这个</span><span class="n">page</span><span class="err">移动到</span><span class="n">pagecache</span><span class="err">里。</span>
+</span><span class='line'><span class="p">[</span><span class="err">@</span><span class="n">yafang</span><span class="err">注：很遗憾，</span><span class="n">Linus</span><span class="err">的这个设想也没有实现</span><span class="p">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>利用这组系统调用接口，就可以真正的实现从内核态到用户态的零拷贝，并且避免了缺页异常：</p>
+
+<ul>
+<li>为了实现零拷贝，mwrite需要去遍历页表（就跟O_DIRECT一样）</li>
+<li>如果用户空间不会去touch这个page，就不会去建立这个页表，也不会影响TLB    <br/>
+<font color=blue>[@yafang注：TLB是页表的缓存，在访问页表的时候会首先去访问TLB，如果TLB里面没有再去内存里面查找] </font></li>
+<li>mmap(MAP_UNCACHED)也不会去touch页表或者TLB</li>
+</ul>
+
+
+<p>总结起来就是，数据从pagecache到用户空间不会经历拷贝，它只是一次移动，通过修改这个page的页表来实现。</p>
+
+<p>路人丙跳出来问Linus对disk-based数据库怎么看。</p>
+
+<ul>
+<li><p>Linux回应： <br/>
+我希望in-memory database(内存数据库)能够完全替代disk-based数据库，这就解决了所有的IO问题。唯一需要被写入磁盘的是日志和备份数据，这两个都是线性的被写入到磁盘的，除非设计者是个疯子。   <br/>
+我不太懂db，但是如果有足够内存的话，再把数据写入到磁盘就很不合理了。</p></li>
+<li><p>路人丙说：
+我没有任何需要去更改O_DIRECT。如果你的app维护着自己的cache，那干嘛还需要内核的pagecache呢？</p></li>
+<li><p>Linus回应：   <br/>
+pagecache的设计目的是：</p>
+
+<ol>
+<li> 它是一个暂存区，以确保文件系统的块特性。让常规的读写操作不需要再去关心对齐。</li>
+<li> 一个同步的实体，确保读写互不干扰，这样子mmap的数据总是一致的。</li>
+<li> cache的作用，提高访问速度</li>
+</ol>
+
+
+<p>  O_DIRECT抛弃了第三点（即O_DIRECT也实现了前两点），但是这样子就破坏了其他部分。比如它破坏了磁盘的调度机制：设想一下读写磁盘的同一个区域。     <br/>
+你们这些人太过于关注“数据直达磁盘”了。</p></li>
+<li>路人丙继续质疑：  <br/>
+但是内存真的太贵了而且又小，不可能把整个数据库都放到内存里啊。如果你想买一个10TB内存的机器，那价格真是会上天了；而且，等到内存达到10TB的时候，数据库就会100TB了。</li>
+<li>Linux回应：  <br/>
+你看看这个趋势：大型机的市场在逐渐的微缩，所以如果小型机器占用了99%的市场份额的话会是件一点也不奇怪的事情。   <br/>
+Microsoft和Linux之所以能够干掉其他OS，就是因为它们的“小即时美”哲学。 <br/>
+我是在暗示说，数据量的大小是不可能赶得上内存大小的发展的。内存不仅仅可以不停的增长，而且应付数据量也会绰绰有余。
+<font color=blue>[@yafang注： Linus说对了么？ ]</font></li>
+</ul>
+
+
+<p>路人XYZ也趁机问Linux各种问题。</p>
+
+<ul>
+<li><p>关于mmap：   <br/>
+mmap最大的好处是你不用去关心你的访问方式，以及你的数据具有很好的局部性。   <br/>
+但是在其他场景下mmap就会带来一些弊端了，因为他会遍历页表，这代价就很高了，甚至比memcpy()还要高。</p></li>
+<li><p>关于memcpy：   <br/>
+memcpy()主要是因为名字起的太差了。memcpy是很慢，但是如果你拷贝的是最近在用的内存，实际上memcpy都是由cache来完成的。   <br/>
+而且拷贝通常意味着你不用去关心锁的问题以及同步的问题。   <br/>
+这也是为什么read()/write()常常比mmap()要快的原因。而且最好不要太大的buffer，因为buffer会影响到你的cache。  <br/>
+就现在而言，最快的拷贝文件的方式是做8KB每次的read/write，不用去担心系统调用的开销，确保L1 cache有足够的剩余空间来存储这8KB的数据，以及避免了mmap带来的page faults开销是更大的收益。</p></li>
+</ul>
+
+
+<p>路人丁提出了一些质疑：</p>
+
+<ul>
+<li>路人丁：   <br/>
+数据库管理自己的cache还有其他的原因，因为application比kernel更清楚自己的数据使用以及将来会怎么样用这些数据</li>
+<li>Linus回应：   <br/>
+你尽管告诉kernel你要怎么样用你的数据就好了</li>
+<li>路人丁：  <br/>
+更糟糕的是，没有办法来暗示正在做的这个IO是优先级非常低的IO。 这对于IO密集型的服务器而言，会有危害。</li>
+<li>Linus回应：  <br/>
+IO优先级是个非常无用的东西。 其他的进程能够得到更好的对待其实一点也不重要，真正的消耗在于seeking带来的延迟。 你真正需要的并不是IO优先级，而是IO batching。</li>
+</ul>
+
+
+<p>路人戊又问了一个问题：</p>
+
+<ul>
+<li>路人戊：    <br/>
+在mount文件系统的时候是否可以加上O_DIRECT这个标记 ？ 这样子我就不需要更改我的代码来实现O_DIRECT了</li>
+<li>Linus回应：   <br/>
+O_DIRECT存在的唯一原因是数据库人员太习惯于用它了，因为其他的OS并没有告诉他们有更好的实现方式，所以它们就直接的hack了它们的OS来按照自己的方式来。   <br/>
+O_DIRECT不仅仅是一个糟糕的设计，它还间接的破坏了接口的完整性。</li>
+</ul>
+
+
+<p>路人己提了一个问题：</p>
+
+<ul>
+<li>路人己：  <br/>
+madvise+mmap，可以实现从文件里面数据时的kernel／user零拷贝，并且不会污染cache。那么write呢？如果不使用O_DIRECT，怎么保证不污染cache呢？</li>
+<li>Linus回应：  <br/>
+mmap()+msync()可以实现。   <br/>
+而且，常规的用户态页对齐数据，也是可以很简单的移到page cache里面去（yafang注：即不是通过copy的方式）。 我们有很多基础设置可以实现这个功能，比如说splice()这个系统调用。 它被使用的不是很广泛。   <br/>
+<font color=blue>[@yafang注：我也不是很清楚splice，接下来会研究下] </font>    <br/>
+你们通常认为借助O_DIRECT只是bypass了OS的IO层，以及实现了直接写，这听起来很简单清晰。但是bypass kernel会对安全以及最基本的正确性会有一些细微的影响。   <br/>
+OS的本质是资源的管理器，让资源的使用合理并且不产生冲突。   <br/>
+O_DIRECT,通过bypass了真正的OS，从根本上破坏了OS设计的基本观点。</li>
+</ul>
+
+
+<h2>Ref.</h2>
+
+<p><a href="http://yarchive.net/comp/linux/o_direct.html">Discussion on O_DIRECT</a> <br/>
+<a href="https://lkml.org/lkml/2002/5/10/37">original mail</a></p>
+</div>
+
+
+<!--
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2017-04-28T22:21:25+08:00" pubdate data-updated="true">Apr 28<span>th</span>, 2017</time></div>
+	
+	<div class="comments"><a href="#disqus_thread">Comments</a></div>
+	
+</div>
+--!>
+</article>
+
+	<div class="share">
+	<div class="addthis_toolbox addthis_default_style ">
+		
+		
+		
+		
+	</div>
+	
+</div>
+
+
+
+<section id="comment">
+    <h2 class="title">Comments</h2>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+</section>
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2017
+
+    Yafang Shao
+
+</footer>
+	<script src="/javascripts/slash.js"></script>
+<script src="/javascripts/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+	$('.fancybox').fancybox();
+})(jQuery);
+</script> <!-- Delete or comment this line to disable Fancybox -->
+
+
+<script type="text/javascript">
+      var disqus_shortname = 'laoar';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://laoar.github.io/blog/2017/04/28/directio/';
+        var disqus_url = 'http://laoar.github.io/blog/2017/04/28/directio/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//go.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+</body>
+</html>
