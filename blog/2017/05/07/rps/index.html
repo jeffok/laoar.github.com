@@ -1,0 +1,413 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>为什么使能RPS/RFS, 或者RSS/网卡多队列后，QPS反而下降？ - One Man's Yammer</title>
+	<meta name="author" content="Yafang Shao">
+
+	
+	<meta name="description" content="为什么使能RPS/RFS, 或者RSS/网卡多队列后，QPS反而下降？ TL;DR RPS 即receive side steering,利用网卡的多队列特性，将每个核分别跟网卡的一个首发队列绑定，以达到网卡硬中断和软中断均衡的负载在各个CPU上。 他要求网卡必须要支持多队列特性。
+RPS &hellip;">
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="" rel="alternate" title="One Man's Yammer" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/favicon.png" rel="shortcut icon">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	<script async="true" src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+	
+</head>
+
+
+<body>
+	<header id="header" class="inner"><h1><a href="/">One Man's Yammer</a></h1>
+<nav id="main-nav"><ul class="main">
+	<li><a href="/read">BookWall</a></li>
+</ul>
+</nav>
+<nav id="mobile-nav"> <ul class="main">
+	<li><a href="/read">BookWall</a></li>
+</ul>
+ </nav>
+<!--	<div class="menu"> --!>
+		<!--<a class="button">Menu</a>
+		<div class="container"><ul class="main">
+	<li><a href="/read">BookWall</a></li>
+</ul>
+</div>--!>
+	<!--</div>--!>
+<!--</nav>--!>
+<!-- @yfshao
+	<div class="alignright search">
+		<a class="button"></a>
+		<div class="container">
+			<form action="false" method="get">
+				<input type="text" name="q" results="0">
+				<input type="hidden" name="q" value="site:laoar.github.io">
+			</form>
+		</div>
+	</div>
+</nav>
+--!>
+<!--
+<nav id="sub-nav" class="alignright">
+	<div class="social">
+		
+		
+		
+		
+    
+		
+		
+		
+		
+		
+    
+	</div>
+	<form class="search" action="false" method="get">
+		<input class="alignright" type="text" name="q" results="0">
+		<input type="hidden" name="q" value="site:laoar.github.io">
+	</form>
+</nav>
+--!>
+<!----!>
+</header>
+	
+		
+	
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">为什么使能RPS/RFS, 或者RSS/网卡多队列后，QPS反而下降？</h2>
+	<div class="entry-content"><h2>TL;DR</h2>
+
+<ul>
+<li><p>RPS  <br/>
+即receive side steering,利用网卡的多队列特性，将每个核分别跟网卡的一个首发队列绑定，以达到网卡硬中断和软中断均衡的负载在各个CPU上。  <br/>
+他要求网卡必须要支持多队列特性。</p></li>
+<li><p>RPS   <br/>
+receive packet steering  <br/>
+他把收到的packet依据一定的hash规则给hash到不同的CPU上去，以达到各个CPU负载均衡的目的。  <br/>
+他只是把软中断做负载均衡，不去改变硬中断。因而对网卡没有任何要求。</p></li>
+<li><p>RFS   <br/>
+receive flow steering  <br/>
+RFS需要依赖于RPS，他跟RPS不同的是不再简单的依据packet来做hash，而是根据flow的特性，即application在哪个核上来运行去做hash，从而使得有更好的数据局部性。</p></li>
+</ul>
+
+
+<p>我们可以看到很多案例，使用这些特性后提醒了网络包的处理能力，从而提升QPS，降低RT。</p>
+
+<p>但是，我们知道，任何一个优化特性都不是普遍适用的，都有他特定的场景来应用。   <br/>
+很多人对此可能会有疑惑，那很多优化功能不是都已经作为默认配置了么，如果不是普遍适用的，干嘛还要作为默认配置呢？ <br/>
+其实很简单，一个优化特性可以作为默认配置，依据我的理解，只需要满足下面这些特征即可：</p>
+
+<ul>
+<li>对某些场景可以显著提升性能</li>
+<li>对大部分场景无害</li>
+<li>对某一部分场景可能会损伤性能</li>
+</ul>
+
+
+<p>所以Linux的很多配置都是可以灵活配置供选择的。</p>
+
+<p>下面我们就来看下RPS这些特性在哪些场景下才能发挥作用。</p>
+
+<h2>问题描述</h2>
+
+<p>业务方在使用KVM虚拟机进行性能压测时，发现某一个核的softirq占比特别高，如下所示：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='lasso'><span class='line'><span class="err">$</span><span class="x"> </span><span class="nx">mpstall</span><span class="x"> </span><span class="na">-L</span><span class="x"> </span><span class="kc">ALL</span><span class="x"> </span><span class="mi">1</span><span class="x"></span>
+</span><span class='line'><span class="mi">03</span><span class="p">:</span><span class="mi">44</span><span class="p">:</span><span class="mi">20</span><span class="x"> </span><span class="nb">PM</span><span class="x">  </span><span class="nx">CPU</span><span class="x">    </span><span class="o">%</span><span class="nx">usr</span><span class="x">   </span><span class="o">%</span><span class="nx">nice</span><span class="x">    </span><span class="o">%</span><span class="nx">sys</span><span class="x"> </span><span class="o">%</span><span class="nx">iowait</span><span class="x">    </span><span class="o">%</span><span class="nx">irq</span><span class="x">   </span><span class="o">%</span><span class="nx">soft</span><span class="x">  </span><span class="o">%</span><span class="nb">steal</span><span class="x">  </span><span class="o">%</span><span class="nx">guest</span><span class="x">  </span><span class="o">%</span><span class="nx">gnice</span><span class="x">   </span><span class="o">%</span><span class="nx">idle</span><span class="x"></span>
+</span><span class='line'><span class="mi">03</span><span class="p">:</span><span class="mi">44</span><span class="p">:</span><span class="mi">21</span><span class="x"> </span><span class="nb">PM</span><span class="x">  </span><span class="kc">all</span><span class="x">   </span><span class="mf">68.58</span><span class="x">    </span><span class="mf">0.00</span><span class="x">   </span><span class="mf">20.70</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">5.49</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">5.24</span><span class="x"></span>
+</span><span class='line'><span class="mi">03</span><span class="p">:</span><span class="mi">44</span><span class="p">:</span><span class="mi">21</span><span class="x"> </span><span class="nb">PM</span><span class="x">    </span><span class="mi">0</span><span class="x">   </span><span class="mf">70.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">   </span><span class="mf">23.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">7.00</span><span class="x"></span>
+</span><span class='line'><span class="mi">03</span><span class="p">:</span><span class="mi">44</span><span class="p">:</span><span class="mi">21</span><span class="x"> </span><span class="nb">PM</span><span class="x">    </span><span class="mi">1</span><span class="x">   </span><span class="mf">60.78</span><span class="x">    </span><span class="mf">0.00</span><span class="x">   </span><span class="mf">16.67</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">   </span><span class="mf">21.57</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.98</span><span class="x"></span>
+</span><span class='line'><span class="mi">03</span><span class="p">:</span><span class="mi">44</span><span class="p">:</span><span class="mi">21</span><span class="x"> </span><span class="nb">PM</span><span class="x">    </span><span class="mi">2</span><span class="x">   </span><span class="mf">71.29</span><span class="x">    </span><span class="mf">0.00</span><span class="x">   </span><span class="mf">21.78</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">6.93</span><span class="x"></span>
+</span><span class='line'><span class="mi">03</span><span class="p">:</span><span class="mi">44</span><span class="p">:</span><span class="mi">21</span><span class="x"> </span><span class="nb">PM</span><span class="x">    </span><span class="mi">3</span><span class="x">   </span><span class="mf">73.74</span><span class="x">    </span><span class="mf">0.00</span><span class="x">   </span><span class="mf">21.21</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">5.05</span><span class="x"></span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>一句话解释：这个kvm虚拟机只有一个网卡，有网络包到达这个网卡后，它会给某一个cpu(如果没有设置亲和性，这个可以认为是随机的一个cpu，然后就会一直固定在这个cpu上)发中断，通知该cpu来处理这个包，然后cpu就会触发一个软中断把该包送到tcp/ip协议栈(对于tcp包而言)里去处理，该包被放入某一个socket的receive buffer中（如果是一个数据包），软中断结束。 <br/>
+%soft就是指的CPU耗在软中断处理上的时间。  <br/>
+可以看到核1的%soft很高，其他的核的%soft基本为0.    <br/>
+所以就想着把核1的%soft给均摊下，是否可以提升QPS。  <br/>
+我们想到的方法是网卡多队列，或者RPS／RFS。用这种手段来把网卡软中断给均摊到其他的核上去。</p>
+
+<p>其实，看到前面mpstat的显示，如果对网卡多队列，RPS／RFS很熟悉，就会意识到他们在这里不适用。  <br/>
+可惜理解的不深，交了这次学费。</p>
+
+<p>使能网卡多队列后，果然是QPS不但没有提升，反而有下降。   <br/>
+下面就是这次调优交的学费。</p>
+
+<p>为了使描述更清晰（其实是因为我做分析的这个kvm虚拟机上没有网卡多队列，但是不影响，导致性能下降的原因是一致的），我们只分析RPS来看下为什么性能会下降。</p>
+
+<h2>RPS的原理概述</h2>
+
+<ul>
+<li>基于CentOS-7</li>
+</ul>
+
+
+<p><img src="/images/rps.png"></p>
+
+<p>在这之前，软中断只能在硬中断所在CPU上处理，使用RPS后，网卡软中断就可以分发到其他的CPU上去做处理了。</p>
+
+<h2>使能RPS后为什么会导致QPS下降？</h2>
+
+<p>如上图所示，使能了RPS后，会增加一些额外的CPU开销：</p>
+
+<ol>
+<li>收到网卡中断的CPU会向其他CPU发IPI中断，这体现在CPU的%irq上</li>
+<li>需要处理packet的cpu会收到NET_RX_SOFTIRQ软中断，这体现再CPU的%soft上。请注意，RPS并不会减少第一个CPU的软中断次数，但是会额外给其他的CPU增加软中断。他减少的是第一个CPU的软中断的执行时间，即，软中断里不再需要那么多的时间去走协议栈做包解析，把这个时间给均摊到其他的CPU上去了。</li>
+</ol>
+
+
+<h2>量化对比数据</h2>
+
+<h4>硬中断次数的变化</h4>
+
+<p>这可以通过/proc/interrupts来观察</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='lasso'><span class='line'><span class="err">$</span><span class="x"> </span><span class="nx">watch</span><span class="x"> </span><span class="na">-d</span><span class="x"> </span><span class="na">-n</span><span class="x"> </span><span class="mi">1</span><span class="x"> </span><span class="s1">&#39;cat /proc/interrupts&#39;</span><span class="x"></span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<ul>
+<li><p>使能RPS之后：   <br/>
+<img src="/images/rps-2.png"></p></li>
+<li><p>使能RPS之前：   <br/>
+<img src="/images/rps-3.png"></p></li>
+</ul>
+
+
+<p>可以看到，是能RPS后，增加了很多的Function call interrups，即IPI。  <br/>
+而virtio0-input.0（虚拟网卡产生的中断，类似于图中NIC产生的中断）仍然只发给CPU1.  <br/>
+也可以通过dstat来看整体次数的对比</p>
+
+<ul>
+<li>使能RPS之后：</li>
+</ul>
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='lasso'><span class='line'><span class="err">$</span><span class="x"> </span><span class="nx">dstat</span><span class="x"> </span>
+</span><span class='line'><span class="nx">You</span><span class="x"> </span><span class="nx">did</span><span class="x"> </span><span class="ow">not</span><span class="x"> </span><span class="k">select</span><span class="x"> </span><span class="nb">any</span><span class="x"> </span><span class="nx">stats</span><span class="p">,</span><span class="x"> </span><span class="nx">using</span><span class="x"> </span><span class="na">-cdngy</span><span class="x"> </span><span class="k">by</span><span class="x"> </span><span class="nx">default.</span><span class="x"></span>
+</span><span class='line'><span class="o">----</span><span class="nx">total</span><span class="na">-cpu-usage</span><span class="o">----</span><span class="x"> </span><span class="na">-dsk</span><span class="p">/</span><span class="nx">total</span><span class="o">-</span><span class="x"> </span><span class="na">-net</span><span class="p">/</span><span class="nx">total</span><span class="o">-</span><span class="x"> </span><span class="o">---</span><span class="nx">paging</span><span class="o">--</span><span class="x"> </span><span class="o">---</span><span class="nx">system</span><span class="o">--</span><span class="x"></span>
+</span><span class='line'><span class="nx">usr</span><span class="x"> </span><span class="nx">sys</span><span class="x"> </span><span class="nx">idl</span><span class="x"> </span><span class="nx">wai</span><span class="x"> </span><span class="nx">hiq</span><span class="x"> </span><span class="nx">siq</span><span class="o">|</span><span class="x"> </span><span class="nb">read</span><span class="x">  </span><span class="nx">writ</span><span class="o">|</span><span class="x"> </span><span class="nx">recv</span><span class="x">  </span><span class="nb">send</span><span class="o">|</span><span class="x">  </span><span class="k">in</span><span class="x">   </span><span class="nb">out</span><span class="x"> </span><span class="o">|</span><span class="x"> </span><span class="nx">int</span><span class="x">   </span><span class="nx">csw</span><span class="x"> </span>
+</span><span class='line'><span class="x"> </span><span class="mi">62</span><span class="x">  </span><span class="mi">23</span><span class="x">   </span><span class="mi">4</span><span class="x">   </span><span class="mi">0</span><span class="x">   </span><span class="mi">0</span><span class="x">  </span><span class="mi">12</span><span class="o">|</span><span class="x">   </span><span class="mi">0</span><span class="x">     </span><span class="mi">0</span><span class="x"> </span><span class="o">|</span><span class="mi">7096</span><span class="nx">k</span><span class="x">   </span><span class="mi">11</span><span class="nx">M</span><span class="o">|</span><span class="x">   </span><span class="mi">0</span><span class="x">     </span><span class="mi">0</span><span class="x"> </span><span class="o">|</span><span class="x">  </span><span class="mi">49</span><span class="nx">k</span><span class="x"> </span><span class="mi">2261</span><span class="x"> </span>
+</span><span class='line'><span class="x"> </span><span class="mi">74</span><span class="x">  </span><span class="mi">13</span><span class="x">   </span><span class="mi">4</span><span class="x">   </span><span class="mi">0</span><span class="x">   </span><span class="mi">0</span><span class="x">   </span><span class="mi">9</span><span class="o">|</span><span class="x">   </span><span class="mi">0</span><span class="x">     </span><span class="mi">0</span><span class="x"> </span><span class="o">|</span><span class="mi">4003</span><span class="nx">k</span><span class="x"> </span><span class="mi">6543</span><span class="nx">k</span><span class="o">|</span><span class="x">   </span><span class="mi">0</span><span class="x">     </span><span class="mi">0</span><span class="x"> </span><span class="o">|</span><span class="x">  </span><span class="mi">31</span><span class="nx">k</span><span class="x"> </span><span class="mi">2004</span><span class="x"> </span>
+</span><span class='line'><span class="x"> </span><span class="mi">59</span><span class="x">  </span><span class="mi">22</span><span class="x">   </span><span class="mi">5</span><span class="x">   </span><span class="mi">0</span><span class="x">   </span><span class="mi">0</span><span class="x">  </span><span class="mi">13</span><span class="o">|</span><span class="x">   </span><span class="mi">0</span><span class="x">  </span><span class="mi">4096</span><span class="nx">B</span><span class="o">|</span><span class="mi">6710</span><span class="nx">k</span><span class="x">   </span><span class="mi">10</span><span class="nx">M</span><span class="o">|</span><span class="x">   </span><span class="mi">0</span><span class="x">     </span><span class="mi">0</span><span class="x"> </span><span class="o">|</span><span class="x">  </span><span class="mi">48</span><span class="nx">k</span><span class="x"> </span><span class="mi">2220</span><span class="x"> </span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<ul>
+<li>使能RPS之前：</li>
+</ul>
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='lasso'><span class='line'><span class="err">$</span><span class="x"> </span><span class="nx">dstat</span><span class="x"> </span>
+</span><span class='line'><span class="nx">You</span><span class="x"> </span><span class="nx">did</span><span class="x"> </span><span class="ow">not</span><span class="x"> </span><span class="k">select</span><span class="x"> </span><span class="nb">any</span><span class="x"> </span><span class="nx">stats</span><span class="p">,</span><span class="x"> </span><span class="nx">using</span><span class="x"> </span><span class="na">-cdngy</span><span class="x"> </span><span class="k">by</span><span class="x"> </span><span class="nx">default.</span><span class="x"></span>
+</span><span class='line'><span class="o">----</span><span class="nx">total</span><span class="na">-cpu-usage</span><span class="o">----</span><span class="x"> </span><span class="na">-dsk</span><span class="p">/</span><span class="nx">total</span><span class="o">-</span><span class="x"> </span><span class="na">-net</span><span class="p">/</span><span class="nx">total</span><span class="o">-</span><span class="x"> </span><span class="o">---</span><span class="nx">paging</span><span class="o">--</span><span class="x"> </span><span class="o">---</span><span class="nx">system</span><span class="o">--</span><span class="x"></span>
+</span><span class='line'><span class="nx">usr</span><span class="x"> </span><span class="nx">sys</span><span class="x"> </span><span class="nx">idl</span><span class="x"> </span><span class="nx">wai</span><span class="x"> </span><span class="nx">hiq</span><span class="x"> </span><span class="nx">siq</span><span class="o">|</span><span class="x"> </span><span class="nb">read</span><span class="x">  </span><span class="nx">writ</span><span class="o">|</span><span class="x"> </span><span class="nx">recv</span><span class="x">  </span><span class="nb">send</span><span class="o">|</span><span class="x">  </span><span class="k">in</span><span class="x">   </span><span class="nb">out</span><span class="x"> </span><span class="o">|</span><span class="x"> </span><span class="nx">int</span><span class="x">   </span><span class="nx">csw</span><span class="x"> </span>
+</span><span class='line'><span class="x"> </span><span class="mi">64</span><span class="x">  </span><span class="mi">23</span><span class="x">   </span><span class="mi">6</span><span class="x">   </span><span class="mi">0</span><span class="x">   </span><span class="mi">0</span><span class="x">   </span><span class="mi">7</span><span class="o">|</span><span class="x">   </span><span class="mi">0</span><span class="x">  </span><span class="mi">8192</span><span class="nx">B</span><span class="o">|</span><span class="mi">7917</span><span class="nx">k</span><span class="x">   </span><span class="mi">12</span><span class="nx">M</span><span class="o">|</span><span class="x">   </span><span class="mi">0</span><span class="x">     </span><span class="mi">0</span><span class="x"> </span><span class="o">|</span><span class="x">  </span><span class="mi">27</span><span class="nx">k</span><span class="x"> </span><span class="mi">1922</span><span class="x"> </span>
+</span><span class='line'><span class="x"> </span><span class="mi">64</span><span class="x">  </span><span class="mi">22</span><span class="x">   </span><span class="mi">6</span><span class="x">   </span><span class="mi">0</span><span class="x">   </span><span class="mi">0</span><span class="x">   </span><span class="mi">8</span><span class="o">|</span><span class="x">   </span><span class="mi">0</span><span class="x">     </span><span class="mi">0</span><span class="x"> </span><span class="o">|</span><span class="mi">7739</span><span class="nx">k</span><span class="x">   </span><span class="mi">12</span><span class="nx">M</span><span class="o">|</span><span class="x">   </span><span class="mi">0</span><span class="x">     </span><span class="mi">0</span><span class="x"> </span><span class="o">|</span><span class="x">  </span><span class="mi">26</span><span class="nx">k</span><span class="x"> </span><span class="mi">2210</span><span class="x"> </span>
+</span><span class='line'><span class="x"> </span><span class="mi">61</span><span class="x">  </span><span class="mi">23</span><span class="x">   </span><span class="mi">9</span><span class="x">   </span><span class="mi">0</span><span class="x">   </span><span class="mi">0</span><span class="x">   </span><span class="mi">7</span><span class="o">|</span><span class="x">   </span><span class="mi">0</span><span class="x">     </span><span class="mi">0</span><span class="x"> </span><span class="o">|</span><span class="mi">7397</span><span class="nx">k</span><span class="x">   </span><span class="mi">11</span><span class="nx">M</span><span class="o">|</span><span class="x">   </span><span class="mi">0</span><span class="x">     </span><span class="mi">0</span><span class="x"> </span><span class="o">|</span><span class="x">  </span><span class="mi">25</span><span class="nx">k</span><span class="x"> </span><span class="mi">2267</span><span class="x"> </span>
+</span><span class='line'><span class="x"> </span><span class="mi">94</span><span class="x">   </span><span class="mi">4</span><span class="x">   </span><span class="mi">0</span><span class="x">   </span><span class="mi">0</span><span class="x">   </span><span class="mi">0</span><span class="x">   </span><span class="mi">1</span><span class="o">|</span><span class="x">   </span><span class="mi">0</span><span class="x">     </span><span class="mi">0</span><span class="x"> </span><span class="o">|</span><span class="mi">1262</span><span class="nx">k</span><span class="x"> </span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h4>软中断次数的变化</h4>
+
+<p>这可以通过/proc/softirq来观察</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='lasso'><span class='line'><span class="err">$</span><span class="x"> </span><span class="nx">watch</span><span class="x"> </span><span class="na">-d</span><span class="x"> </span><span class="na">-n</span><span class="x"> </span><span class="mi">1</span><span class="x"> </span><span class="s1">&#39;cat /proc/softirq&#39;</span><span class="x"></span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<ul>
+<li><p>使能RPS之前：     <br/>
+<img src="/images/rps-5.png"></p></li>
+<li><p>使能RPS之后：     <br/>
+<img src="/images/rps-6.png"></p></li>
+</ul>
+
+
+<p>可以看到，CPU1上的RX_NET数相差不大比较接近，但是CPU0/2/3上各自都增加了NET_RX.</p>
+
+<h4>各个CPU利用率的变化</h4>
+
+<p>这可以通过mpstat来观察</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='lasso'><span class='line'><span class="err">$</span><span class="x"> </span><span class="nx">mpstat</span><span class="x"> </span><span class="na">-P</span><span class="x"> </span><span class="kc">ALL</span><span class="x"> </span><span class="mi">1</span><span class="x"></span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<ul>
+<li>使能RPS之后</li>
+</ul>
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='lasso'><span class='line'><span class="k">Average</span><span class="p">:</span><span class="x">     </span><span class="nx">CPU</span><span class="x">    </span><span class="o">%</span><span class="nx">usr</span><span class="x">   </span><span class="o">%</span><span class="nx">nice</span><span class="x">    </span><span class="o">%</span><span class="nx">sys</span><span class="x"> </span><span class="o">%</span><span class="nx">iowait</span><span class="x">    </span><span class="o">%</span><span class="nx">irq</span><span class="x">   </span><span class="o">%</span><span class="nx">soft</span><span class="x">  </span><span class="o">%</span><span class="nb">steal</span><span class="x">  </span><span class="o">%</span><span class="nx">guest</span><span class="x">  </span><span class="o">%</span><span class="nx">gnice</span><span class="x">   </span><span class="o">%</span><span class="nx">idle</span><span class="x"></span>
+</span><span class='line'><span class="k">Average</span><span class="p">:</span><span class="x">     </span><span class="kc">all</span><span class="x">   </span><span class="mf">66.21</span><span class="x">    </span><span class="mf">0.00</span><span class="x">   </span><span class="mf">17.73</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">   </span><span class="mf">11.15</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">4.91</span><span class="x"></span>
+</span><span class='line'><span class="k">Average</span><span class="p">:</span><span class="x">       </span><span class="mi">0</span><span class="x">   </span><span class="mf">68.17</span><span class="x">    </span><span class="mf">0.00</span><span class="x">   </span><span class="mf">18.33</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">7.67</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">5.83</span><span class="x"></span>
+</span><span class='line'><span class="k">Average</span><span class="p">:</span><span class="x">       </span><span class="mi">1</span><span class="x">   </span><span class="mf">60.57</span><span class="x">    </span><span class="mf">0.00</span><span class="x">   </span><span class="mf">15.81</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">   </span><span class="mf">20.80</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">2.83</span><span class="x"></span>
+</span><span class='line'><span class="k">Average</span><span class="p">:</span><span class="x">       </span><span class="mi">2</span><span class="x">   </span><span class="mf">69.95</span><span class="x">    </span><span class="mf">0.00</span><span class="x">   </span><span class="mf">19.20</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">7.01</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">3.84</span><span class="x"></span>
+</span><span class='line'><span class="k">Average</span><span class="p">:</span><span class="x">       </span><span class="mi">3</span><span class="x">   </span><span class="mf">66.39</span><span class="x">    </span><span class="mf">0.00</span><span class="x">   </span><span class="mf">17.64</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">8.99</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">6.99</span><span class="x"></span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p></p>
+
+<ul>
+<li>使能RPS之前</li>
+</ul>
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='lasso'><span class='line'><span class="k">Average</span><span class="p">:</span><span class="x">     </span><span class="nx">CPU</span><span class="x">    </span><span class="o">%</span><span class="nx">usr</span><span class="x">   </span><span class="o">%</span><span class="nx">nice</span><span class="x">    </span><span class="o">%</span><span class="nx">sys</span><span class="x"> </span><span class="o">%</span><span class="nx">iowait</span><span class="x">    </span><span class="o">%</span><span class="nx">irq</span><span class="x">   </span><span class="o">%</span><span class="nx">soft</span><span class="x">  </span><span class="o">%</span><span class="nb">steal</span><span class="x">  </span><span class="o">%</span><span class="nx">guest</span><span class="x">  </span><span class="o">%</span><span class="nx">gnice</span><span class="x">   </span><span class="o">%</span><span class="nx">idle</span><span class="x"></span>
+</span><span class='line'><span class="k">Average</span><span class="p">:</span><span class="x">     </span><span class="kc">all</span><span class="x">   </span><span class="mf">70.18</span><span class="x">    </span><span class="mf">0.00</span><span class="x">   </span><span class="mf">19.28</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">5.86</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">4.68</span><span class="x"></span>
+</span><span class='line'><span class="k">Average</span><span class="p">:</span><span class="x">       </span><span class="mi">0</span><span class="x">   </span><span class="mf">73.25</span><span class="x">    </span><span class="mf">0.00</span><span class="x">   </span><span class="mf">21.50</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">5.25</span><span class="x"></span>
+</span><span class='line'><span class="k">Average</span><span class="p">:</span><span class="x">       </span><span class="mi">1</span><span class="x">   </span><span class="mf">58.85</span><span class="x">    </span><span class="mf">0.00</span><span class="x">   </span><span class="mf">14.46</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">   </span><span class="mf">23.44</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">3.24</span><span class="x"></span>
+</span><span class='line'><span class="k">Average</span><span class="p">:</span><span class="x">       </span><span class="mi">2</span><span class="x">   </span><span class="mf">74.50</span><span class="x">    </span><span class="mf">0.00</span><span class="x">   </span><span class="mf">20.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">5.50</span><span class="x"></span>
+</span><span class='line'><span class="k">Average</span><span class="p">:</span><span class="x">       </span><span class="mi">3</span><span class="x">   </span><span class="mf">74.25</span><span class="x">    </span><span class="mf">0.00</span><span class="x">   </span><span class="mf">21.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">0.00</span><span class="x">    </span><span class="mf">4.75</span><span class="x"></span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>可以看到，整体而言，CPU的%soft增大了很多，%usr下降了一些。   <br/>
+我们知道%usr是衡量用户态程序性能的一个指标，%usr越高，意味着执行业务代码的时间就越多。如果%usr下降，那就意味着执行业务代码的时间变少了，这显然对于业务性能是一个危险信号。  <br/>
+至于%usr里面如何来提高业务代码执行效率，是另外的问题了，不讨论。</p>
+
+<h2>结论，RPS适用的场景</h2>
+
+<p>使能了RPS后，会增加CPU的%soft，如果业务场景本身就是CPU密集的，CPU的负载已经很高了，那么RPS就会挤压%usr，即挤压业务代码的执行时间，从而导致业务性能下降。</p>
+
+<h4>适用场景</h4>
+
+<p>RPS如果想要提升业务性能，前提是除了网卡中断所在的CPU外，其他的CPU都需要有一定的空闲时间，这样使能RPS才能带来收益，否则就会带来额外开销导致性能下降。<br/>
+在这个场景下，RPS搭配RFS会带来更好的收益，不讨论。</p>
+
+<h2>有没有更优的解决方案？</h2>
+
+<p>答案肯定是有的。</p>
+
+<p>It is a SECRET!</p>
+
+<h2>Ref.</h2>
+
+<p><a href="https://lwn.net/Articles/362339/">RPS</a> <br/>
+<a href="https://lwn.net/Articles/382428/">RFS</a> <br/>
+<a href="https://www.kernel.org/doc/Documentation/networking/scaling.txt">RSS</a></p>
+</div>
+
+
+<!--
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2017-05-07T17:36:21+08:00" pubdate data-updated="true">May 7<span>th</span>, 2017</time></div>
+	
+	<div class="comments"><a href="#disqus_thread">Comments</a></div>
+	
+</div>
+--!>
+</article>
+
+	<div class="share">
+	<div class="addthis_toolbox addthis_default_style ">
+		
+		
+		
+		
+	</div>
+	
+</div>
+
+
+
+<section id="comment">
+    <h2 class="title">Comments</h2>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+</section>
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2017
+
+    Yafang Shao
+
+</footer>
+	<script src="/javascripts/slash.js"></script>
+<script src="/javascripts/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+	$('.fancybox').fancybox();
+})(jQuery);
+</script> <!-- Delete or comment this line to disable Fancybox -->
+
+
+<script type="text/javascript">
+      var disqus_shortname = 'laoar';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://laoar.github.io/blog/2017/05/07/rps/';
+        var disqus_url = 'http://laoar.github.io/blog/2017/05/07/rps/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//go.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+</body>
+</html>
