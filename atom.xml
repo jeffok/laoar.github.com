@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2017-05-31T20:35:42+08:00</updated>
+  <updated>2017-06-04T11:34:02+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -12,6 +12,18 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[擅用工具是最好的学习方式 ]]></title>
+    <link href="http://laoar.github.io/blog/2017/06/04/wireshark-comment/"/>
+    <updated>2017-06-04T11:30:49+08:00</updated>
+    <id>http://laoar.github.io/blog/2017/06/04/wireshark-comment</id>
+    <content type="html"><![CDATA[<h2>RL;DR</h2>
+
+<p>这是对<a href="https://book.douban.com/subject/26710788/">wireshark网络分析的艺术</a>这本书的书评。 <br/>
+写于豆瓣，具体见<a href="https://book.douban.com/review/8580711/">擅用工具是最好的学习方式</a></p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[为什么使能RPS/RFS, 或者RSS/网卡多队列后，QPS反而下降？]]></title>
@@ -3907,162 +3919,6 @@ i为3时被展开的循环体：</p>
 <li><a href="https://www.douban.com/note/575214110/">并行有五种</a></li>
 </ul>
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Ruby, 我的书有点乱]]></title>
-    <link href="http://laoar.github.io/blog/2014/08/31/ruby/"/>
-    <updated>2014-08-31T00:26:17+08:00</updated>
-    <id>http://laoar.github.io/blog/2014/08/31/ruby</id>
-    <content type="html"><![CDATA[<p>学习Ruby，不是为了了解这个纯粹面向对象的东西到底是什么样子的，而是为了解决我面对的一些实际问题。比如说现在遇到的问题，自从买了Kindle后，我就隔三差五的会下载一些kindle电子书，有时候也会买一些，而我呢又是比较懒散的一个人，这样就搞的我的电子书有些乱，就那样胡乱的放着。这个时候你可能会说，花一点点时间整理一下不就好了嘛。嗯，那是因为你不是程序员。对于程序员而言，他们宁愿花很多时间写个程序来搞定。  <br/>
-在很多情况下，明明5分钟就能用手来搞定的事情，非得花几个小时写然后再花几天调最终还可能产生意料之外的错误的程序来做。这大致就是程序员碎了一地的节操吧。</p>
-
-<p>我在网上下载以及从Amazon上买的电子书有以下几种情况让我心里有些许的不爽，可能是由于最近是处女座的日子，我也跟着有些强迫症起来。</p>
-
-<ol>
-<li>Life of Pi(少年pi的奇幻漂流） &ndash; Austin Lee.mobi  <br/>
-我不喜欢名字里面有括号括起来的东西，而且这部分内容完全是重复的，我向纯粹一些，把括号里面的内容给删掉。</li>
-<li>Of Mice and Men (Penguin Classics)_B00CS74W6Q.azw3   <br/>
-Amazon上卖的书，书的编号（比如_B00CS74W6Q）是直接放在文件名字里面的，好在我不是处女座，所以对这个东西是可以接受的，而且觉得它挺好，可以用来区分哪些书是下载的哪些书是买的。我正好打算把下载的书和买的书给分开，所以这个东西就派上用场了。</li>
-<li>我下载的东西都是放在默认的Download目录里面，我想把他们都整理到Documents这个目录里面。</li>
-</ol>
-
-
-<p>所以我就写了个Ruby脚本来做这件事。其实，目前为止仍然困惑我的一件事情是，Ruby除了做脚本还能做什么呢？</p>
-
-<p>这个<a href="https://github.com/laoar/bcleaner">Ruby脚本</a>很短小，所以就直接贴在这里了。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-<span class='line-number'>40</span>
-<span class='line-number'>41</span>
-<span class='line-number'>42</span>
-<span class='line-number'>43</span>
-<span class='line-number'>44</span>
-<span class='line-number'>45</span>
-<span class='line-number'>46</span>
-<span class='line-number'>47</span>
-<span class='line-number'>48</span>
-<span class='line-number'>49</span>
-<span class='line-number'>50</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">if</span> <span class="no">ARGV</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span>  <span class="mi">2</span>
-</span><span class='line'>    <span class="nb">print</span> <span class="s2">&quot;usage: ./bcleaner.rb dst_path src_path</span><span class="se">\n</span><span class="s2">&quot;</span>
-</span><span class='line'>    <span class="nb">exit</span> <span class="o">-</span><span class="mi">1</span>
-</span><span class='line'><span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'><span class="vg">$dst</span> <span class="o">=</span> <span class="no">ARGV</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span>
-</span><span class='line'><span class="vg">$src</span> <span class="o">=</span> <span class="no">ARGV</span><span class="o">[</span><span class="mi">1</span><span class="o">]</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">if</span> <span class="o">!</span><span class="no">Dir</span><span class="o">.</span><span class="n">exist?</span><span class="p">(</span><span class="vg">$src</span><span class="p">)</span> <span class="o">||</span> <span class="o">!</span><span class="no">Dir</span><span class="o">.</span><span class="n">exist?</span><span class="p">(</span><span class="vg">$dst</span><span class="p">)</span>
-</span><span class='line'>    <span class="nb">puts</span> <span class="s2">&quot;No such Directory&quot;</span>
-</span><span class='line'>    <span class="nb">exit</span> <span class="o">-</span><span class="mi">1</span>
-</span><span class='line'><span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">if</span> <span class="no">Dir</span><span class="o">.</span><span class="n">entries</span><span class="p">(</span><span class="vg">$src</span><span class="p">)</span> <span class="o">==</span> <span class="o">[</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="s2">&quot;..&quot;</span><span class="p">,</span> <span class="s2">&quot;.DS_Store&quot;</span><span class="o">]</span> <span class="o">||</span> <span class="no">Dir</span><span class="o">.</span><span class="n">entries</span><span class="p">(</span><span class="vg">$src</span><span class="p">)</span> <span class="o">==</span> <span class="o">[</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="s2">&quot;..&quot;</span><span class="o">]</span>
-</span><span class='line'>    <span class="nb">printf</span> <span class="s2">&quot;%s is empty!</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="vg">$src</span>
-</span><span class='line'>    <span class="nb">exit</span> <span class="o">-</span><span class="mi">1</span>
-</span><span class='line'><span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">if</span> <span class="o">!</span><span class="no">Dir</span><span class="o">.</span><span class="n">exist?</span><span class="p">(</span><span class="vg">$dst</span> <span class="o">+</span> <span class="s2">&quot;/purchased&quot;</span><span class="p">)</span>
-</span><span class='line'>    <span class="no">Dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="vg">$dst</span> <span class="o">+</span> <span class="s2">&quot;/purchased&quot;</span><span class="p">)</span>
-</span><span class='line'><span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'><span class="no">Dir</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="vg">$src</span><span class="p">)</span>
-</span><span class='line'><span class="vg">$hit</span> <span class="o">=</span> <span class="kp">false</span>
-</span><span class='line'><span class="no">Dir</span><span class="o">.</span><span class="n">entries</span><span class="p">(</span><span class="vg">$src</span><span class="p">)</span><span class="o">.</span><span class="n">each</span><span class="p">{</span><span class="o">|</span><span class="n">x</span><span class="o">|</span>
-</span><span class='line'>    <span class="n">y</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
-</span><span class='line'>    <span class="k">for</span> <span class="n">i</span> <span class="k">in</span> <span class="mi">0</span><span class="o">.</span><span class="n">.</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">length</span>
-</span><span class='line'>        <span class="k">if</span> <span class="n">x</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">!=</span> <span class="s1">&#39;(&#39;</span> <span class="o">&amp;&amp;</span>  <span class="n">x</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">!=</span> <span class="s1">&#39;（&#39;</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="vg">$hit</span>
-</span><span class='line'>            <span class="n">y</span> <span class="o">+=</span> <span class="n">x</span><span class="o">[</span><span class="n">i</span><span class="o">]</span>
-</span><span class='line'>        <span class="k">else</span>
-</span><span class='line'>            <span class="vg">$hit</span> <span class="o">=</span> <span class="kp">true</span>
-</span><span class='line'>            <span class="k">if</span> <span class="n">x</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">==</span> <span class="s1">&#39;)&#39;</span> <span class="o">||</span> <span class="n">x</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">==</span> <span class="s1">&#39;）&#39;</span> <span class="o">||</span> <span class="n">x</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">==</span> <span class="s1">&#39;_&#39;</span>
-</span><span class='line'>                <span class="vg">$hit</span> <span class="o">=</span> <span class="kp">false</span>
-</span><span class='line'>                <span class="vg">$hit</span> <span class="o">=</span> <span class="kp">false</span>
-</span><span class='line'>                <span class="k">if</span> <span class="n">x</span><span class="o">[</span><span class="n">i</span><span class="o">]</span> <span class="o">==</span> <span class="s1">&#39;_&#39;</span>
-</span><span class='line'>                    <span class="n">y</span> <span class="o">+=</span> <span class="n">x</span><span class="o">[</span><span class="n">i</span><span class="o">]</span>
-</span><span class='line'>                <span class="k">end</span>
-</span><span class='line'>            <span class="k">end</span>
-</span><span class='line'>        <span class="k">end</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="s2">&quot;.azw3&quot;</span><span class="p">)</span> <span class="o">||</span> <span class="n">x</span><span class="o">.</span><span class="n">include?</span><span class="p">(</span><span class="s2">&quot;.mobi&quot;</span><span class="p">)</span>
-</span><span class='line'>        <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">include?</span><span class="s2">&quot;_B00&quot;</span>
-</span><span class='line'>            <span class="no">File</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="vg">$dst</span> <span class="o">+</span> <span class="s2">&quot;/purchased/&quot;</span> <span class="o">+</span> <span class="n">y</span><span class="p">)</span>
-</span><span class='line'>        <span class="k">elsif</span> <span class="n">x</span><span class="o">[</span><span class="mi">0</span><span class="o">]</span> <span class="o">!=</span> <span class="s1">&#39;.&#39;</span>
-</span><span class='line'>            <span class="no">File</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="vg">$dst</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="n">y</span><span class="p">)</span>
-</span><span class='line'>        <span class="k">end</span>
-</span><span class='line'>    <span class="k">end</span>
-</span><span class='line'><span class="p">}</span>
-</span><span class='line'>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Ruby很有特色的一个地方就包括它的字符串处理，它不用像C语言一样来考虑内存管理，程序员也不必要担心字符串占用的内存空间[1].  <br/>
-比如可以直接这样给一个字符串赋值:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">str</span> <span class="o">=</span> <span class="err">“</span><span class="n">we</span><span class="err">”</span> <span class="o">+</span> <span class="err">“</span> <span class="n">are</span><span class="err">”</span> <span class="o">+</span> <span class="err">“</span> <span class="n">a</span><span class="s2">&quot; + “ whole”    </span>
-</span><span class='line'><span class="s2">str2 = 2 * str    </span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>此时str2是&#8221;we are a whole we are a whole&#8221;  <br/>
-妈妈说，再也不用担心用strcpy还是strncpy了&hellip;  <br/>
-另外一个有特色的地方是Ruby对于中文字符的支持，我们知道在UTF-8编码下一个汉字是占用3个字节，这可以很容易的用C语言来验证：printf(&ldquo;%d\n&rdquo;, strlen(&ldquo;你好&rdquo;)) 显示的结果是6。但是，在Ruby里面，printf(&ldquo;%d\n&rdquo;, &ldquo;再见&rdquo;.length)的结果是2，即它显示的是字数而不是字节数，这也是Ruby对中文支持很好的地方，或许是因为松本行泓先生是日本人的缘故吧。所以对于str = &ldquo;你好&#8221;而言，在Ruby里面str[0]是&#8221;你&#8221;；而在C语言里面，str[0]则只是&#8221;你&#8221;的第一个字节。</p>
-
-<p>看起来确实是挺酷的吧&hellip;</p>
-
-<p>在执行完这个程序后，这些书就按照我的预期整理好了。但是，等等，让我们打开其中的书试试看。当我打开从网上下载的书时，一点问题都没有，然而当我打开从Amazon上买的书时，结果：  <br/>
-<img src="http://laoar.github.io/images/ruby.png"></p>
-
-<p>&hellip;&hellip;
- 哈哈哈哈哈哈&hellip;  <br/>
- 所以说，备份很重要～</p>
-
-<h2>P.S.</h2>
-
-<p>[1] <a href="http://guides.ruby.tw/ruby/strings.html">guides.ruby</a>  <br/>
-[2] 进来事情有些多，所以直到这个月最后一号才写这篇文章，写的也有些赶。</p>
 ]]></content>
   </entry>
   
