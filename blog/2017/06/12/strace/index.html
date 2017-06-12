@@ -1,0 +1,301 @@
+
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>strace是如何工作的 ? - One Man's Yammer</title>
+	<meta name="author" content="Yafang Shao">
+
+	
+	<meta name="description" content="Strace是如何工作的 ? TL;DR strace应该是我们经常使用的工具之一，他对于我们排除故障以及性能分析都很有帮助。 本文来分析一下strace的实现机制。 strace是用来跟踪系统的调用的，所以我们先来分析系统调用机制，然后再分析strace的实现机制。 关于系统调用( &hellip;">
+	
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link href="" rel="alternate" title="One Man's Yammer" type="application/atom+xml">
+	<link rel="canonical" href="">
+	<link href="/favicon.png" rel="shortcut icon">
+	<link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+	<!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+	<script async="true" src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+	
+</head>
+
+
+<body>
+	<header id="header" class="inner"><h1><a href="/">One Man's Yammer</a></h1>
+<nav id="main-nav"><ul class="main">
+	<li><a href="/read">BookWall</a></li>
+</ul>
+</nav>
+<nav id="mobile-nav"> <ul class="main">
+	<li><a href="/read">BookWall</a></li>
+</ul>
+ </nav>
+<!--	<div class="menu"> --!>
+		<!--<a class="button">Menu</a>
+		<div class="container"><ul class="main">
+	<li><a href="/read">BookWall</a></li>
+</ul>
+</div>--!>
+	<!--</div>--!>
+<!--</nav>--!>
+<!-- @yfshao
+	<div class="alignright search">
+		<a class="button"></a>
+		<div class="container">
+			<form action="false" method="get">
+				<input type="text" name="q" results="0">
+				<input type="hidden" name="q" value="site:laoar.github.io">
+			</form>
+		</div>
+	</div>
+</nav>
+--!>
+<!--
+<nav id="sub-nav" class="alignright">
+	<div class="social">
+		
+		
+		
+		
+    
+		
+		
+		
+		
+		
+    
+	</div>
+	<form class="search" action="false" method="get">
+		<input class="alignright" type="text" name="q" results="0">
+		<input type="hidden" name="q" value="site:laoar.github.io">
+	</form>
+</nav>
+--!>
+<!----!>
+</header>
+	
+		
+	
+	<div id="content" class="inner"><article class="post">
+	<h2 class="title">Strace是如何工作的 ?</h2>
+	<div class="entry-content"><h2>TL;DR</h2>
+
+<p>strace应该是我们经常使用的工具之一，他对于我们排除故障以及性能分析都很有帮助。   <br/>
+本文来分析一下strace的实现机制。   <br/>
+strace是用来跟踪系统的调用的，所以我们先来分析系统调用机制，然后再分析strace的实现机制。</p>
+
+<h2>关于系统调用(syscall)</h2>
+
+<p>系统调用的历史比较复杂，涉及到各种演变，以及glibc各版本与kenrel各版本的兼容性，以及AMD与intel的不统一。所以要理清syscall是是一件很庞杂的工程，也花费了我很长的时间。           <br/>
+syscall的主要原理大致如下图所示，glibc这块的代码就不深入探究了。</p>
+
+<p><img src="/images/syscall.png"></p>
+
+<p>下面是对该图的一些解释。</p>
+
+<h4>context（上下文）</h4>
+
+<p>在userspace，只有进程运行，所以只有进程上下文（process context），对应于%usr；     <br/>
+在kernelspace，除了进程外，还存在着中断（包括硬件中断和软件中断），所以有进程上下文（对应于%sys）和中断上下文（interrupt context，包括%irq和%sirq）。</p>
+
+<p>在一开始的时候，linux是通过<code>int 80h</code>来实现的系统调用。<code>int 80h</code>会产生一个软中断给cpu，从而陷入内核，此时是中断上下文（对应于%sirq），在软中断里面会做一些当前用户态进程上下文的一些保存工作，比如寄存期的值等。在软中断里面将准备工作处理好后，就会让进程继续执行，于是进程进入到内核态，执行该系统调用对应的资源操作，此时就是处于进程上下文（对应于%sys）。</p>
+
+<p>这种方式存在的缺陷也是一目了然：首先这个过程需要去读取中断向量表，中断向量表可能不在cache中，cache miss的性能影响较明显；其次这个过程涉及到进程上下文到中断上下文的一系列保存／恢复操作，这些额外的指令占用了CPU时间。</p>
+
+<p>所以后来，intel／AMD这类CPU厂商就提出来了fast syscall的概念，增加一些新的指令编码让系统调用不用再经过中断上下文，让进程直接从用户态切换到内核态即可, 都是在进程上下文。即从trap方式变为MSR方式， 这些指令就是sysenter/sysexit/syscall.</p>
+
+<h4>context switch（上下文切换）</h4>
+
+<p>context switch，即我们用dstat或sar看到的<code>csw</code>.   <br/>
+需要注意的是，context switch只发生在当前运行进程（进程或线程一直是个容易混淆的概念，这里从用户程序视角而言用线程更清晰一些）的pid（对于线程而言，他在内核里也是一个pid）发生改变时。这可以从内核代码里的<code>__schedule</code>这个函数里看出来：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='cpp'><span class='line'><span class="n">__schedule</span>
+</span><span class='line'>    <span class="n">rq</span><span class="o">-&gt;</span><span class="n">nr_switches</span><span class="o">++</span><span class="p">;</span>
+</span><span class='line'>    <span class="n">context_switch</span><span class="p">(</span><span class="n">rq</span><span class="p">,</span> <span class="n">prev</span><span class="p">,</span> <span class="n">next</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>所以，从进程上下文进入中断上下文时并不存在context switch，因为当前的pid并没有发生改变。 只是从中断上下文再返回到进程上下文时是可以有context switch的，如果有更高优先级的进程需要运行的话，就会调度到这个更高优先级的进程去，当前运行进程的pid发生改变了，于是有了context switch。</p>
+
+<h4>用户态／内核态</h4>
+
+<p>用户态／内核态是进程在不同特权级的状态，用户态对应于ring3，内核态对应于ring0. （这是linux的实现，其他OS可能会有更加复杂的特权级设计）        <br/>
+对于资源的访问都是需要在内核态来实现的，这也是为什么进程在访问系统资源时需要通过syscall来进入内核态。如果要访问的资源只涉及到读取操作，不需要更改内核空间的数据，那么这个操作完全可以在用户态来执行，从而避免掉从用户态到内核态的切换，提升性能。于是就有了vDSO（virtual dynamic shared object）的概念。</p>
+
+<h4>vDSO</h4>
+
+<p>vDSO是把一些只读的并且会被频繁调用的系统调用实现从内核空间给映射到用户空间的一个页中，从而进程在执行这些系统调用时不用在进入到内核空间。   <br/>
+目前这类系统调用包括(参见kernel的arch/x86/vdso/这部分代码)：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='julia'><span class='line'><span class="n">gettimeofday</span>
+</span><span class='line'><span class="n">clock_gettime</span>
+</span><span class='line'><span class="n">getcpu</span>
+</span><span class='line'><span class="n">time</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>vDSO可以通过<code>/proc/[pid]/maps</code>来查看。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='julia'><span class='line'><span class="mi">7</span><span class="n">ffd659eb000</span><span class="o">-</span><span class="mi">7</span><span class="n">ffd659ed000</span> <span class="n">r</span><span class="o">-</span><span class="n">xp</span> <span class="mi">00000000</span> <span class="mi">00</span><span class="p">:</span><span class="mi">00</span> <span class="mi">0</span>                          <span class="p">[</span><span class="n">vdso</span><span class="p">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h4>syscall入口的统一化</h4>
+
+<p>早期的<code>int 80h</code>, 以及后来的<code>sysenter</code>/<code>sysexit</code>/<code>syscall</code>, 这么多的指令需要一个统一的封装，从而让用户程序不用关注一个系统调用具体会通过哪种方式进入内核态，这也是在vDSO里面来实现的。</p>
+
+<h2>接着来看strace</h2>
+
+<p>strace以attach的方式追踪一个进程的过程大致如下，tracee表示被追踪进程。    <br/>
+strace工具主要是用到了ptrace这个系统调用，ptrace这个系统调用提供了让一个进程观察和控制另外一个进程执行的方式，主要用在strace／gdb这类调试工具上。  <br/>
+使用ptrace你自己也能够实现一个简单的tracer。</p>
+
+<p><img src="/images/strace.png"></p>
+
+<h4>父进程／子进程</h4>
+
+<p>一个进程在发生如下状态改变时会通知给他的父进程：进程终止(terminated),收到一个暂停执行的信号从而暂停执行，以及收到一个恢复执行的信号从而恢复执行。   <br/>
+那么父进程就可以通过wait/waitpid这类函数来捕获其子进程这些状态改变信息。</p>
+
+<p>所以如果一个进程想要追踪另外一个进程，首先就需要自己成为被追踪进程的父进程。 但是被追踪进程他本来是有自己的父进程的。所以Linux提供了这样一种方式来解决这个问题：让被追踪进程可以有两个父进程，一个真正的父进程，一个是tracer进程。这可以通过task_struct来查看：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='cpp'><span class='line'><span class="n">task_struct</span> <span class="p">{</span>
+</span><span class='line'>    <span class="k">struct</span> <span class="n">task_struct</span> <span class="n">__rcu</span> <span class="o">*</span><span class="n">real_parent</span><span class="p">;</span> <span class="cm">/* real parent process */</span>
+</span><span class='line'>    <span class="k">struct</span> <span class="n">task_struct</span> <span class="n">__rcu</span> <span class="o">*</span><span class="n">parent</span><span class="p">;</span> <span class="cm">/* recipient of SIGCHLD, wait4() reports */</span>
+</span><span class='line'><span class="p">};</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>于是attach到被调进程后，strace就成为了他的一个父进程。</p>
+
+<h4>进程状态</h4>
+
+<p>我们可以通过<code>ps aux</code>的<code>STAT</code>这一项来看进程的状态，会有R/S/D/T/Z/X这几个状态。  下面是对这些进程状态的一个粗略解释：</p>
+
+<ul>
+<li><p>R  <br/>
+TASK_RUNNING, 可执行状态，表示进程正在运行或者可以运行但是尚未被调度到的状态。</p></li>
+<li><p>S  <br/>
+TASK_INTERRUPTIBLE, 可以被信号打断的睡眠状态，系统里大部分进程都会处在这个状态。</p></li>
+<li><p>D  <br/>
+TASK_UNINTERRUPTIBLE, 不能够被信号打断的睡眠状态，这也是我们有时候<code>CRTL+C</code>无法杀掉一个进程的原因，因为进程处在这个状态不会去处理信号。</p></li>
+<li><p>T<br/>
+TASK_STOPPED或者TASK_TRACED, 暂停状态或跟踪状态， 这两个状态都表示进程暂停下来。    <br/>
+TASK_TRACED就是strace跟踪涉及到的一个状态。在被追踪进程进入系统调用以及从系统调用返回时，他会发现自己被设置了PT_TRACED这个标记,于是就意识到自己被追踪了，于是就把自己的状态设置为TASK_TRACED，暂停下来执行，然后通知strace进程（通过SIGCHILD这个信号）；于是strace进程就做相应的信息处理，处理完后再resume被调进程的执行，将被调进程的状态设置为TASK_RUNNING，这也是我们在用strace跟踪进程时，会输出<code>resumed</code>的原因。</p></li>
+<li><p>Z  <br/>
+TASK_DEAD &ndash; EXIT_ZOMBIE, 僵死(zombie)进程, 即进程退出后他的进程结构体没有被父进程给回收。</p></li>
+<li><p>X <br/>
+TASK_DEAD &ndash; EXIT_DEAD, 退出状态，进程即将被销毁。</p></li>
+</ul>
+
+
+<h4>strace的性能影响</h4>
+
+<p>我们已经知道strace会导致被调进程在进入系统调用以及从系统调用返回时会有一个暂停状态，strace将信息处理完毕后再去恢复被调进程的执行。strace他本身只有一个线程，所以如果被调进程有非常多的子线程，而且系统调用又有些频繁，那么就可能导致strace进程忙不过来的情况：被调进程暂停了但是strace来不及去处理信息，这就会导致被调进程会暂停很长时间，对RT敏感的业务就会造成很大的影响。</p>
+
+<p>所以，线上业务一定要慎用strace，特别是系统繁忙的情况下。</p>
+
+<p>如果系统调用多大strace实在处理不过来时，他会放弃处理一些系统调用，从而避免把系统给搞跪了，即strace有一个单位时间内处理系统调用数目的阈值。</p>
+
+<p>strace程序为什么不做成多线程的呢？ 这样子不就可以处理更多的信息了么。也许这就是一个权衡吧，别让调试过多的影响程序执行。 (<code>TODO:</code> 有时间了我会研究下这个问题)</p>
+
+<h2>Ref.</h2>
+
+<p><a href="https://blog.packagecloud.io/eng/2016/02/29/how-does-strace-work/">How does strace work?</a>   <br/>
+<a href="https://blog.packagecloud.io/eng/2016/04/05/the-definitive-guide-to-linux-system-calls/">The Definitive Guide to Linux System Calls</a>
+<a href="https://lwn.net/Articles/604515/">Anatomy of a system call, part 2</a>
+<a href="https://www.intel.com/Assets/en_US/PDF/manual/253668.pdf">Intel® 64 and IA-32 Architectures Software Developer’s Manual Volume 3A: System Programming Guide, Part 1</a></p>
+
+<p><a href="https://webdocs.cs.ualberta.ca/~paullu/C498/meng.ptrace.slides.pdf">System Call Tracing using ptrace</a></p>
+</div>
+
+
+<!--
+<div class="meta">
+	<div class="date">
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2017-06-12T22:06:41+08:00" pubdate data-updated="true">Jun 12<span>th</span>, 2017</time></div>
+	
+	<div class="comments"><a href="#disqus_thread">Comments</a></div>
+	
+</div>
+--!>
+</article>
+
+	<div class="share">
+	<div class="addthis_toolbox addthis_default_style ">
+		
+		
+		
+		
+	</div>
+	
+</div>
+
+
+
+<section id="comment">
+    <h2 class="title">Comments</h2>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+</section>
+</div>
+	<footer id="footer" class="inner">Copyright &copy; 2017
+
+    Yafang Shao
+
+</footer>
+	<script src="/javascripts/slash.js"></script>
+<script src="/javascripts/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+	$('.fancybox').fancybox();
+})(jQuery);
+</script> <!-- Delete or comment this line to disable Fancybox -->
+
+
+<script type="text/javascript">
+      var disqus_shortname = 'laoar';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://laoar.github.io/blog/2017/06/12/strace/';
+        var disqus_url = 'http://laoar.github.io/blog/2017/06/12/strace/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//go.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+</body>
+</html>
