@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2017-06-13T09:51:37+08:00</updated>
+  <updated>2017-06-13T09:54:32+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -154,11 +154,10 @@ TASK_DEAD &ndash; EXIT_DEAD, 退出状态，进程即将被销毁。</p></li>
 <h2>Ref.</h2>
 
 <p><a href="https://blog.packagecloud.io/eng/2016/02/29/how-does-strace-work/">How does strace work?</a>   <br/>
-<a href="https://blog.packagecloud.io/eng/2016/04/05/the-definitive-guide-to-linux-system-calls/">The Definitive Guide to Linux System Calls</a>
-<a href="https://lwn.net/Articles/604515/">Anatomy of a system call, part 2</a>
-<a href="https://www.intel.com/Assets/en_US/PDF/manual/253668.pdf">Intel® 64 and IA-32 Architectures Software Developer’s Manual Volume 3A: System Programming Guide, Part 1</a></p>
-
-<p><a href="https://webdocs.cs.ualberta.ca/~paullu/C498/meng.ptrace.slides.pdf">System Call Tracing using ptrace</a></p>
+<a href="https://blog.packagecloud.io/eng/2016/04/05/the-definitive-guide-to-linux-system-calls/">The Definitive Guide to Linux System Calls</a>   <br/>
+<a href="https://lwn.net/Articles/604515/">Anatomy of a system call, part 2</a>               <br/>
+<a href="https://www.intel.com/Assets/en_US/PDF/manual/253668.pdf">Intel® 64 and IA-32 Architectures Software Developer’s Manual Volume 3A: System Programming Guide, Part 1</a>
+<a href="https://webdocs.cs.ualberta.ca/~paullu/C498/meng.ptrace.slides.pdf">System Call Tracing using ptrace</a></p>
 ]]></content>
   </entry>
   
