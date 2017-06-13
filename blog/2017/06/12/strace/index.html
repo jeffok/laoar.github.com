@@ -191,7 +191,7 @@ TASK_RUNNING, 可执行状态，表示进程正在运行或者可以运行但是
 <li><p>S  <br/>
 TASK_INTERRUPTIBLE, 可以被信号打断的睡眠状态，系统里大部分进程都会处在这个状态。</p></li>
 <li><p>D  <br/>
-TASK_UNINTERRUPTIBLE, 不能够被信号打断的睡眠状态，这也是我们有时候<code>CRTL+C</code>无法杀掉一个进程的原因，因为进程处在这个状态不会去处理信号。</p></li>
+TASK_UNINTERRUPTIBLE, 不能够被信号打断的睡眠状态，在这个状态时是不可以被信号给wake up的，这也是该状态与S状态的区别，S状态是可以被信号给唤醒的。</p></li>
 <li><p>T<br/>
 TASK_STOPPED或者TASK_TRACED, 暂停状态或跟踪状态， 这两个状态都表示进程暂停下来。    <br/>
 TASK_TRACED就是strace跟踪涉及到的一个状态。在被追踪进程进入系统调用以及从系统调用返回时，他会发现自己被设置了PT_TRACED这个标记,于是就意识到自己被追踪了，于是就把自己的状态设置为TASK_TRACED，暂停下来执行，然后通知strace进程（通过SIGCHILD这个信号）；于是strace进程就做相应的信息处理，处理完后再resume被调进程的执行，将被调进程的状态设置为TASK_RUNNING，这也是我们在用strace跟踪进程时，会输出<code>resumed</code>的原因。</p></li>
