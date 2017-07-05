@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2017-06-13T09:54:32+08:00</updated>
+  <updated>2017-07-05T21:14:29+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -12,6 +12,130 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[LinuxCon+ContainerCon+CloudOpen 参会总结]]></title>
+    <link href="http://laoar.github.io/blog/2017/07/05/lc3/"/>
+    <updated>2017-07-05T21:06:54+08:00</updated>
+    <id>http://laoar.github.io/blog/2017/07/05/lc3</id>
+    <content type="html"><![CDATA[<p>在北京的国家会议中心参加了一年一度的LC3会议，LC3以前都是在北美／欧洲／日本举行，这是第一次来中国，为此Linux和Git的作者Linus也来到了LC3现场。</p>
+
+<p>这次会议我主要是关注LinuxCon相关的演讲，对Container以及Cloud关注较少。  <br/>
+会议共持续两天，具体日程安排见<a href="https://www.lfasiallc.com/linuxcon-containercon-cloudopen-china/about/schedule">LC3 schedule</a></p>
+
+<h2>存储、文件系统相关</h2>
+
+<p>来自Google的Theodore Ts&#8217;o分享了他针对SMR磁盘在Ext4上所做的优化，他是Ext4的maintainer。 他演讲的内容跟发表在LWN上的这篇文章内容差不多：<a href="https://lwn.net/Articles/720226/">Evolving ext4 for SMR drives</a>   和<a href="https://www.usenix.org/system/files/conference/fast17/fast17-aghayev.pdf">Evolving Ext4 for Shingled Disks</a></p>
+
+<p>传统磁盘( conventional drives)有存储的物理上限，为了突破这种上限，就有了SMR, 中文名叠瓦式磁盘。这种磁盘他的离散IO较多时性能会很差，为了提升SMR随机写时的性能，Ted对Ext4做了一些改造，使得SMR的随机写性能大幅提升。这些工作主要是在JBD层来做的，有几百行的样子，然后Ext4层也稍微做了一些改动。   <br/>
+Ext4在SMR磁盘上之所以性能差，主要是因为Ext4的metadata在磁盘上的存储位置比较发散(the metadata is spread across the disk，这是因为Ext4的metadata是跟data存储在一起的), 而且metadata的写操作都是4K的随机写，这种行为对SMR磁盘就是致命的。（PS：这就是Ext4远不如ZFS的其中一个原因，Ext4的metadata需要写两次，一次是往journal，一次是往最终的存储位置，从journal写往最终的存储位置是就是随机写。而ZFS只需要一次写操作，因为它没有journal，是通过checksum来确保数据的integirty的。Ext4在有生之年怕是永远也追不上ZFS）   <br/>
+所以Ted就想到了一个办法来改善这种表现：Lazy IO，把data和metadata分开存储，然后把metadata以log的方式来管理从而变成顺序写。       <br/>
+这个改动在metadata-light和metadata-heavy的业务上都得到了很明显的性能提升。 <br/>
+Ext4的metadata存储位置比较发散是有一些历史原因的，主要是因为一开始认为随机读的代价较大，所以才把metadata跟data存储在了一起，但是在SMR磁盘上随机读远没有随机写的代价大。</p>
+
+<p>在下午intel的吴峰光主持的大师训练营上，跟Ted做了一些交流，主要问了他对pagecache以及ZFS的看法。Ted的意思，pagecache的目的是OK而不是good，它是一个很通用的东西，他让很多的存储设备得到了性能提升这就可以了，如果你真的很在意pagecache，你就自己去搞个cache去（就像database做的那样）。Ted的观点其实也是现在业界公认的看法：pagecache不够好，别想着去把pagecache给做好了，去实现自己的专用cache来bypass掉它才是王道，哇哈哈，这跟Linus的看法还是有区别的。 <br/>
+我问题的第二个问题是关于ZFS vs EXT4的，我们知道EXT4的log在RAID4/5/6上是个硬伤，因为它没有可靠的writeback device而且log要写很多次并且比较分散，但是ZFS的writeback device就很可靠而且可以做到O(1)的复杂度来写入，所以在RAID4/5/6上不得不去关掉journal(虽然有风险，但是碰运气吧)。Ted的回答是EXT4本身并不是针对RAID来设计的一个文件系统，因为ext4 主要是是应用在大规模分布式系统中，分布式存储本身就考虑了冗余和容灾的问题，如果是用在RAID上最好还是ZFS。Ted还说，“经常有人问我会不会有未来的文件系统，我都是告诉他们不会有的，一个文件系统太重要了，因为文件系统出故障这就是数据不可靠了，跟系统crash还不一样，系统crash只要重启下就好了， 但是文件系统一出问题，别人就不敢用你了。ZFS从研究到商用用了7年时间，然后再到被大家认可又花了很长时间。EXT4也好，ZFS也好，各自有自己擅长的地方，不会有一个统一的fs来管理一切”。</p>
+
+<p>附上跟Ted交流后的合照：</p>
+
+<p><img src="http://laoar.github.io/images/ted.png">       <br/>
+PS：请观察体型对比</p>
+
+<h2>资源隔离／资源利用率</h2>
+
+<p>阿里云的马涛分享了阿里巴巴在资源管理上面的一些实践（Alibaba&rsquo;s Work on Resource Management in Linux Kernel）， 主要是围绕CPU／内存／磁盘／网络这四大块。 <br/>
+他们做这个事情的背景是，阿里的很多机器资源利用率都很低（具体表现是CPU利用率低，load低），所以通过线上线下业务混布来提升资源利用率，但是线上线下业务一旦混布在一起，就难免线下业务会影响到线上业务，所以需要做一些资源隔离来更好的让线上业务不会受太大影响。 <br/>
+我们知道，电商线上业务很敏感(or 最敏感？)的一个指标就是RT，因为这牵涉到金钱交易，实实在在的钱，反应太慢了用户怒了直接不跟你交易了。但是只要你的RT能够控制在一定范围内，即使有增大只要不给用户带来太差的体检，就是可以接受的，这也是离线／在线混布的理论基础。离线在线混布，离线业务对在线业务多多少少都会有一些影响，这是无解的，我们要做的就是让这种影响尽量小。 这也是技术的一个前进方向：榨干硬件的所有性能，把硬件用到极致。</p>
+
+<p>所谓影响少，具体到技术细节就是隔离性，隔离做的好影响就会少，隔离不彻底影响就会失控。所以做离线在线业务混布的前提就是要评估好隔离性。 <br/>
+阿里现在在资源的隔离性上只有CPU这一块做的较好，内存／磁盘／网络都还是在摸索中。   <br/>
+在CPU隔离这部分，他们现在可以做到针对CPU超线程的动态隔离。举个例子，一个socket会有很多core，一个core现在都会有两个超线程，如果在线业务跟离线业务同时跑在一个socket上，那么LLC（last level cache）上就会有争抢，所以必须要妥善处理好LLC，否则RT就可能会抖动很大。如果在线业务和离线业务同时跑在同一个core的不同超线程上，那影响就更大了，所以必须要避免这种情况，这也是可以通过技术手段来细粒度控制的，通过修改Linux的调度器来实现。intel有个做法是在线业务一个调度器，离线业务一个调度器，彼此互不干扰。 <br/>
+在磁盘／网络的隔离性上，他们还是在摸索中，更多的是借助tools来观察性能指标。</p>
+
+<p>PS: 一朋友点评道，难道IO调度器真的是个天堑么？国内云计算企业永远也达不到Joygent的水平么。</p>
+
+<h2>更加轻量级的服务化方案：unikernel</h2>
+
+<p>来自vmware的陈铁俊分享了他在unikernel的一些实践。   <br/>
+虚拟化的一个趋势：先是KVM／Zen这种操作系统级的虚拟化，再是container这种资源隔离级虚拟化，再接着就是更加彻底的进程级的虚拟化方案&mdash;unikernel。</p>
+
+<p>任务都是以进程为单位来执行的，（当然进程里面还有线程，还有协程），所以如果可以做到进程级别的虚拟化，不是更加轻量级么，这就是unikernel的初衷。</p>
+
+<p>unikernel的特征以及优势：</p>
+
+<ul>
+<li><p>单进程  <br/>
+unikernel里只有一个进程，进程里面可以有多线程，所以unikernel的调度非常轻量，这也使得它的启动更快，销毁更快，非常适合服务化。 <br/>
+这样子也有其他一些优势：一个任务故障了不会影响到整个系统，其他的任务不会受到任何影响，你只需要重启你的任务就可以了。</p></li>
+<li><p>单一地址空间   <br/>
+它的进程不存在内核态，全部都是在用户态来执行，所以也没有系统调用的开销也没有了内核空间用户空间相互拷贝的操作(zero-copy)</p></li>
+<li><p>安全性   <br/>
+由于逻辑的精简它的安全性非常好</p></li>
+</ul>
+
+
+<p>为了实现unikernel，需要在调度／网络协议栈／地址空间管理等等上面对现有的机制做很大改造，或者说，重写一个operating system。</p>
+
+<p>unikernel现在已经开始商用了，而不是仅仅停留在理论研究上，华为他们搞的libOS（unikernel的一种形式）已经开始了在IoT（internet of things，物联网）上面商用。</p>
+
+<h2>关于系统安全漏洞(CVE): live patch</h2>
+
+<p>安全问题一直都是很严重的问题，对于操作系统而言，它的安全漏洞存在的一个问题是，即使我们找到了漏洞有了好的解决方案，但是也很难去部署到线上来修复这个漏洞，因为操作系统升级往往要重启整个机器这就不得不中断当前线上的任务，一旦规模大了这就很难接受。</p>
+
+<p>所以针对系统级的CVE，都是通过live patch的方案来修复，即给当前正在运行的业务打热补丁，从而避免了影响当前在运行的业务。</p>
+
+<p>来自Critix的Lars Kurth分享了Xen在hypervisor级别的live path方案，以及在hypervisor上如果通过DMI这个技术来解决安全问题。</p>
+
+<p>当前live patch方案的比较：</p>
+
+<table>
+<thead>
+<tr>
+<th></th>
+<th align="left"> technology     </th>
+<th align="center">    function+data </th>
+<th align="center"> data struct  </th>
+<th align="center"> inline patching</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td align="left"> kernel live patching  </td>
+<td align="center"> Y </td>
+<td align="center">  N   </td>
+<td align="center">N</td>
+</tr>
+<tr>
+<td></td>
+<td align="left">kCrarft(Suse)</td>
+<td align="center">Y</td>
+<td align="center">N</td>
+<td align="center">N </td>
+</tr>
+<tr>
+<td></td>
+<td align="left">ksplice(Oracle)</td>
+<td align="center">Y</td>
+<td align="center">Y</td>
+<td align="center">Y</td>
+</tr>
+<tr>
+<td></td>
+<td align="left">Xen livepatch</td>
+<td align="center">Y</td>
+<td align="center">Y</td>
+<td align="center">future</td>
+</tr>
+</tbody>
+</table>
+
+
+<h2>others</h2>
+
+<p>这次大会上还有很多关于K8s, openstack, container, IoT等等的分享，大家感兴趣的可以去<a href="https://www.lfasiallc.com/linuxcon-containercon-cloudopen-china/about/schedule">LC3 schedule</a>上去下载文档。PS：有些演讲没有把文档放上来。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[strace是如何工作的 ?]]></title>
@@ -2603,507 +2727,6 @@ Openflowtable的匹配过程大致如下图。</p>
         <div data-wgo="/3rd-party/wgo/game.sgf" style="width: 700px"></div>
 	</body>
 </html>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[My Reading in 2014]]></title>
-    <link href="http://laoar.github.io/blog/2014/12/27/reading-2014/"/>
-    <updated>2014-12-27T06:32:01+08:00</updated>
-    <id>http://laoar.github.io/blog/2014/12/27/reading-2014</id>
-    <content type="html"><![CDATA[<p>This article was automatically generated via <a href="https://github.com/laoar/booklist">Booklist</a>, which is wrote in Ruby by @laoar. It&#8217;s open to everyone. Feel free to use it.</p>
-
-
-<p>Below are the books @laoar have read in 2014. There&rsquo;re totally 23 books, that&rsquo;s approximately 1.92 books per month, not a bad number. Pls. keep proceeding.<br><br></p>
-
-<h3>1.   Ruby元编程</h3>
-
-
-<center><img src="http://img5.douban.com/mpic/s7014167.jpg"></center>
-
-
-<p><strong>rating: </strong>★★★★☆</p>
-
-
-<p><strong>comment:</strong><br>
-读完了ruby的这部分，以后再读rails这部分。</p>
-
-
-<p><font color=red>[Hey slacker, can&#8217;t U read it seriously and give more comment?]</font></p>
-
-
-<br>
-
-
-
-
-<h3>2.   C程序性能优化</h3>
-
-
-<center><img src="http://img3.douban.com/mpic/s24611330.jpg"></center>
-
-
-<p><strong>rating: </strong>★★★★☆</p>
-
-
-<p><strong>comment:</strong><br>
-日本技术人员在一些领域上总是会钻研的很深，他们写的书总有一些参考价值。这本书对我对性能优化的理解很有帮助，虽然大部分内容都无用，然后有那么几句话切实的帮到了我就够了，一本好书！</p>
-
-
-<p><font color=green>[Good job!]</font></p>
-
-
-<br>
-
-
-
-
-<h3>3.   Zero to One</h3>
-
-
-<center><img src="http://img5.douban.com/mpic/s27463048.jpg"></center>
-
-
-<p><strong>rating: </strong>★★★★☆</p>
-
-
-<p><strong>comment:</strong><br>
-The author Peter Thiel is  a legendary person. This book descripts his experice on the companies which he has found or invested.</p>
-
-
-<p><font color=green>[Good job!]</font></p>
-
-
-<br>
-
-
-
-
-<h3>4.   图解网络硬件</h3>
-
-
-<center><img src="http://img3.douban.com/mpic/s27316002.jpg"></center>
-
-
-<p><strong>rating: </strong>★★★★☆</p>
-
-
-<p><strong>comment:</strong><br>
-讲的很全面，很好的入门读物。</p>
-
-
-<p><font color=red>[Hey slacker, can&#8217;t U read it seriously and give more comment?]</font></p>
-
-
-<br>
-
-
-
-
-<h3>5.   自由之魂</h3>
-
-
-<center><img src="http://img5.douban.com/mpic/s27086436.jpg"></center>
-
-
-<p><strong>rating: </strong>★★★☆☆</p>
-
-
-<p><strong>comment:</strong><br>
-可是都去了台湾。</p>
-
-
-<p><font color=red>[Hey slacker, can&#8217;t U read it seriously and give more comment?]</font></p>
-
-
-<br>
-
-
-
-
-<h3>6.   Of Mice and Men</h3>
-
-
-<center><img src="http://img3.douban.com/mpic/s4734995.jpg"></center>
-
-
-<p><strong>rating: </strong>★★★★★</p>
-
-
-<p><strong>comment:</strong><br>
-Reads like ancient English, i.e. ya, ta, wun&#8217;t. Not sure whether it is because of printing or not, but this is the first kindle book I purchased on amazon.com, which took me around 8$. The two men were both dependent on each other and had a common dream, going through so many difficuties, however the dream was broken at last. Sorrowful ending.</p>
-
-
-<p>[hmm&#8230;]</p>
-
-
-<br>
-
-
-
-
-<h3>7.   HTML 5 与 CSS 3 权威指南</h3>
-
-
-<center><img src="http://img5.douban.com/mpic/s4696737.jpg"></center>
-
-
-<p><strong>rating: </strong>★★★☆☆</p>
-
-
-<p><strong>comment:</strong><br>
-对于不了解html和css的，不适合读这本书。像一本手册，不适合系统学习。作者费这么多心思来搜集网上的资料，大致也能了解html5/css3能够做什么。</p>
-
-
-<p><font color=green>[Good job!]</font></p>
-
-
-<br>
-
-
-
-
-<h3>8.   A Tale of Two Cities</h3>
-
-
-<center><img src="http://img5.douban.com/mpic/s2789809.jpg"></center>
-
-
-<p><strong>rating: </strong>★★★★★</p>
-
-
-<p><strong>comment:</strong><br>
-Charles Dickens&#8217; words are so beautiful.</p>
-
-
-<p><font color=red>[Hey slacker, can&#8217;t U read it seriously and give more comment?]</font></p>
-
-
-<br>
-
-
-
-
-<h3>9.   Hard Choices</h3>
-
-
-<center><img src="http://img5.douban.com/mpic/s27312699.jpg"></center>
-
-
-<p><strong>rating: </strong>★★★☆☆</p>
-
-
-<p><strong>comment:</strong><br>
-Chapters related to China  are as follows, chap. 4, 5 and 25.  Nevertheless, it can broaden our view.</p>
-
-
-<p><font color=green>[Good job!]</font></p>
-
-
-<br>
-
-
-
-
-<h3>10.   图解HTTP</h3>
-
-
-<center><img src="http://img3.douban.com/mpic/s27283822.jpg"></center>
-
-
-<p><strong>rating: </strong>★★★☆☆</p>
-
-
-<p><strong>comment:</strong><br>
-http快速入门，看完之后能够让你对http了解一个大概，不深入，入门。对于没有网络基础的人而言很适用。</p>
-
-
-<p><font color=red>[Hey slacker, can&#8217;t U read it seriously and give more comment?]</font></p>
-
-
-<br>
-
-
-
-
-<h3>11.   松本行弘的程序世界</h3>
-
-
-<center><img src="http://img5.douban.com/mpic/s11290956.jpg"></center>
-
-
-<p><strong>rating: </strong>★★★★★</p>
-
-
-<p><strong>comment:</strong><br>
-ruby版《深入理解计算机系统》。侧重理论讲解，离实际应用还很远。</p>
-
-
-<p><font color=red>[Hey slacker, can&#8217;t U read it seriously and give more comment?]</font></p>
-
-
-<br>
-
-
-
-
-<h3>12.   The Old Man and the Sea</h3>
-
-
-<center><img src="http://img3.douban.com/mpic/s9068443.jpg"></center>
-
-
-<p><strong>rating: </strong>★☆☆☆☆</p>
-
-
-<p><strong>comment:</strong><br>
-Looks wierd that it won for Hemingway both Pulitzer and Nobel Prize. It descibes a old fisherman&#8217;s three days&#8217; struggling on the sea just because of a big fish which in his mind represents pride, hornor, faith, goal or something.   This kind of book, per my understanding, only deserves one star. That&#8217;s all.</p>
-
-
-<p>[hmm&#8230;]</p>
-
-
-<br>
-
-
-
-
-<h3>13.   The Shortest History of Europe</h3>
-
-
-<center><img src="http://img3.douban.com/mpic/s4489600.jpg"></center>
-
-
-<p><strong>rating: </strong>★★★★☆</p>
-
-
-<p><strong>comment:</strong><br>
-It&#8217;s a special perspective that interpreting the history not by timeline, but by the religion, goverment and language.  It mentioned China as well, with the purpose to explain why Europe was the first to industrialise.</p>
-
-
-<p>[hmm&#8230;]</p>
-
-
-<br>
-
-
-
-
-<h3>14.   The Fault in Our Stars</h3>
-
-
-<center><img src="http://img3.douban.com/mpic/s10394551.jpg"></center>
-
-
-<p><strong>rating: </strong>★★★☆☆</p>
-
-
-<p><strong>comment:</strong><br>
-Very sad love story of young adult. It&#8217;s NOTHING but a commercial book, which only aims to sell more copies.  I would recommend it for none.</p>
-
-
-<p><font color=green>[Good job!]</font></p>
-
-
-<br>
-
-
-
-
-<h3>15.   Programming Ruby</h3>
-
-
-<center><img src="http://img3.douban.com/mpic/s4244255.jpg"></center>
-
-
-<p><strong>rating: </strong>★★★☆☆</p>
-
-
-<p><strong>comment:</strong><br>
-The introduction to Ruby. NO rails, and metaprogramming.</p>
-
-
-<p><font color=red>[Hey slacker, can&#8217;t U read it seriously and give more comment?]</font></p>
-
-
-<br>
-
-
-
-
-<h3>16.   The Crowd</h3>
-
-
-<center><img src="http://img3.douban.com/mpic/s3363313.jpg"></center>
-
-
-<p><strong>rating: </strong>★★★☆☆</p>
-
-
-<p><strong>comment:</strong><br>
-Full of rumor stories, lack of agumentation. It can&#8217;t convinced me withouth enough evidence, but inerest me beause of his point of view. Compared to novel, this kind of book is very hard to read in English.</p>
-
-
-<p>[hmm&#8230;]</p>
-
-
-<br>
-
-
-
-
-<h3>17.   Animal Farm</h3>
-
-
-<center><img src="http://img5.douban.com/mpic/s11909707.jpg"></center>
-
-
-<p><strong>rating: </strong>★★★★★</p>
-
-
-<p><strong>comment:</strong><br>
-Orwell is good at using very simple story to explain the truth.Took me few days finish it.Pretty easy reading.It&#8217;s an allegory of the Russian Revolution.The farmer(Nicholas II),Major(Lenin/Marx),Snowball(Leon Trosky)，Napoleon(Stalin),Boxer(the peasants),dogs(The Party).Regarding China, it&#8217;s same.Framer(蒋？)，Major(李大钊/陈独秀),Snowball(刘)，Naploeon(哼～).</p>
-
-
-<p>[hmm&#8230;]</p>
-
-
-<br>
-
-
-
-
-<h3>18.   Atlas Shrugged</h3>
-
-
-<center><img src="http://img5.douban.com/mpic/s1448069.jpg"></center>
-
-
-<p><strong>rating: </strong>★★★★☆</p>
-
-
-<p><strong>comment:</strong><br>
-花了差不多三个月读完了这本英文皇皇巨著。 I will never live for the sake of another man, nor ask another man to live for min. 安兰德在这本书里宣扬的是自私经济学，反对所谓共产主义。书名来自于Fransisco和Realdan的对话，Atalas holds the world on his shoulders, with his blood running, yet still making greate effort to hold the world aloft.  He need a shrug to relex himself.    很好奇Golt的理想国最后会是什么结局？可惜安兰德没有写。</p>
-
-
-<p>[hmm&#8230;]</p>
-
-
-<br>
-
-
-
-
-<h3>19.   代码的未来</h3>
-
-
-<center><img src="http://img5.douban.com/mpic/s26393136.jpg"></center>
-
-
-<p><strong>rating: </strong>★★★★★</p>
-
-
-<p><strong>comment:</strong><br>
-不愧为大师，能够用很通俗的语言把很高深的技术描述的很清楚。 而且把各种技术关联在一起，正应了那句话，技术总是相同的，牛人的牛逼之处就在于能够触类旁通。总之，这本书给我的帮助很大。</p>
-
-
-<p><font color=green>[Good job!]</font></p>
-
-
-<br>
-
-
-
-
-<h3>20.   黑客与画家</h3>
-
-
-<center><img src="http://img3.douban.com/mpic/s4669554.jpg"></center>
-
-
-<p><strong>rating: </strong>★★★☆☆</p>
-
-
-<p><strong>comment:</strong><br>
-如果不是那几篇谈论编程语言的文章，我真想给它2星。许多文章是又丑又长，一个观点反反复复变换着各个法儿的说，味同嚼蜡。另外，关于未来的编程语言，我还是觉得松本行弘在《代码的未来》里说的更好。</p>
-
-
-<p><font color=green>[Good job!]</font></p>
-
-
-<br>
-
-
-
-
-<h3>21.   台湾念真情</h3>
-
-
-<center><img src="http://img5.douban.com/mpic/s11150599.jpg"></center>
-
-
-<p><strong>rating: </strong>★★★★☆</p>
-
-
-<p><strong>comment:</strong><br>
-乡土民情。台湾人的文字很优雅。</p>
-
-
-<p><font color=red>[Hey slacker, can&#8217;t U read it seriously and give more comment?]</font></p>
-
-
-<br>
-
-
-
-
-<h3>22.   图解TCP/IP : 第5版</h3>
-
-
-<center><img src="http://img5.douban.com/mpic/s26676928.jpg"></center>
-
-
-<p><strong>rating: </strong>★★★☆☆</p>
-
-
-<p><strong>comment:</strong><br>
-TCP/IP快速入门，以及索引。 译者的计算机背景似乎不是很强，比如第24页，“最典型的时大实体和小实体”，有点莫名其妙，实则应该是“大端和小端”。</p>
-
-
-<p><font color=green>[Good job!]</font></p>
-
-
-<br>
-
-
-
-
-<h3>23.   父与子全集</h3>
-
-
-<center><img src="http://img5.douban.com/mpic/s1094608.jpg"></center>
-
-
-<p><strong>rating: </strong>★★★★★</p>
-
-
-<p><strong>comment:</strong><br>
-温馨</p>
-
-
-<p><font color=red>[Hey slacker, can&#8217;t U read it seriously and give more comment?]</font></p>
-
-
-<br>
-
-
-
-
-<h2>Statistics</h2>
-
-
-<br><img src="http://laoar.github.io/images/human_lang.png"><img src="http://laoar.github.io/images/details_month.png">
-
 ]]></content>
   </entry>
   
