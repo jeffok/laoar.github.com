@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2017-10-15T14:23:50+08:00</updated>
+  <updated>2017-10-15T14:35:42+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -164,12 +164,17 @@
 
 <h4>Linux Kernel开源管理方式</h4>
 
-<p><img src="http://laoar.github.io/images/maintainer.png"></p>
+<center><img src="http://laoar.github.io/images/maintainer.png"></center>
+
 
 <p>图片来自Greg在LC3 Beijing上的演讲<a href="https://www.lfasiallc.com/linuxcon-containercon-cloudopen-china/about/schedule">Linux Kernel Development &ndash; How It All Works</a>.</p>
 
-<p>Linus毫无疑问是Linux Kernel的一号人物，Andrew Morton是二号人物，涉及memory management的一些改动一般都会有Andrew Morton先合入linux-mm tree，再合入linux-next tree，然后Linus会基于linux-next tree来发布下一个linux版本，比如当前版本是4.13，下一个版本就是4.14。   也有一些会直接由Linus合入到mailine上作为下一版本的rc版，比如4.14-rc3，然后rc版本周期的变化（一般一周一次），直至最终发布为4.14.0。 <br/>
-<img src="http://laoar.github.io/images/kernel-version.png"></p>
+<p>Linus毫无疑问是Linux Kernel的一号人物，Andrew Morton是二号人物，涉及memory management的一些改动一般都会有Andrew Morton先合入linux-mm tree，再合入linux-next tree，然后Linus会基于linux-next tree来发布下一个linux版本，比如当前版本是4.13，下一个版本就是4.14。   也有一些会直接由Linus合入到mailine上作为下一版本的rc版，比如4.14-rc3，然后rc版本周期的变化（一般一周一次），直至最终发布为4.14.0。</p>
+
+<center><img src="http://laoar.github.io/images/kernel-version.png"></center>
+
+
+<p></p>
 
 <p>Andrew Morton可以称为Linux Kernel的执法官，很多大家争执不定的问题都由他来一锤定音，在我提交的这个patch过程中他就扮演了这个角色。</p>
 
