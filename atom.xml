@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2017-07-05T21:14:29+08:00</updated>
+  <updated>2017-10-15T14:23:50+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -12,6 +12,237 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[我给Linux Kernel的background writeback贡献的一个patch]]></title>
+    <link href="http://laoar.github.io/blog/2017/10/15/background-writeback/"/>
+    <updated>2017-10-15T13:50:45+08:00</updated>
+    <id>http://laoar.github.io/blog/2017/10/15/background-writeback</id>
+    <content type="html"><![CDATA[<p>这是我帮同事分析热迁移镜像下载IO限速时看内核代码发现的一个问题。</p>
+
+<p>然后给Linux Kernel提交了一个patch:<a href="https://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git/commit/?h=next-20171009&amp;id=bdf970a91a92c71a08a885d697fd018b667fb9a4">mm/page-writeback.c: print a warning if the vm dirtiness settings are illogical</a>.  <br/>
+该patch基于kernel 4.14-rc2，会在kernel 4.14.0上面发布。</p>
+
+<h2>问题背景</h2>
+
+<p>IO限速我们一般都是选择cgoup的blkio子系统，blkio子系统可以限制direct IO，理论上也可以限制sync IO，但是对async IO就无能为力了，所以才有了cgroup2的blkcg+memcg联合起来控制异步IO。</p>
+
+<p>镜像下载是一个sync IO操作，所以理论上是可以通过blkio来进行限速的，但是事实上却没有限制住。于是我就去分析为什么这个sync IO没有限制住。</p>
+
+<h3>实验</h3>
+
+<p>我们做的限速如下, 读写最大都为30M bps。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>group user.slice {
+</span><span class='line'>    blkio {
+</span><span class='line'>        blkio.throttle.write_bps_device="8:0 31457280";
+</span><span class='line'>        blkio.throttle.read_bps_device="8:0 31457280";
+</span><span class='line'>    }
+</span><span class='line'>}
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>然后使用dd做如下测试：</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>dd if=/dev/zero of=sun.txt bs=2000M count=1 oflag=dsync</span></code></pre></td></tr></table></div></figure>
+
+
+<p>然后可以通过iostat来观察写的效果，可以发现，写入的速度不止30M，可以很快的达到磁盘的最大带宽。   <br/>
+即cgroup blkio失效了。</p>
+
+<h4>为什么blkio throttle在限制sync IO时失效了 ？</h4>
+
+<p>dd的做法是一次会写入bs大小的数据到内存，然后再根据相应的flag执行后续操作，如此依次进行count次。 <br/>
+比如我们上面的那个命令，首先会写2000M的数据到内存，然后再根据oflag来执行sync写入到磁盘的操作。于是这就引入了问题，在往内存写的过程中可能会触发bdi writeback（包括background writeback和periodic writeback），于是blkio失控。</p>
+
+<p>因而，blkio真正能够有效控制的只有direct IO。 如果想要控制sync IO，那么必须要关闭bdi writeback才可以。</p>
+
+<h4>backgroup writeback</h4>
+
+<p>如果写入的可回收的脏页数大于了后台回收的阈值，就会去唤醒后台回收。代码如下：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='cpp'><span class='line'><span class="n">balance_dirty_pages_ratelimited</span>
+</span><span class='line'>    <span class="n">balance_dirty_pages</span>
+</span><span class='line'>        <span class="n">nr_reclaimable</span> <span class="o">=</span> <span class="n">global_node_page_state</span><span class="p">(</span><span class="n">NR_FILE_DIRTY</span><span class="p">)</span> <span class="o">+</span>
+</span><span class='line'>        <span class="n">global_node_page_state</span><span class="p">(</span><span class="n">NR_UNSTABLE_NFS</span><span class="p">);</span>
+</span><span class='line'>        <span class="p">...</span>
+</span><span class='line'>        <span class="k">if</span> <span class="p">(</span><span class="n">nr_reclaimable</span> <span class="o">&gt;</span> <span class="n">gdtc</span><span class="o">-&gt;</span><span class="n">bg_thresh</span><span class="p">)</span>
+</span><span class='line'>            <span class="n">wb_start_background_writeback</span><span class="p">(</span><span class="n">wb</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>这段代码在进程每次写文件时都会去执行检查。 <br/>
+&ldquo;gdtc->bg_thresh&rdquo; 即我们设置的<code>vm.dirty_background_ratio</code>的大小(在某些情况下可能不同)。</p>
+
+<p>background writeback被唤醒的这个行为可以通过<code>ftrace</code>来观察，</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='cpp'><span class='line'><span class="err">$</span> <span class="n">echo</span> <span class="mi">1</span> <span class="o">&gt;</span> <span class="o">/</span><span class="n">sys</span><span class="o">/</span><span class="n">kernel</span><span class="o">/</span><span class="n">debug</span><span class="o">/</span><span class="n">tracing</span><span class="o">/</span><span class="n">events</span><span class="o">/</span><span class="n">writeback</span><span class="o">/</span><span class="n">writeback_wake_background</span><span class="o">/</span><span class="n">enable</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>来使能对该事件的追踪。</p>
+
+<p>backgroud writeback被唤醒后，就会去执行wb_workfn()这个handler。 <br/>
+同样这个行为也可以借助ftrace来跟踪：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='cpp'><span class='line'><span class="err">$</span> <span class="n">echo</span> <span class="nl">r:</span><span class="n">wb_workfn</span> <span class="n">wb_workfn</span> <span class="err">$</span><span class="n">retral</span> <span class="o">&gt;</span> <span class="o">/</span><span class="n">sys</span><span class="o">/</span><span class="n">kernel</span><span class="o">/</span><span class="n">debug</span><span class="o">/</span><span class="n">tracing</span><span class="o">/</span><span class="n">kprobe_events</span>
+</span><span class='line'>
+</span><span class='line'><span class="err">$</span> <span class="n">echo</span> <span class="mi">1</span> <span class="o">&gt;</span> <span class="o">/</span><span class="n">sys</span><span class="o">/</span><span class="n">kernel</span><span class="o">/</span><span class="n">debug</span><span class="o">/</span><span class="n">tracing</span><span class="o">/</span><span class="n">events</span><span class="o">/</span><span class="n">kprobes</span><span class="o">/</span><span class="n">wb_workfn</span><span class="o">/</span><span class="n">enable</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>ftrace是用来分析内核逻辑的一个很强大很方便的工具: )</p>
+
+<p>background writeback会将脏页比例给刷到<code>dirty_background_ratio</code>以下：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='cpp'><span class='line'><span class="n">wb_workfn</span>
+</span><span class='line'>    <span class="n">wb_do_writeback</span>
+</span><span class='line'>        <span class="n">wb_check_background_flush</span>
+</span><span class='line'>            <span class="n">wb_writeback</span>
+</span><span class='line'>                <span class="k">if</span> <span class="p">(</span><span class="n">work</span><span class="o">-&gt;</span><span class="n">for_background</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">wb_over_bg_thresh</span><span class="p">(</span><span class="n">wb</span><span class="p">))</span>
+</span><span class='line'>                    <span class="k">break</span><span class="p">;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h4>vm.dirty_background_ratio</h4>
+
+<p>我们可以通过sysctl调整这个值的大小来设置系统中的脏页达到了多少后来唤醒刷盘。这个值的有效设置范围是[0, 100]。如果我们想在写数据时避免后台刷盘，那就需要把该值调大一些。 <br/>
+同事就调整该值来做下对比验证，在做测试的几组数据中，我发现，他有时候会把<code>vm.dirty_background_ratio</code>设置的很大，然后<code>vm.dirty_ratio</code>设置的很小。<br/>
+我就很好奇， dirty background ratio还可以高于dirty  ratio的啊，高于他之后会发生什么哪？因为我一直以来都是以为dirty ratio的值应该要大于dirty background ratio。</p>
+
+<p>很困惑，于是就去内核代码一看究竟。</p>
+
+<h2>问题分析</h2>
+
+<p>虽然我们可以成功的将<code>vm.dirty_background_ratio</code>设置的大于<code>vm.dirty_ratio</code>，但是在实际运行中会检查出这种情况然后做出相应调整：</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='cpp'><span class='line'><span class="n">domain_dirty_limits</span>
+</span><span class='line'>    <span class="k">if</span> <span class="p">(</span><span class="n">bg_thresh</span> <span class="o">&gt;=</span> <span class="n">thresh</span><span class="p">)</span>
+</span><span class='line'>        <span class="n">bg_thresh</span> <span class="o">=</span> <span class="n">thresh</span> <span class="o">/</span> <span class="mi">2</span><span class="p">;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>如上所示，如果<code>vm.dirty_background_ratio</code>大于<code>vm.dirty_ratio</code>，那么真正的backgroun阈值会被调整成为<code>vm.dirty_ratio</code>的1/2.  <br/>
+于是这就会带来一些困惑，我们明明设置成功了，但是实际起作用的值却跟我们设置的不一样！  <br/>
+所以为何不在设置之初就做检查哪？只让你去设置合理的值。  <br/>
+所以我就给内核提交了一个patch，对dirty/backgrou ratio, dirty/background bytes做合理性检查，并且ratio的有效范围指定为(0, 100)，因为这四个值任一个为0%或100%都是很危险的，可能会产生一些不可预料的行为。</p>
+
+<h2>提交内核patch</h2>
+
+<h4>如何向内核提交patch ?</h4>
+
+<p>具体步骤可以参考<a href="https://kernelnewbies.org/FirstKernelPatch">FirstKernelPatch</a>,   <br/>
+也有篇比较简洁的中文blog：<a href="http://mirage1993.blog.51cto.com/2709744/1912785">如何向 Linux Kernel 提交 Patch</a> <br/>
+不再赘述</p>
+
+<h4>Linux Kernel开源管理方式</h4>
+
+<p><img src="http://laoar.github.io/images/maintainer.png"></p>
+
+<p>图片来自Greg在LC3 Beijing上的演讲<a href="https://www.lfasiallc.com/linuxcon-containercon-cloudopen-china/about/schedule">Linux Kernel Development &ndash; How It All Works</a>.</p>
+
+<p>Linus毫无疑问是Linux Kernel的一号人物，Andrew Morton是二号人物，涉及memory management的一些改动一般都会有Andrew Morton先合入linux-mm tree，再合入linux-next tree，然后Linus会基于linux-next tree来发布下一个linux版本，比如当前版本是4.13，下一个版本就是4.14。   也有一些会直接由Linus合入到mailine上作为下一版本的rc版，比如4.14-rc3，然后rc版本周期的变化（一般一周一次），直至最终发布为4.14.0。 <br/>
+<img src="http://laoar.github.io/images/kernel-version.png"></p>
+
+<p>Andrew Morton可以称为Linux Kernel的执法官，很多大家争执不定的问题都由他来一锤定音，在我提交的这个patch过程中他就扮演了这个角色。</p>
+
+<h2>我的patch提交过程</h2>
+
+<p>在周六分析了一天后，我就给Linux Kernel提交了patch: <a href="https://patchwork.kernel.org/patch/9954721/">mm: introduce sanity check on dirty ratio sysctl value</a></p>
+
+<p>这些maintainer们周末一般都休息的，所以page-writeback.c这个文件的maintainer Jan Kara (at Suse Labs)到了周一他上班后才回复我邮件然后提了一些建议。</p>
+
+<p>最终<a href="https://patchwork.kernel.org/patch/9963291/">[v4] mm: introduce validity check on vm dirtiness settings</a> 获得了他reivew通过:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='cpp'><span class='line'><span class="n">Looks</span> <span class="n">good</span><span class="p">.</span> <span class="n">You</span> <span class="n">can</span> <span class="nl">add:</span>
+</span><span class='line'>
+</span><span class='line'><span class="n">Reviewed</span><span class="o">-</span><span class="nl">by:</span> <span class="n">Jan</span> <span class="n">Kara</span> <span class="o">&lt;</span><span class="n">jack</span><span class="err">@</span><span class="n">suse</span><span class="p">.</span><span class="n">cz</span><span class="o">&gt;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>然后我就给Andrew Morton发送了这个patch，同时cc linux-mm mailing list，一个大约100行的patch。</p>
+
+<h4>maintainer的争执</h4>
+
+<p>结果另外一个maintainer    Michal Hocko（at Suse Labs）跳出来说:</p>
+
+<blockquote><p> In general we do not try to be clever for these knobs because we _expect_ admins to do sane things.</p></blockquote>
+
+<p>他的意见是只需要完善Document即可，不需要修改内核代码。因为dirty ratio／bytes比dirty background ratio／bytes 设置的大是个常识，有经验的系统管理员都会这样做的。</p>
+
+<p>然后Jan Kara怼了回去：</p>
+
+<blockquote><p>So I personally think that the checks Yafang added are worth the extra code. The situation with ratio/bytes interface and hard/background limit is complex enough that it makes sense to have basic sanity checks to me.</p></blockquote>
+
+<p>俩人一个实验室的，就不能先当面讨论下再反馈意见给我么：)</p>
+
+<h4>Andrew Morton出马</h4>
+
+<p>大概Anrew Morton看到了他们的争论，就站出来问了我一个问题，这个问题体现出来Andrew是个非常细心并且考虑很全面的一个人。</p>
+
+<p>他说，做了你的这些检查后，如果我们会同时调整<code>dirty_background_bytes</code>和<code>dirty_bytes</code>, 如果想要调大系统中的脏页数量，那就得先设置<code>dirty_bytes</code>然后再设置<code>dirty_background_bytes</code>；如果要调小呢，那就得先设置<code>dirty_background_bytes</code>，再设置<code>dirty_bytes</code>。 但是我们现有的一些设置脚本可能顺序是反过来的，当然这些脚本是不对的。你的这些检查会让这些脚本不work了对不对 ？</p>
+
+<p>然后我回复Andrew说，如果顺序不对的话，第一个设置会失败。然后会有打印日志来提醒系统管理员设置的有问题，以便做改正。这种情况下要比第一个设置成功要好一些。  <br/>
+因为第一个设置成功的话，实际起作用的值跟设置的值会不一样，这样子可能会引发一些跟系统管理员期望值不一样的现象。
+比如说，调高系统中的脏页数，首先把<code>dirty_background_bytes</code>给调大不想早早的唤醒后台刷盘，如果这个值高于了当前的<code>dirty_ratio</code>对应的值，那么后台刷盘阈值实际就为<code>dirty_ratio</code>的1/2，也就是反而变小了，这个时候就可能会唤醒后台刷盘。</p>
+
+<p>然后Andrew答复我，大意是，宁愿出点错误也比不work强，还是只是加个打印告警吧！</p>
+
+<p>我就按照Andrew的意见修改后提交了给他。</p>
+
+<p>最后Andrew发了一个确认邮件给我： <br/>
+<img src="http://laoar.github.io/images/andrew-confirm.png"></p>
+
+<h4>一番感慨</h4>
+
+<p>从这里也可以看出来，内核里面的很多缺点都是向历史包袱妥协的结果，得在历史包袱和完美做法之间取一个折衷，即一个合理的做法。</p>
+
+<h2>ref.</h2>
+
+<ul>
+<li><a href="https://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git/commit/?h=next-20171009&amp;id=bdf970a91a92c71a08a885d697fd018b667fb9a4">mm/page-writeback.c: print a warning if the vm dirtiness settings are illogical</a></li>
+<li><a href="https://kernelnewbies.org/FirstKernelPatch">FirstKernelPatch</a></li>
+<li><a href="http://mirage1993.blog.51cto.com/2709744/1912785">如何向 Linux Kernel 提交 Patch</a></li>
+<li><a href="https://www.lfasiallc.com/linuxcon-containercon-cloudopen-china/about/schedule">Linux Kernel Development &ndash; How It All Works</a></li>
+<li><a href="https://marc.info/?l=linux-mm&amp;m=150663807625190&amp;w=2">mmotm 2017-09-28-15-33 uploaded</a></li>
+<li><a href="http://git.cmpxchg.org/cgit.cgi/linux-mmotm.git/">linux-mmotm.git</a></li>
+<li><a href="https://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git/">linux-next</a></li>
+<li><a href="https://marc.info/?l=linux-mm&amp;r=1&amp;w=2">linux-mm mailing list</a></li>
+<li><a href="https://lkml.org/">Linux Kernel Mailing List</a></li>
+</ul>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[LinuxCon+ContainerCon+CloudOpen 参会总结]]></title>
@@ -2703,30 +2934,6 @@ Openflowtable的匹配过程大致如下图。</p>
 
 <p>对于协议栈初学者而言，在读这本书时，要结合《深入理解linux网络内幕》那本书一起看，那本书对网络的基本概念讲解的特别好，非常清晰明了。   <br/>
 另外，对于所有的网络从业者，甚至说软硬件工程师，《TCP／IP详解卷一》都是必读之书，而且是需要反复去读，读一遍显然是不够的。</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[The Fight In Rank 4d]]></title>
-    <link href="http://laoar.github.io/blog/2015/01/04/the-fight-in-rank-4d/"/>
-    <updated>2015-01-04T00:00:00+08:00</updated>
-    <id>http://laoar.github.io/blog/2015/01/04/the-fight-in-rank-4d</id>
-    <content type="html"><![CDATA[<!DOCTYPE HTML>
-<html>
-	<head>
-		<!--mkdir 3rd-party/ under octopress/source/ first, then we put wgo library under the 3rd-party directy, so we can get the file in wgo/ with '/3rd-party/wgo/file', and create our own html files in octopress. -->
-    	<script type="text/javascript" src="http://laoar.github.io/3rd-party/wgo/wgo.min.js"></script>
-    	<script type="text/javascript" src="http://laoar.github.io/3rd-party/wgo/wgo.player.min.js"></script>
-    	<link type="text/css" href="http://laoar.github.io/3rd-party/wgo/wgo.player.css" rel="stylesheet" />
-	</head>
-	<body>
-		<h2><center>四段的对杀</center></h2>
-		<h2><center>The Fight in Rank-4D</center></h2>
-		<br>
-		<h4><center>In memory of the progress with my friend wood.</center></h4>		
-        <div data-wgo="/3rd-party/wgo/game.sgf" style="width: 700px"></div>
-	</body>
-</html>
 ]]></content>
   </entry>
   
