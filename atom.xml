@@ -4,7 +4,7 @@
   <title><![CDATA[One Man's Yammer]]></title>
   <link href="http://laoar.github.io/atom.xml" rel="self"/>
   <link href="http://laoar.github.io/"/>
-  <updated>2017-10-15T14:35:42+08:00</updated>
+  <updated>2017-10-16T10:10:08+08:00</updated>
   <id>http://laoar.github.io/</id>
   <author>
     <name><![CDATA[Yafang Shao]]></name>
@@ -57,14 +57,16 @@
 <p>然后可以通过iostat来观察写的效果，可以发现，写入的速度不止30M，可以很快的达到磁盘的最大带宽。   <br/>
 即cgroup blkio失效了。</p>
 
-<h4>为什么blkio throttle在限制sync IO时失效了 ？</h4>
+<h3>为什么blkio throttle在限制sync IO时失效了 ？</h3>
 
-<p>dd的做法是一次会写入bs大小的数据到内存，然后再根据相应的flag执行后续操作，如此依次进行count次。 <br/>
-比如我们上面的那个命令，首先会写2000M的数据到内存，然后再根据oflag来执行sync写入到磁盘的操作。于是这就引入了问题，在往内存写的过程中可能会触发bdi writeback（包括background writeback和periodic writeback），于是blkio失控。</p>
+<p>dd的做法是一次会写入bs大小的数据到内存，然后再根据相应的flag执行后续操作，如此依次进行count次。    <br/>
+这个行为可以通过<code>strace</code>来跟踪。</p>
+
+<p>比如我们上面的那个命令，首先会写2000M的数据到内存，然后再根据oflag来执行sync写入到磁盘的操作。于是这就引入了问题，在往内存写的过程中可能会触发bdi writeback（包括background writeback和periodic writeback），于是blkio失控。</p>
 
 <p>因而，blkio真正能够有效控制的只有direct IO。 如果想要控制sync IO，那么必须要关闭bdi writeback才可以。</p>
 
-<h4>backgroup writeback</h4>
+<h3>backgroup writeback</h3>
 
 <p>如果写入的可回收的脏页数大于了后台回收的阈值，就会去唤醒后台回收。代码如下：</p>
 
@@ -128,7 +130,7 @@
 </span></code></pre></td></tr></table></div></figure>
 
 
-<h4>vm.dirty_background_ratio</h4>
+<h3>vm.dirty_background_ratio</h3>
 
 <p>我们可以通过sysctl调整这个值的大小来设置系统中的脏页达到了多少后来唤醒刷盘。这个值的有效设置范围是[0, 100]。如果我们想在写数据时避免后台刷盘，那就需要把该值调大一些。 <br/>
 同事就调整该值来做下对比验证，在做测试的几组数据中，我发现，他有时候会把<code>vm.dirty_background_ratio</code>设置的很大，然后<code>vm.dirty_ratio</code>设置的很小。<br/>
@@ -156,13 +158,13 @@
 
 <h2>提交内核patch</h2>
 
-<h4>如何向内核提交patch ?</h4>
+<h3>如何向内核提交patch ?</h3>
 
 <p>具体步骤可以参考<a href="https://kernelnewbies.org/FirstKernelPatch">FirstKernelPatch</a>,   <br/>
 也有篇比较简洁的中文blog：<a href="http://mirage1993.blog.51cto.com/2709744/1912785">如何向 Linux Kernel 提交 Patch</a> <br/>
 不再赘述</p>
 
-<h4>Linux Kernel开源管理方式</h4>
+<h3>Linux Kernel开源管理方式</h3>
 
 <center><img src="http://laoar.github.io/images/maintainer.png"></center>
 
@@ -197,7 +199,7 @@
 
 <p>然后我就给Andrew Morton发送了这个patch，同时cc linux-mm mailing list，一个大约100行的patch。</p>
 
-<h4>maintainer的争执</h4>
+<h3>maintainer的争执</h3>
 
 <p>结果另外一个maintainer    Michal Hocko（at Suse Labs）跳出来说:</p>
 
@@ -211,7 +213,7 @@
 
 <p>俩人一个实验室的，就不能先当面讨论下再反馈意见给我么：)</p>
 
-<h4>Andrew Morton出马</h4>
+<h3>Andrew Morton出马</h3>
 
 <p>大概Anrew Morton看到了他们的争论，就站出来问了我一个问题，这个问题体现出来Andrew是个非常细心并且考虑很全面的一个人。</p>
 
@@ -228,7 +230,7 @@
 <p>最后Andrew发了一个确认邮件给我： <br/>
 <img src="http://laoar.github.io/images/andrew-confirm.png"></p>
 
-<h4>一番感慨</h4>
+<h3>一番感慨</h3>
 
 <p>从这里也可以看出来，内核里面的很多缺点都是向历史包袱妥协的结果，得在历史包袱和完美做法之间取一个折衷，即一个合理的做法。</p>
 
