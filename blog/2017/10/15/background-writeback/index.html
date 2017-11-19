@@ -82,7 +82,7 @@
 	<div class="entry-content"><p>这是我帮同事分析热迁移镜像下载IO限速时看内核代码发现的一个问题。</p>
 
 <p>然后给Linux Kernel提交了一个patch:<a href="https://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git/commit/?h=next-20171009&amp;id=bdf970a91a92c71a08a885d697fd018b667fb9a4">mm/page-writeback.c: print a warning if the vm dirtiness settings are illogical</a>.  <br/>
-该patch基于kernel 4.14-rc2，会在kernel 4.14.0上面发布。</p>
+该patch基于kernel 4.14-rc2，会在kernel 4.15.0上面发布。</p>
 
 <h2>问题背景</h2>
 
@@ -232,7 +232,9 @@
 
 <p>图片来自Greg在LC3 Beijing上的演讲<a href="https://www.lfasiallc.com/linuxcon-containercon-cloudopen-china/about/schedule">Linux Kernel Development &ndash; How It All Works</a>.</p>
 
-<p>Linus毫无疑问是Linux Kernel的一号人物，Andrew Morton是二号人物，涉及memory management的一些改动一般都会有Andrew Morton先合入linux-mm tree，再合入linux-next tree，然后Linus会基于linux-next tree来发布下一个linux版本，比如当前版本是4.13，下一个版本就是4.14。   也有一些会直接由Linus合入到mailine上作为下一版本的rc版，比如4.14-rc3，然后rc版本周期的变化（一般一周一次），直至最终发布为4.14.0。</p>
+<p>Linus毫无疑问是Linux Kernel的一号人物，Andrew Morton是二号人物，涉及memory management的一些改动一般都会有Andrew Morton先合入linux-mm tree，再合入linux-next tree. 如果当前stable版本是4.13，那么mainline就是4.14.0-rcX, linux-next对应的版本版本就是4.15.0。在Linus发布4.15.0-rc1的时候会将linux-next tree以及其他的一些feature-next tree给merge到mainline。    <br/>
+也有一些会直接由Linus合入到mailine或者stable，其他的一些maintainer有时候也会和乳mainline或stable。   <br/>
+然后rc版本周期的变化（一般一周一次), 共约七八个rc版就会发布4.14.0，然后再发布4.15.0-rc1。</p>
 
 <center><img src="/images/kernel-version.png"></center>
 
